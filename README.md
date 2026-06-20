@@ -16,6 +16,8 @@ This bundle contains the current planning documentation for CloakRFQ Receipts.
 - `docs/adr/0007-controlled-funder-identity-disclosure.md` — control Funder identity disclosure timing.
 - `docs/adr/0008-seller-controlled-fallback-queue.md` — use a Seller-Controlled Fallback Queue.
 - `docs/adr/0009-binding-quotes-with-expiry.md` — use Binding Quotes with Quote Expiry for the MVP.
+- `docs/adr/0010-on-ledger-demo-settlement.md` — use on-ledger settlement for the MVP; ignore for now.
+- `docs/adr/0011-scoped-compliance-receipts.md` — use Scoped Compliance Receipts for audit and regulatory disclosure.
 
 ## Status
 
