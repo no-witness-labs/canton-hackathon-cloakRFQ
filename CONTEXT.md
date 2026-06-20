@@ -4,7 +4,7 @@
 
 ### CloakRFQ Receipts
 
-A private, functionality-preserving RFQ marketplace for Receivable Sales on Canton, where Funders submit Private Quotes, Sellers select the Best Compliant Quote, scoped parties provide attestations, and Auditors or Regulators receive selective compliance evidence without unnecessary disclosure.
+A private, functionality-preserving RFQ marketplace for Receivable Sales on Canton, where Funders submit Private Quotes, Sellers select the Best Compliant Quote through a minimal Seller Quote View, scoped parties provide attestations, and Auditors or Regulators receive selective compliance evidence without unnecessary disclosure.
 
 ### Receivable
 
@@ -34,6 +34,10 @@ The party obligated to pay a Receivable. In invoice-focused examples, the Debtor
 
 A participant that submits a Private Quote to purchase a Receivable in a private RFQ process. Prefer "Funder" over "Lender" because the MVP is a Receivable Sale rather than a loan.
 
+### Bidder
+
+An informal synonym for Funder in RFQ or auction-style explanations. Prefer "Funder" in canonical product language.
+
 ### Lender
 
 A participant that provides a loan to a borrower. This term is not part of the MVP's canonical language unless the product later adds secured lending.
@@ -41,6 +45,10 @@ A participant that provides a loan to a borrower. This term is not part of the M
 ### Coordinator
 
 A participant or service that may help route invitations, deadlines, and workflow status in the RFQ process without being entitled to read Private Quote contents by default.
+
+### Marketplace Operator
+
+Avoid this as a canonical term when possible. If used, it means a Coordinator and not a quote-visible auctioneer.
 
 ### Compliance Party
 
@@ -64,7 +72,7 @@ An optional scoped party or service that verifies Proof of Funds if the chosen P
 
 ### Debtor Risk
 
-The commercial risk that the Debtor will not pay the Receivable in full and on time.
+The risk that the Debtor will fail to pay, pay late, dispute the obligation, or otherwise reduce the expected value of a Receivable.
 
 ### Receivable Risk
 
@@ -73,6 +81,10 @@ The commercial, legal, or operational risk that a Receivable is invalid, dispute
 ### Risk Attestation
 
 A selective statement from a Risk Assessor about Debtor Risk or Receivable Risk that helps Funders price a Receivable without necessarily disclosing all raw Debtor, Seller, invoice, or underwriting data.
+
+### Debtor Risk Attestation
+
+A risk statement about the Debtor that helps Funders price a Receivable without necessarily disclosing all raw Debtor information.
 
 ### Eligibility Attestation
 
@@ -86,6 +98,10 @@ A selectively disclosed record that states the compliance-relevant outcome of a 
 
 The intentional disclosure of only the specific facts a party needs for a defined purpose, rather than disclosing the full underlying workflow, Quote Book, identity, or asset record.
 
+### Regulatory Disclosure
+
+A selectively disclosed fact or record provided to a Regulator because an applicable rule requires it.
+
 ### Sensitive Attribute
 
 A personal or organizational attribute that is not part of the ordinary commercial quote decision and should not be disclosed unless specifically required for compliance.
@@ -96,15 +112,15 @@ The Seller-defined boundary for what information may be disclosed before quoting
 
 ### Debtor Notification
 
-A disclosure to the Debtor that the Receivable has been assigned or sold. Debtor Notification is optional and disclosure-controlled in the MVP rather than always required.
+A disclosure to the Debtor that the Receivable has been sold, assigned, or otherwise transferred. Debtor Notification is optional and disclosure-controlled in the MVP.
 
 ### Confidential Receivable Sale
 
-A Receivable Sale where the Debtor is not notified during the RFQ process unless notification becomes required by the transaction terms, settlement model, or applicable rules.
+A Receivable Sale where the Debtor is not notified during the RFQ and where Debtor Notification is avoided unless required by the chosen quote, settlement path, compliance rule, or legal enforceability need.
 
 ### Disclosed Receivable Sale
 
-A Receivable Sale where the Debtor is notified of the assignment or sale, usually after selection or as part of settlement or compliance requirements.
+A Receivable Sale where the Debtor is notified because the RFQ terms, selected quote, settlement path, compliance rule, or legal enforceability need requires it.
 
 ### Blind RFQ
 
@@ -170,6 +186,10 @@ The Private Quote selected by the Seller for attempted settlement. A Selected Qu
 
 A Private Quote that is not selected to complete a Receivable Sale. Prefer "Unselected Quote" over "lost bid" in product language.
 
+### Eligible Quote
+
+A Private Quote that satisfies the RFQ's eligibility conditions, including applicable compliance status, Proof-of-Funds Gate, Quote Validity Period, and any other minimum RFQ requirements.
+
 ### Pending Quote
 
 An eligible, still-valid Private Quote that may remain available while a Selected Quote attempts settlement.
@@ -178,9 +198,17 @@ An eligible, still-valid Private Quote that may remain available while a Selecte
 
 A Pending Quote that may be selected if the current Selected Quote fails before RFQ Finality.
 
+### Fallback Queue
+
+An ordered set of Fallback Quotes available if the current Selected Quote fails before RFQ Finality.
+
 ### Seller-Controlled Fallback Queue
 
 The Seller-controlled ordered set of still-valid Eligible Quotes that may be promoted if the current Selected Quote fails before RFQ Finality.
+
+### Fallback Promotion
+
+The act of moving a Fallback Quote into the Selected Quote position after the current Selected Quote fails before RFQ Finality.
 
 ### Quote Expiry
 
@@ -193,6 +221,10 @@ The period during which a Private Quote remains eligible for selection or fallba
 ### Binding Quote
 
 A Private Quote that cannot be arbitrarily withdrawn during its Quote Validity Period unless the RFQ terms explicitly allow withdrawal.
+
+### Withdrawable Quote
+
+A Private Quote that the Funder may cancel before selection if the RFQ terms explicitly allow withdrawal.
 
 ### RFQ Disclosure Package
 
@@ -214,6 +246,10 @@ Evidence that a Funder has enough liquid or committed funding capacity to suppor
 
 The requirement that a Funder provide acceptable quote-scoped Proof of Funds before a Private Quote can be treated as eligible.
 
+### Proof-Backed Private Quote
+
+A Private Quote that has passed the Proof-of-Funds Gate. This does not mean funds are locked, reserved, escrowed, or guaranteed through settlement.
+
 ### Funding Capacity Attestation
 
 A possible form of quote-scoped Proof of Funds stating that a Funder can support a Private Quote without revealing full balances or funding sources.
@@ -229,6 +265,10 @@ A stronger future mechanism that reserves or locks funds for a Private Quote. Th
 ### Quote Bond
 
 An optional future security or penalty deposit intended to discourage unserious Private Quotes. A Quote Bond is distinct from Proof of Funds because it does not necessarily prove capacity to fund the full purchase price.
+
+### Funding Commitment
+
+The Selected Quote Funder's obligation to complete funding or settlement during the Settlement Window, subject to the RFQ terms.
 
 ### Settlement Window
 
@@ -248,11 +288,19 @@ The product objective of minimizing disclosure as far as realistically achievabl
 
 ### Functionality-Preserving Privacy
 
-The product principle that CloakRFQ Receipts should preserve real-world RFQ behavior first, then maximize privacy within that constraint.
+The product principle that CloakRFQ Receipts should preserve real-world RFQ behavior first, then maximize privacy within that constraint. If a privacy mechanism would materially change the business meaning of the RFQ, the product should reduce the privacy claim rather than alter the financial workflow.
+
+### Functional Fidelity
+
+The product principle that privacy mechanisms should preserve the real-world business behavior of the RFQ process rather than replacing it with a materially different workflow.
+
+### Market Fidelity
+
+The degree to which the product preserves recognizable real-world RFQ behavior, including competitive quoting, compliance eligibility, commercial quote comparison, Seller selection, settlement, and scoped audit or regulatory disclosure.
 
 ### Real-World RFQ Functionality
 
-The core business behavior of a financial RFQ process that should be preserved even when privacy goals are added.
+The core business behavior of a financial RFQ process that should be preserved even when privacy goals are added. Privacy features should be evaluated by asking how much privacy can be added to this functionality, not by replacing the functionality with a simpler private substitute.
 
 ### Best-Deal RFQ
 
@@ -268,7 +316,7 @@ The Privacy Ambition that the Seller receives only the Winning Quote and not the
 
 ### Unselected Funder Privacy
 
-The Privacy Ambition that Funders and Private Quotes not selected for a Receivable Sale remain undisclosed as much as practically achievable, without distorting the real-world RFQ process.
+The Privacy Ambition that Funders not selected for a Receivable Sale remain undisclosed as much as practically achievable.
 
 ### Unselected Quote Privacy
 
