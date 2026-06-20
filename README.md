@@ -5,7 +5,7 @@ This bundle contains the current planning documentation for CloakRFQ Receipts.
 ## Files
 
 - `CONTEXT.md` — glossary of canonical domain terms. This is not a spec or scratchpad.
-- `CLOAKRFQ_PROJECT_BRIEF.md` — consolidated product brief, resolved decisions, workflow, privacy posture, non-goals, and open questions.
+- `CLOAKRFQ_PROJECT_BRIEF.md` — consolidated product brief, resolved decisions, explicit Current workflow, privacy posture, non-goals, and open questions.
 - `MANIFEST.md` — package completeness notes and file inventory.
 - `docs/adr/0001-receivable-sale-rfq-mvp.md` — model the MVP as a Receivable Sale, not a secured loan.
 - `docs/adr/0002-maximum-practical-privacy-for-rfqs.md` — target Maximum Practical Privacy for RFQs.
@@ -19,6 +19,6 @@ This bundle contains the current planning documentation for CloakRFQ Receipts.
 
 ## Status
 
-Complete for the current discovery/grilling phase as of 2026-06-19.
+Complete for the current discovery/grilling phase as of 2026-06-20.
 
 Not complete as an implementation specification. The Daml template model, settlement mechanism, exact Proof-of-Funds mechanism, quote-selection protocol, and Compliance Receipt contents still need to be designed.
