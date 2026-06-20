@@ -76,27 +76,75 @@ A Receivable Sale where the Debtor is notified of the assignment or sale, usuall
 
 ### Blind RFQ
 
-A private request-for-quote process in which Funders do not see competing quotes, outsiders do not see the process, and no ordinary marketplace coordinator receives the full quote book by default.
+A private request-for-quote process in which Funders do not see competing quotes, outsiders do not see the process, and no ordinary marketplace Coordinator receives the full Quote Book by default.
 
 ### Private Quote
 
 A Funder's confidential offer to purchase a Receivable in a Blind RFQ. A Private Quote is disclosed only according to the RFQ's selective disclosure rules.
 
+### Proof-Backed Private Quote
+
+A Private Quote that has passed a quote-scoped Proof-of-Funds Gate.
+
 ### Quote Book
 
 The set of Private Quotes submitted for a Blind RFQ.
 
+### Eligible Quote
+
+A Private Quote that has passed required eligibility checks, including compliance requirements and any required Proof-of-Funds Gate.
+
+### Pending Quote
+
+A submitted Private Quote whose final outcome has not yet been determined. Pending Quotes may remain available during the Settlement Window so the Seller can fall back to another quote if the Selected Quote fails before RFQ Finality.
+
+### Quote Validity Period
+
+The period during which a Private Quote remains eligible for Seller selection or fallback promotion.
+
+### Quote Expiry
+
+The time after which a Private Quote is no longer selectable or promotable unless the Funder refreshes or resubmits it.
+
+### Binding Quote
+
+A Private Quote that cannot be withdrawn during its Quote Validity Period except under conditions explicitly allowed by the RFQ terms. The MVP uses Binding Quotes with Quote Expiry to preserve fallback reliability without making quotes open-ended.
+
+### Withdrawable Quote
+
+A Private Quote that a Funder may cancel before selection if the RFQ terms explicitly allow withdrawal. This is not the default MVP model.
+
+### Selected Quote
+
+A Private Quote selected by the Seller for attempted settlement. A Selected Quote is not final until settlement succeeds or the RFQ otherwise reaches Finality.
+
 ### Winning Quote
 
-The Private Quote selected to complete a Receivable Sale.
+The Selected Quote that successfully completes settlement and becomes the basis for the completed Receivable Sale.
 
 ### Unselected Quote
 
-A Private Quote that is not selected to complete a Receivable Sale. Prefer "Unselected Quote" over "lost bid" in product language.
+A Private Quote that is not selected as the Winning Quote by RFQ Finality. Prefer "Unselected Quote" over "lost bid" in product language.
+
+### Fallback Quote
+
+A Pending Quote that may be selected if the current Selected Quote fails before RFQ Finality.
+
+### Fallback Queue
+
+The Seller-controlled ordered set of still-valid Eligible Quotes that may be promoted if the current Selected Quote fails before RFQ Finality.
+
+### Seller-Controlled Fallback Queue
+
+A Fallback Queue ordered by the Seller according to Selection Criteria rather than automatically by highest price or any single quote field.
+
+### Fallback Promotion
+
+The act of making a Fallback Quote the new Selected Quote after the prior Selected Quote fails before RFQ Finality.
 
 ### Best Compliant Quote
 
-The eligible Private Quote selected by the Seller to complete a Receivable Sale after required compliance checks. For the MVP, the default economic comparison is Net Purchase Price, but the Seller may also consider other Selection Criteria.
+The eligible Private Quote selected by the Seller according to the RFQ's Selection Criteria after required compliance checks. The Best Compliant Quote may become a Selected Quote and later a Winning Quote if settlement succeeds.
 
 ### Seller Selection Discretion
 
@@ -130,6 +178,22 @@ The major commercial facts and attestations needed to make a Receivable meaningf
 
 Optional non-core information that may matter in some receivables-finance scenarios but is not required to preserve the MVP's core RFQ meaning.
 
+### Seller Quote View
+
+The minimum Seller-visible comparison view needed to select the Best Compliant Quote from Eligible Quotes.
+
+### Funder Identity Disclosure Timing
+
+The rule governing when a Funder's identity is revealed during RFQ, selection, closing, settlement, audit, or regulation.
+
+### Funder Identity Minimization
+
+The product principle that Funder identity should stay hidden or pseudonymous unless there is a real workflow reason to reveal it.
+
+### Pseudonymous Funder View
+
+A Seller Quote View presentation in which a Funder can be compared without revealing its full legal identity unless disclosure is required.
+
 ### Coordinator
 
 A participant or service that may help route invitations, deadlines, and workflow status in the RFQ process without being entitled to read Private Quote contents by default.
@@ -152,7 +216,7 @@ A non-government assurance party that may receive scoped audit evidence without 
 
 ### Selective Disclosure
 
-The intentional disclosure of only the specific facts a party needs for a defined purpose, rather than disclosing the full underlying workflow, quote book, identity, or asset record.
+The intentional disclosure of only the specific facts a party needs for a defined purpose, rather than disclosing the full underlying workflow, Quote Book, identity, or asset record.
 
 ### Regulatory Disclosure
 
@@ -170,6 +234,50 @@ A selectively disclosed record that states the compliance-relevant outcome of a 
 
 A personal or organizational attribute that is not part of the ordinary commercial quote decision and should not be disclosed unless specifically required for compliance.
 
+### Proof of Funds
+
+Evidence that a Funder has enough liquid or committed funding capacity to support a Private Quote at a relevant verification point.
+
+### Proof-of-Funds Gate
+
+The requirement that a Funder provide acceptable quote-scoped Proof of Funds before a Private Quote can be treated as eligible.
+
+### Funding Capacity Attestation
+
+A quote-scoped statement that a Funder can support a Private Quote without revealing full balances or funding sources.
+
+### Funding Evidence Provider
+
+An optional scoped party or service that verifies Proof of Funds if the chosen Proof-of-Funds mechanism requires an external verifier.
+
+### Reusable Funds Caveat
+
+The accepted limitation that Proof of Funds may show funds existed at a verification point while not preventing the same funds from supporting multiple bids or being spent later unless a stronger mechanism is added.
+
+### Funding Lock
+
+A stronger future mechanism that reserves or locks funds for a Private Quote. The MVP should not claim Funding Lock behavior unless it is explicitly implemented.
+
+### Quote Bond
+
+An optional future security deposit or penalty mechanism used to discourage unserious quotes. A Quote Bond is not the same as proving ability to fund the full purchase price.
+
+### Funding Commitment
+
+The Selected Quote Funder's obligation to complete funding or settlement during the Settlement Window.
+
+### Settlement Window
+
+The phase after the Seller selects a quote and before the Receivable Sale reaches finality. During this window, the Selected Quote attempts to settle and eligible Pending Quotes may remain available as Fallback Quotes.
+
+### Commitment Failure
+
+Failure by the Selected Quote's Funder to complete funding or settlement during the Settlement Window.
+
+### RFQ Finality
+
+The point after which the Receivable Sale is complete or fallback rights end.
+
 ### Privacy Ambition
 
 A desired privacy outcome that guides the product direction but has not yet been committed to as an MVP-enforced guarantee.
@@ -182,9 +290,9 @@ A privacy property that the product explicitly claims to enforce in the current 
 
 The product objective of minimizing disclosure as far as realistically achievable while preserving Real-World RFQ Functionality. This term does not authorize changing the core financial workflow merely to obtain stronger privacy.
 
-### Functional Fidelity
+### Real-World RFQ Functionality
 
-The product principle that privacy mechanisms should preserve the real-world business behavior of the RFQ process rather than replacing it with a materially different workflow.
+The core business behavior of a financial RFQ process that should be preserved even when privacy goals are added. Privacy features should be evaluated by asking how much privacy can be added to this functionality, not by replacing the functionality with a simpler private substitute.
 
 ### Functionality-Preserving Privacy
 
@@ -194,9 +302,9 @@ The product principle that CloakRFQ Receipts should preserve real-world RFQ beha
 
 The degree to which the product preserves recognizable real-world RFQ behavior, including competitive quoting, compliance eligibility, commercial quote comparison, Seller selection, settlement, and scoped audit or regulatory disclosure.
 
-### Real-World RFQ Functionality
+### Functional Fidelity
 
-The core business behavior of a financial RFQ process that should be preserved even when privacy goals are added. Privacy features should be evaluated by asking how much privacy can be added to this functionality, not by replacing the functionality with a simpler private substitute.
+A synonym for Market Fidelity in product discussions. Prefer "Market Fidelity" or "Real-World RFQ Functionality" when possible.
 
 ### Best-Deal RFQ
 
@@ -208,7 +316,7 @@ An RFQ process where any quote satisfying a pre-defined threshold may be accepte
 
 ### Winning-Only Disclosure
 
-The Privacy Ambition that the Seller receives only the Winning Quote and not the full Quote Book, where this can be achieved without weakening Real-World RFQ Semantics.
+The Privacy Ambition that the Seller receives only the Winning Quote and not the full Quote Book, where this can be achieved without weakening Real-World RFQ Functionality.
 
 ### Unselected Funder Privacy
 
