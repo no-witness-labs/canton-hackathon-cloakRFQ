@@ -39,6 +39,25 @@ CloakRFQ Receipts directly answers that challenge:
 
 The project is therefore not just using Canton as a generic ledger. The product logic depends on Canton-style privacy, selective disclosure, and multi-party workflow coordination.
 
+## Why Canton
+
+CloakRFQ uses Canton for concrete product benefits, not generic chain branding.
+
+| Canton benefit | How CloakRFQ uses it |
+|---|---|
+| **Selective disclosure** | Sellers, Funders, Coordinators, Compliance, Risk, Auditors, and Regulators each receive only the records relevant to their role. |
+| **Private RFQs** | Funders do not see competing Private Quotes, and Coordinators do not receive quote contents by default. |
+| **Atomic multi-party settlement** | Receivable assignment and Demo Settlement Asset transfer can be demonstrated as one coordinated settlement outcome. |
+| **Institutional decentralisation** | The workflow does not require a quote-visible marketplace operator that controls and reads the full Quote Book by default. |
+| **Workflow speed** | Quote submission, selection, settlement status, fallback, and compliance receipt generation can happen in one coordinated workflow instead of across disconnected manual processes. |
+| **Efficiency** | Unrelated parties do not need to process or store the full marketplace, quote book, or compliance record. |
+| **Role-based authorization** | Daml/Canton workflow roles can encode who may create, view, approve, select, settle, or audit each record. |
+| **Auditability without full transparency** | Auditors or Regulators can receive Scoped Compliance Receipts without becoming full observers of the private RFQ. |
+
+Deck wording:
+
+> **CloakRFQ uses Canton because private invoice-financing RFQs need more than tokenization. They need selective disclosure, role-based authorization, atomic settlement, and auditability without exposing the full marketplace.**
+
 ## Relationship to other themes
 
 These themes are relevant, but they should be treated as supporting context rather than submission tracks.
