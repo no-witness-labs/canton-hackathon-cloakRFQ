@@ -118,26 +118,26 @@ The workflow may use `gh pr create` with the workflow token to create the PR. Th
 
 ## Local Push Guardrail
 
-Install this hook on every agent-machine clone to block accidental direct pushes to remote `main`.
+The repository includes `.githooks/pre-push` to block accidental direct pushes to remote `main` from agent-machine clones.
 
-This is a local guardrail, not a complete security boundary. It prevents normal accidental pushes, but it can still be bypassed by someone intentionally disabling hooks. If GitHub branch protections/rulesets are available for the repository plan, use them as the stronger enforcement layer.
+Activate the committed hook in each local clone:
 
 ```bash
-mkdir -p .githooks
-
-cat > .githooks/pre-push <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-
-while read -r local_ref local_sha remote_ref remote_sha; do
-  if [ "$remote_ref" = "refs/heads/main" ]; then
-    echo "ERROR: direct push to remote main is blocked."
-    echo "Push a task branch and open a PR instead."
-    exit 1
-  fi
-done
-EOF
-
 chmod +x .githooks/pre-push
 git config core.hooksPath .githooks
 ```
+
+After activation, this command should fail locally:
+
+```bash
+git push origin main
+```
+
+Expected failure message:
+
+```text
+ERROR: direct push to remote main is blocked.
+Push a task branch and open a PR instead.
+```
+
+This is a local guardrail, not a complete security boundary. It prevents normal accidental pushes, but it can still be bypassed by someone intentionally disabling hooks. If GitHub branch protections/rulesets are available for the repository plan, use them as the stronger enforcement layer.
