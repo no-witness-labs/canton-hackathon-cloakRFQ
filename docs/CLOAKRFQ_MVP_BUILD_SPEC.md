@@ -63,10 +63,12 @@ These are implementation candidates, not final law:
 
 - Competing Funders do not see each other's Private Quotes.
 - Coordinator does not read Private Quote contents by default.
-- Seller sees Seller Quote View, not raw Proof-of-Funds data or Funder balances.
+- Seller sees Seller Quote View and Proof-of-Funds status or attestation, not raw Proof-of-Funds evidence, Funder balances, funding sources, or unrelated financial positions.
 - Funder identity is hidden by default unless required.
 - Auditor/Regulator receives Scoped Compliance Receipt, not full RFQ data.
 - Outsiders see nothing useful.
+
+Caveat: these are application-level Canton privacy goals, not anonymity claims. Parties, their hosting participant or validator operators, and explicitly entitled signatories, observers, controllers, or actors may see the contracts or transaction views they are entitled to see.
 
 ## Stretch privacy ambitions
 
@@ -76,7 +78,7 @@ Do not claim these unless implemented:
 - Unselected Quotes hidden from Seller.
 - Unselected Funders always hidden from Seller.
 - Quote selection without any single non-essential party seeing full Quote Book.
-- Proof of Funds without revealing raw balances/funding sources.
+- A Proof-of-Funds mechanism that verifies funding capacity without revealing raw balances, funding sources, or unrelated financial positions to any non-essential verifier.
 - Funding Locks, escrow, Quote Bonds, or production payment finality.
 
 ## Non-goals
@@ -98,5 +100,7 @@ Do not claim these unless implemented:
 
 - Keep Proof of Funds as eligibility evidence, not a lock.
 - Keep Demo Settlement Asset clearly non-production.
+- Treat Receivable assignment as an MVP workflow state transition. Do not claim production legal assignment, perfection, enforceability against the Debtor, or jurisdiction-specific receivables-transfer compliance unless those workflows are explicitly added.
+- Treat Binding Quotes as workflow-binding for the MVP, not as externally legally enforceable commitments unless legal-enforcement workflows are explicitly added.
 - Keep Scoped Compliance Receipt as selective disclosure, not a zero-knowledge proof.
 - Prefer minimal, demoable templates over over-generalized finance infrastructure.

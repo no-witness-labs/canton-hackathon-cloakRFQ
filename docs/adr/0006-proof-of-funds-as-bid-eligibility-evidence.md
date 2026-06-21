@@ -1,4 +1,4 @@
-# 0006 - Require Proof of Funds as Bid Eligibility Evidence, Not a Funding Lock
+# ADR 0006: Require Proof of Funds as Bid Eligibility Evidence, Not a Funding Lock
 
 ## Status
 

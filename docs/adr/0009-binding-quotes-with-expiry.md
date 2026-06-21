@@ -26,6 +26,8 @@ A Private Quote:
 
 This decision does not imply funds are locked, reserved, escrowed, or guaranteed through settlement. It also does not add financial penalties for the MVP.
 
+In the MVP, "Binding Quote" means binding under the demo workflow rules during the Quote Validity Period. It does not claim external legal enforceability unless a legal agreement, enforcement mechanism, or jurisdiction-specific legal workflow is explicitly added.
+
 ## Consequences
 
 - Fallback behavior is more credible because the Seller can rely on still-valid Pending Quotes during the Settlement Window.

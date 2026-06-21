@@ -1,4 +1,4 @@
-# 0002 - Target Maximum Practical Privacy for RFQs
+# ADR 0002: Target Maximum Practical Privacy for RFQs
 
 ## Status
 

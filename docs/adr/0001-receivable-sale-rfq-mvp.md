@@ -1,4 +1,4 @@
-# 0001 - Model the MVP as a Receivable Sale, Not a Secured Loan
+# ADR 0001: Model the MVP as a Receivable Sale, Not a Secured Loan
 
 ## Status
 

@@ -1,4 +1,4 @@
-# 0004 - Make Debtor Notification Optional and Disclosure-Controlled
+# ADR 0004: Make Debtor Notification Optional and Disclosure-Controlled
 
 ## Status
 
