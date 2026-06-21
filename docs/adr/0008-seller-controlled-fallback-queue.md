@@ -1,4 +1,4 @@
-# 0008 - Use a Seller-Controlled Fallback Queue
+# ADR 0008: Use a Seller-Controlled Fallback Queue
 
 ## Status
 

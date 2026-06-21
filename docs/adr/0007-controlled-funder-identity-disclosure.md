@@ -1,4 +1,4 @@
-# 0007 - Control Funder Identity Disclosure Timing
+# ADR 0007: Control Funder Identity Disclosure Timing
 
 ## Status
 

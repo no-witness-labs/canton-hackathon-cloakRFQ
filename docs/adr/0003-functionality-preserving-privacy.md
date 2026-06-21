@@ -1,4 +1,4 @@
-# 0003 - Preserve Real-World RFQ Functionality Before Optimizing Privacy
+# ADR 0003: Preserve Real-World RFQ Functionality Before Optimizing Privacy
 
 ## Status
 

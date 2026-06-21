@@ -198,6 +198,8 @@ A Binding Quote:
 - does not imply funds are locked, reserved, escrowed, or guaranteed through settlement;
 - does not imply monetary penalties in the MVP.
 
+In the MVP, "Binding Quote" means binding under the demo workflow rules during the Quote Validity Period. It does not claim external legal enforceability unless a legal agreement, enforcement mechanism, or jurisdiction-specific legal workflow is explicitly added.
+
 ## Settlement model
 
 The MVP uses On-Ledger Demo Settlement.
@@ -205,6 +207,8 @@ The MVP uses On-Ledger Demo Settlement.
 A tokenized or represented Receivable is assigned to the Winning Funder, and Demo Settlement Asset transfers to the Seller. This demonstrates payment-versus-receivable settlement as Canton/Daml ledger state transitions.
 
 The Demo Settlement Asset is non-production. The MVP must not claim real payment finality, bank settlement, stablecoin settlement, Canton Coin/Amulet integration, or production custody.
+
+The MVP also does not claim production legal assignment, perfection of ownership or security rights, enforceability against the Debtor, or jurisdiction-specific receivables-transfer compliance. The on-ledger Receivable assignment demonstrates the application workflow state transition only, unless legal documentation, Debtor notification, transfer restrictions, or jurisdiction-specific assignment workflows are explicitly added later.
 
 ## Scoped Compliance Receipt
 
@@ -233,6 +237,12 @@ The receipt should not disclose by default:
 - Unselected Funder identities;
 - full Seller/Debtor/Funder records.
 
+## Canton privacy and trust boundary
+
+Canton privacy is stakeholder- and participant-based. Parties, their hosting participant or validator operators, and explicitly entitled signatories, observers, controllers, or actors may see the contracts or transaction views they are entitled to see.
+
+The MVP does not claim full anonymity, secrecy from a party's own infrastructure operator, or secrecy from parties intentionally added to a contract or transaction view. Privacy claims should be understood as role-scoped selective disclosure within the application workflow.
+
 ## Privacy guarantees vs ambitions
 
 ### MVP privacy guarantees to aim for
@@ -246,7 +256,7 @@ The receipt should not disclose by default:
 | Sensitive Attributes are not disclosed as raw data unless required.                                   | MVP guarantee target. |
 | Funders receive an attestation-first RFQ Disclosure Package.                                          | MVP guarantee target. |
 | Seller receives a minimal Seller Quote View, not raw Funder balances or funding sources.              | MVP guarantee target. |
-| Proof of Funds is scoped to quote eligibility and does not reveal full financial position by default. | MVP guarantee target. |
+| Seller receives only Proof-of-Funds status or an attestation by default, not raw Proof-of-Funds evidence, balances, funding sources, or unrelated financial positions. | MVP guarantee target. |
 
 ### Stretch privacy ambitions
 
@@ -257,7 +267,7 @@ These are valuable but should not be overclaimed until the protocol design is ch
 - Unselected Quotes remain hidden from everyone except the submitting Funder.
 - Quote selection can happen without any single non-essential party seeing the full Quote Book.
 - Pending Quotes remain private while still being available for fallback.
-- Proof of Funds can be verified without revealing raw balances, funding sources, or unrelated financial positions.
+- The Proof-of-Funds mechanism itself can verify funding capacity without revealing raw balances, funding sources, or unrelated financial positions to any non-essential verifier.
 
 ## Important non-goals for the MVP
 

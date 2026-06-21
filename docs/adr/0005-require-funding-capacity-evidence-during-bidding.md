@@ -1,4 +1,4 @@
-# 0005 - Require Funding Capacity Evidence During Bidding
+# ADR 0005: Require Funding Capacity Evidence During Bidding
 
 ## Status
 
