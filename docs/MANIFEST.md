@@ -12,6 +12,7 @@ It contains:
 - the current consolidated project brief (`docs/CLOAKRFQ_PROJECT_BRIEF.md`), including the explicit Current workflow section;
 - the product requirements document (`docs/CLOAKRFQ_PRD.md`);
 - the hackathon track alignment note (`docs/HACKATHON_ALIGNMENT.md`), documenting that the submission track is Track 1: Private DeFi & Capital Markets;
+- the hackathon roadmap (`docs/HACKATHON_ROADMAP.md`), documenting the compact completion plan for the MVP and submission package;
 - the MVP implementation handoff spec (`docs/CLOAKRFQ_MVP_BUILD_SPEC.md`);
 - the accepted ADRs created so far (`docs/adr/0001` through `docs/adr/0011`);
 - a README describing the bundle.
@@ -35,6 +36,7 @@ This package is not complete as production implementation. The following impleme
 | `docs/CLOAKRFQ_PROJECT_BRIEF.md`                                    | Consolidated brief and decision summary.              |
 | `docs/CLOAKRFQ_PRD.md`                                              | Product requirements document for the MVP workflow.   |
 | `docs/HACKATHON_ALIGNMENT.md`                                       | Hackathon track alignment and submission positioning. |
+| `docs/HACKATHON_ROADMAP.md`                                         | Compact roadmap for MVP and submission completion.    |
 | `docs/MANIFEST.md`                                                  | Completeness and inventory notes.                     |
 | `docs/CLOAKRFQ_MVP_BUILD_SPEC.md`                                   | MVP implementation handoff spec.                      |
 | `docs/adr/0001-receivable-sale-rfq-mvp.md`                          | Receivable Sale instead of secured loan.              |

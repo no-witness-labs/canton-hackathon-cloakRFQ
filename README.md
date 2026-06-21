@@ -8,6 +8,7 @@ This bundle contains the current planning documentation for CloakRFQ Receipts.
 - `docs/CLOAKRFQ_PROJECT_BRIEF.md` — consolidated product brief, resolved decisions, explicit Current workflow, privacy posture, non-goals, and open questions.
 - `docs/CLOAKRFQ_PRD.md` — product requirements document for the MVP workflow.
 - `docs/HACKATHON_ALIGNMENT.md` — Canton Hackathon track alignment and submission positioning. The project will submit under Track 1: Private DeFi & Capital Markets.
+- `docs/HACKATHON_ROADMAP.md` — compact roadmap for completing the hackathon MVP and submission package.
 - `docs/MANIFEST.md` — package completeness notes and file inventory.
 - `docs/CLOAKRFQ_MVP_BUILD_SPEC.md` — implementation handoff spec for the MVP.
 - `docs/adr/0001-receivable-sale-rfq-mvp.md` — model the MVP as a Receivable Sale, not a secured loan.
