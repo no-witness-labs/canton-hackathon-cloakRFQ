@@ -9,20 +9,20 @@ This package is complete for the current domain-discovery and product-decision p
 It contains:
 
 - the current glossary (`CONTEXT.md`);
-- the current consolidated project brief (`CLOAKRFQ_PROJECT_BRIEF.md`), including the explicit Current workflow section;
-- the accepted ADRs created so far (`docs/adr/0001` through `docs/adr/0009`);
+- the current consolidated project brief (`docs/CLOAKRFQ_PROJECT_BRIEF.md`), including the explicit Current workflow section;
+- the MVP implementation handoff spec (`docs/CLOAKRFQ_MVP_BUILD_SPEC.md`);
+- the accepted ADRs created so far (`docs/adr/0001` through `docs/adr/0011`);
 - a README describing the bundle.
 
-This package is not complete as a build specification. The following are intentionally still open:
+This package is not complete as production implementation. The following implementation and design details are intentionally still open:
 
 - exact Daml template and choice design;
-- settlement model;
 - exact Proof-of-Funds mechanism;
 - quote-selection protocol details;
-- Compliance Receipt contents;
 - Debtor identity disclosure rules;
 - post-settlement Funder exit model;
-- post-MVP penalties, reputation, or Quote Bond design.
+- post-MVP penalties, reputation, or Quote Bond design;
+- production payment integration, if ever added.
 
 ## File inventory
 
@@ -30,8 +30,9 @@ This package is not complete as a build specification. The following are intenti
 | ------------------------------------------------------------------- | ----------------------------------------------------- |
 | `README.md`                                                         | Describes the documentation bundle.                   |
 | `CONTEXT.md`                                                        | Glossary-only domain language.                        |
-| `CLOAKRFQ_PROJECT_BRIEF.md`                                         | Consolidated brief and decision summary.              |
-| `MANIFEST.md`                                                       | Completeness and inventory notes.                     |
+| `docs/CLOAKRFQ_PROJECT_BRIEF.md`                                    | Consolidated brief and decision summary.              |
+| `docs/MANIFEST.md`                                                  | Completeness and inventory notes.                     |
+| `docs/CLOAKRFQ_MVP_BUILD_SPEC.md`                                   | MVP implementation handoff spec.                      |
 | `docs/adr/0001-receivable-sale-rfq-mvp.md`                          | Receivable Sale instead of secured loan.              |
 | `docs/adr/0002-maximum-practical-privacy-for-rfqs.md`               | Maximum Practical Privacy.                            |
 | `docs/adr/0003-functionality-preserving-privacy.md`                 | Functionality-Preserving Privacy.                     |
@@ -41,3 +42,5 @@ This package is not complete as a build specification. The following are intenti
 | `docs/adr/0007-controlled-funder-identity-disclosure.md`            | Controlled Funder identity disclosure.                |
 | `docs/adr/0008-seller-controlled-fallback-queue.md`                 | Seller-controlled fallback.                           |
 | `docs/adr/0009-binding-quotes-with-expiry.md`                       | Binding Quotes with Quote Expiry.                     |
+| `docs/adr/0010-on-ledger-demo-settlement.md`                        | On-Ledger Demo Settlement.                            |
+| `docs/adr/0011-scoped-compliance-receipts.md`                       | Scoped Compliance Receipts.                           |

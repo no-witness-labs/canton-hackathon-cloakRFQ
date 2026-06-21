@@ -8,7 +8,7 @@ Last updated: 2026-06-20
 
 Working product language:
 
-> CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. Funders submit Private Quotes with quote-scoped Proof of Funds, Sellers select the Best Compliant Quote through a minimal Seller Quote View, Compliance and Risk parties provide scoped attestations, and Auditors or Regulators receive selective proof-of-compliance receipts without exposing unnecessary bidders, quotes, identities, balances, or sensitive commercial data.
+> CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. Funders submit Private Quotes with quote-scoped Proof of Funds, Sellers select the Best Compliant Quote through a minimal Seller Quote View, Compliance and Risk parties provide scoped attestations, and Auditors or Regulators receive Scoped Compliance Receipts without exposing unnecessary bidders, quotes, identities, balances, or sensitive commercial data.
 
 The guiding product question is:
 
@@ -32,7 +32,7 @@ It is a private RFQ flow for selling a Receivable at a discount, with privacy an
 6. The Seller selects the Best Compliant Quote using a Seller Quote View.
 7. Settlement is attempted with the Selected Quote.
 8. If the Selected Quote fails before RFQ Finality, the Seller may use a Seller-Controlled Fallback Queue.
-9. A scoped Compliance Receipt is produced for an Auditor or Regulator where required.
+9. A Scoped Compliance Receipt is produced for an Auditor or Regulator where required.
 
 ## Resolved product decisions
 
@@ -57,6 +57,8 @@ It is a private RFQ flow for selling a Receivable at a discount, with privacy an
 | Fallback                 | Use a Seller-Controlled Fallback Queue, not automatic highest-price fallback.                                                                |
 | Quote validity           | For the MVP, Private Quotes are Binding Quotes during their Quote Validity Period and have Quote Expiry.                                     |
 | Penalties                | Monetary penalties are not in the MVP. Quote Bonds are a future option.                                                                      |
+| Settlement model         | Use On-Ledger Demo Settlement with a Demo Settlement Asset.                                                                                  |
+| Compliance receipt       | Use Scoped Compliance Receipts for audit and regulatory disclosure.                                                                          |
 
 ## Main roles
 
@@ -85,11 +87,11 @@ It is a private RFQ flow for selling a Receivable at a discount, with privacy an
 9. Seller receives a Seller Quote View for Eligible Quotes, with Funder identity hidden by default unless disclosure is required.
 10. Seller selects the Best Compliant Quote as the Selected Quote for attempted settlement.
 11. Seller may define a Seller-Controlled Fallback Queue from other still-valid Eligible Quotes.
-12. The RFQ enters the Settlement Window: the Selected Quote attempts to fund and settle while Pending Quotes may remain available as Fallback Quotes.
-13. If settlement succeeds, the Selected Quote becomes the Winning Quote and the Receivable Sale completes.
+12. The Selected Quote enters the Settlement Window: the Selected Quote attempts to fund and settle while Pending Quotes may remain available as Fallback Quotes.
+13. If settlement succeeds, On-Ledger Demo Settlement assigns the Receivable to the Winning Funder and transfers Demo Settlement Asset to the Seller.
 14. If settlement fails before RFQ Finality, the Seller may promote a Fallback Quote from the Fallback Queue.
 15. After RFQ Finality, pending fallback rights end.
-16. Auditor or Regulator receives a scoped Compliance Receipt if required.
+16. Auditor or Regulator receives a Scoped Compliance Receipt if required.
 
 ## RFQ Disclosure Package
 
@@ -196,6 +198,41 @@ A Binding Quote:
 - does not imply funds are locked, reserved, escrowed, or guaranteed through settlement;
 - does not imply monetary penalties in the MVP.
 
+## Settlement model
+
+The MVP uses On-Ledger Demo Settlement.
+
+A tokenized or represented Receivable is assigned to the Winning Funder, and Demo Settlement Asset transfers to the Seller. This demonstrates payment-versus-receivable settlement as Canton/Daml ledger state transitions.
+
+The Demo Settlement Asset is non-production. The MVP must not claim real payment finality, bank settlement, stablecoin settlement, Canton Coin/Amulet integration, or production custody.
+
+## Scoped Compliance Receipt
+
+A Scoped Compliance Receipt may include:
+
+- RFQ/workflow reference;
+- opaque Receivable reference;
+- Seller eligibility status;
+- Winning Funder eligibility status;
+- Risk Attestation reference if used;
+- Proof-of-Funds Gate status for the Winning Quote;
+- quote-selection statement;
+- settlement status;
+- Debtor Notification mode;
+- fallback status if fallback occurred;
+- RFQ Finality timestamp.
+
+The receipt should not disclose by default:
+
+- full RFQ workflow;
+- full Quote Book;
+- all Private Quotes;
+- raw Proof-of-Funds data;
+- raw Sensitive Attributes;
+- raw invoice documents;
+- Unselected Funder identities;
+- full Seller/Debtor/Funder records.
+
 ## Privacy guarantees vs ambitions
 
 ### MVP privacy guarantees to aim for
@@ -253,29 +290,33 @@ Current boundary: Proof of Funds screens for funding capacity at a relevant poin
 
 Open options include a mocked proof, an on-ledger funds check, a Funding Capacity Attestation, a Funding Evidence Provider, or a settlement-bank check.
 
-### 3. Settlement model
+### Resolved product decisions
 
-What exactly transfers in the MVP: mock cash, Canton Coin/Amulet, off-ledger settlement confirmation, or another payment representation?
+Settlement model is resolved as On-Ledger Demo Settlement with a Demo Settlement Asset.
 
-Not resolved yet.
+Compliance Receipt product shape is resolved as Scoped Compliance Receipt.
 
-### 4. Compliance Receipt contents
+### 3. Winning-Only Disclosure feasibility
 
-Exactly what does the Compliance Receipt reveal to an Auditor or Regulator, especially when fallback occurred, identity disclosure was required, or a Selected Quote failed?
+How much stronger Winning-Only Disclosure is technically feasible without weakening RFQ functionality?
 
-Not resolved yet.
-
-### 5. Debtor identity disclosure
+### 4. Debtor identity disclosure
 
 When, if ever, must the raw Debtor identity be revealed?
 
 The default model prefers attestations before quote submission, with raw disclosure only if required by quote terms, compliance, settlement, or enforceability.
 
-### 6. Post-settlement Funder exit
+### 5. Post-settlement Funder exit
 
 If a Funder buys the Receivable and later wants to exit, is that a secondary sale, reassignment, or separate RFQ?
 
 Current boundary: this should be treated as a new transaction, not fallback. Exact model is not resolved.
+
+### 6. Production payment integration
+
+Will a later version add production payment integration?
+
+Current boundary: the MVP uses a Demo Settlement Asset only.
 
 ### 7. Quote penalties and reputation
 
@@ -293,7 +334,7 @@ Show multiple party views:
 - Coordinator sees workflow status but not quote contents.
 - Compliance Party sees eligibility data and can produce attestations.
 - Risk Assessor sees only risk-relevant data and produces Risk Attestations.
-- Auditor or Regulator sees a Compliance Receipt, not the full RFQ.
+- Auditor or Regulator sees a Scoped Compliance Receipt, not the full RFQ.
 - Outsider sees nothing useful.
 
 ## Current ADRs
@@ -307,3 +348,5 @@ Show multiple party views:
 - ADR 0007: Control Funder Identity Disclosure Timing.
 - ADR 0008: Use a Seller-Controlled Fallback Queue.
 - ADR 0009: Use Binding Quotes with Quote Expiry for the MVP.
+- ADR 0010: Use On-Ledger Demo Settlement for the MVP.
+- ADR 0011: Use Scoped Compliance Receipts for Audit and Regulatory Disclosure.

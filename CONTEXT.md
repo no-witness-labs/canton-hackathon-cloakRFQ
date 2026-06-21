@@ -92,7 +92,15 @@ A selective statement that a party satisfies a specific eligibility or complianc
 
 ### Compliance Receipt
 
-A selectively disclosed record that states the compliance-relevant outcome of a Receivable Sale workflow without revealing unnecessary commercial or personal information.
+A selectively disclosed record that states the compliance-relevant outcome of a Receivable Sale workflow without revealing unnecessary commercial or personal information. In the MVP, the accepted form is a Scoped Compliance Receipt.
+
+### Scoped Compliance Receipt
+
+A selectively disclosed Compliance Receipt that provides statuses, opaque references, attestations, timestamps, and final settlement outcome to an entitled Auditor or Regulator without exposing the full RFQ, full Quote Book, raw Proof-of-Funds evidence, raw Sensitive Attributes, raw invoice documents, or Unselected Funder identities by default.
+
+### Evidence Reference
+
+An opaque reference, identifier, hash, or pointer to supporting evidence that may be disclosed to an entitled party without embedding the full underlying evidence in the default workflow view.
 
 ### Selective Disclosure
 
@@ -273,6 +281,18 @@ The Selected Quote Funder's obligation to complete funding or settlement during 
 ### Settlement Window
 
 The phase after the Seller selects a quote and before RFQ Finality. During the Settlement Window, the Selected Quote attempts settlement while eligible Pending Quotes may remain available as Fallback Quotes.
+
+### On-Ledger Demo Settlement
+
+The MVP settlement model where the Receivable assignment and Demo Settlement Asset transfer are represented as Canton/Daml ledger state transitions. It demonstrates payment-versus-receivable settlement without claiming production payment finality.
+
+### Demo Settlement Asset
+
+A non-production payment representation used in the MVP to demonstrate the payment side of a Receivable Sale. It must not be described as real money, Canton Coin/Amulet, a stablecoin, bank money, or production custody unless such integration is explicitly added.
+
+### Settlement Result
+
+The outcome of an attempted Receivable Sale settlement, such as completed, failed, or fallback-used, scoped to the parties entitled to see that outcome.
 
 ### Commitment Failure
 
