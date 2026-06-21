@@ -32,7 +32,7 @@ Settlement product decision is resolved as On-Ledger Demo Settlement. Compliance
 
 ## Agent Git Workflow
 
-This repository may be worked on by a local agent machine using a repo-scoped SSH deploy key. The intended workflow is **task branch -> pull request -> human review -> manual merge**.
+This repository may be worked on by a local agent machine using a repo-scoped SSH deploy key. The intended steady-state workflow is **task branch -> automatic pull request -> human review -> manual merge**.
 
 The agent machine may:
 
@@ -50,7 +50,9 @@ The agent machine must not:
 - merge pull requests;
 - rewrite history unless explicitly instructed for a recovery task.
 
-The human reviewer is responsible for opening or reviewing the PR and merging it manually.
+The human reviewer is responsible for reviewing the PR and merging it manually.
+
+The PR should be created by GitHub-side automation after the agent pushes a task branch. The agent machine should not need a personal access token or a logged-in GitHub account just to create PRs. If automatic PR creation is not yet installed, the agent must still push only the task branch and report the branch name or compare URL as a temporary fallback.
 
 For each new task/job/issue, use this flow:
 
@@ -68,11 +70,9 @@ git diff --check
 git add .
 git commit -m "docs(scope): describe the change"
 git push -u origin HEAD
-
-branch="$(git branch --show-current)"
-echo "Create PR:"
-echo "https://github.com/no-witness-labs/canton-hackathon-cloakRFQ/compare/main...${branch}?expand=1"
 ```
+
+After the branch push, GitHub-side automation should open a PR targeting `main`. The agent must not merge the PR.
 
 Use Conventional Commit style for commit messages:
 
@@ -92,6 +92,29 @@ feat(daml): add receivable sale rfq lifecycle
 test(daml): cover quote expiry scenarios
 chore(repo): add codex branch workflow
 ```
+
+## Automatic PR Creation
+
+To avoid manual PR creation, install repository-side automation that opens a PR whenever a permitted task branch is pushed.
+
+Recommended approach:
+
+- keep the agent machine limited to the repo-scoped SSH deploy key;
+- let the agent push task branches only;
+- let GitHub Actions or a narrow GitHub App create the PR;
+- keep PR review and merge as human-only steps.
+
+A GitHub Actions workflow for this should live under `.github/workflows/` and run on pushes to task branch patterns such as `codex/**`, `docs/**`, `fix/**`, `feat/**`, `test/**`, `refactor/**`, `chore/**`, and `ci/**`.
+
+The workflow should use least privilege permissions, for example:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+```
+
+The workflow may use `gh pr create` with the workflow token to create the PR. The agent machine itself should not run `gh auth login` and should not hold personal GitHub credentials.
 
 ## Local Push Guardrail
 
