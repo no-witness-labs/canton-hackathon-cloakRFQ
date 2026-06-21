@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "ERROR: direct push to remote main is blocked."
+    echo "Push a task branch and open a PR instead."
+    exit 1
+  fi
+done
