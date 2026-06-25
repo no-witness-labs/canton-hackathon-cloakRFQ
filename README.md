@@ -11,6 +11,7 @@ This bundle contains the current planning documentation for CloakRFQ Receipts.
 - `docs/HACKATHON_ROADMAP.md` — compact roadmap for completing the hackathon MVP and submission package.
 - `docs/MANIFEST.md` — package completeness notes and file inventory.
 - `docs/CLOAKRFQ_MVP_BUILD_SPEC.md` — implementation handoff spec for the MVP.
+- `docs/technical-design/001-high-level-technical-design.md` — first implementation-oriented high-level technical design note.
 - `docs/adr/0001-receivable-sale-rfq-mvp.md` — model the MVP as a Receivable Sale, not a secured loan.
 - `docs/adr/0002-maximum-practical-privacy-for-rfqs.md` — target Maximum Practical Privacy for RFQs.
 - `docs/adr/0003-functionality-preserving-privacy.md` — preserve real-world RFQ functionality before optimizing privacy.
@@ -27,7 +28,7 @@ This bundle contains the current planning documentation for CloakRFQ Receipts.
 
 Complete for current discovery/grilling phase as of 2026-06-20.
 
-Ready to proceed to implementation design.
+Implementation-oriented technical design has started under `docs/technical-design/`.
 
 Not complete as production implementation. Exact Daml templates/choices, quote-selection protocol details, and exact Proof-of-Funds mechanism remain open.
 
