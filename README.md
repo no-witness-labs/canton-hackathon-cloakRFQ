@@ -1,8 +1,30 @@
-# CloakRFQ Receipts Markdown Documentation
+# CloakRFQ
 
-This bundle contains the current planning documentation for CloakRFQ Receipts.
+Privacy-preserving RFQ settlement on the Canton Network. This repository
+holds both the planning documentation and the first implementation.
 
-## Files
+## Layout
+
+```
+docs/   Planning documentation — product brief, PRD, ADRs, technical design, roadmap.
+web/    Next.js 14 (App Router + TypeScript) UI prototype of the MVP. See web/README.md.
+```
+
+## Web app
+
+The `web/` directory is the Next.js port of the original HTML prototype —
+the four RFQ surfaces (overview, trade, maker, portfolio) built as React
+client components. All data is currently mocked client-side; the component
+boundaries are where Canton wallet / ledger integrations slot in. See
+`web/README.md` for details.
+
+```bash
+cd web
+npm install
+npm run dev   # http://localhost:3000
+```
+
+## Documentation files
 
 - `CONTEXT.md` — glossary of canonical domain terms. This is not a spec or scratchpad.
 - `docs/CLOAKRFQ_PROJECT_BRIEF.md` — consolidated product brief, resolved decisions, explicit Current workflow, privacy posture, non-goals, and open questions.
