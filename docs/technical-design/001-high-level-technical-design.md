@@ -28,6 +28,19 @@ RFQ discovery and private RFQ disclosure are separate surfaces.
 
 The discovery listing must not expose the full RFQ Disclosure Package.
 
+## Regulatory Mode
+
+Regulation is always relevant to eligibility, disclosure, package access, settlement evidence, and receipt generation. Regulator visibility is scoped and mode-dependent.
+
+The preferred MVP mode is **rule-publisher mode**:
+
+- applicable regulation is represented as Phase 1 template/state;
+- Compliance Party applies the selected rules to the Seller, RFQ, Disclosure Boundary, and package access;
+- Regulator is not automatically an active party on every RFQ;
+- Regulator usually receives a Scoped Compliance Receipt after RFQ Finality.
+
+An optional **pre-approval mode** may add Regulator involvement before quoting or settlement only if the selected regulation requires it.
+
 ## Phase 1 — RFQ Origination & Eligibility
 
 ### Boundary
@@ -39,16 +52,19 @@ Starts when the Seller prepares a Receivable for RFQ. Ends when the Blind RFQ is
 - Seller
 - Compliance Party
 - optional Risk Assessor
+- optional Regulator, only when the selected regulatory mode requires direct involvement
 - Coordinator
 
 ### Actions
 
 - Create or reference `Receivable`.
+- Select or reference applicable `Regulation` / regulatory rule state.
 - Define RFQ parameters and `DisclosureBoundary`.
 - Issue required `ComplianceAttestation`s.
-- Optionally issue `RiskAttestation`s.
+- Apply regulatory and compliance rules to Seller eligibility, RFQ eligibility, disclosure constraints, and package access.
+- Optionally issue Debtor or Receivable `RiskAttestation`s before package issuance.
 - Prepare Core Pre-Quote Facts and optional Supplemental RFQ Information.
-- Prepare Funder-specific `RFQDisclosurePackage` content.
+- Prepare Funder-specific `RFQDisclosurePackage` content that reflects compliance, risk, and regulatory constraints.
 - Create `RFQDiscoveryListing` with partial public discovery information.
 - Configure routing, deadlines, invitations, and access request handling.
 - Open `RFQRequest` / Blind RFQ.
@@ -56,6 +72,7 @@ Starts when the Seller prepares a Receivable for RFQ. Ends when the Blind RFQ is
 ### Outputs
 
 - `Receivable`
+- `Regulation` / selected regulatory rule state
 - `RFQRequest`
 - `RFQDiscoveryListing`
 - prepared `RFQDisclosurePackage` content
@@ -90,6 +107,8 @@ Starts when Funders can discover the RFQ or receive invitations. Ends when a quo
 - Seller selection mechanism produces enough information for the Seller to select the Best Compliant Quote.
 - Seller selects `SelectedQuote`.
 - Seller may define `SellerControlledFallbackQueue` from still-valid Eligible Quotes.
+
+Regulatory rules may constrain Phase 2 access, package issuance, quote eligibility, and disclosure. In the preferred MVP mode, the Regulator does not view live quoting by default.
 
 ### Open Technical Question
 
@@ -136,6 +155,8 @@ Starts when `SelectedQuote` enters the Settlement Window. Ends when the RFQ reac
 - Debtor Notification occurs only if required by quote terms, compliance, settlement, enforceability, or RFQ terms.
 - Issue `ScopedComplianceReceipt` when required.
 
+Regulator receipt visibility is usually post-finality. If a selected regulation requires pre-approval, that requirement must be modeled explicitly rather than making Regulator visibility automatic for all RFQs.
+
 ### Outputs
 
 - `SettlementResult`
@@ -150,6 +171,10 @@ Starts when `SelectedQuote` enters the Settlement Window. Ends when the RFQ reac
 | Concern | Rule |
 |---|---|
 | Discovery | Some partial RFQ information must be publicly or semi-publicly discoverable; the full RFQ Disclosure Package must not be public. |
+| Regulation | Regulation is Phase 1 state or template input; Regulator party involvement is mode-dependent. |
+| Compliance | Compliance applies selected regulatory rules to Seller eligibility, RFQ eligibility, disclosure constraints, and package access. |
+| Risk | Risk Assessor acts before package issuance and produces Debtor or Receivable Risk Attestations; Funders price risk themselves. |
+| Regulator risk visibility | Regulator usually needs risk outcomes, references, threshold status, or risk tier when required, not raw underwriting data or raw debtor credit files by default. |
 | Proof of Funds | Gates quote eligibility only; does not imply locked, reserved, escrowed, single-use, or guaranteed funds. |
 | Quote privacy | Competing Funders do not see competing Private Quotes. |
 | Coordinator visibility | Coordinator routes workflow state and invitations without Private Quote contents by default. |
@@ -157,7 +182,7 @@ Starts when `SelectedQuote` enters the Settlement Window. Ends when the RFQ reac
 | Seller selection visibility | Exact mechanism remains open; document the implemented protocol once chosen. |
 | Fallback | Fallback applies only before `RFQFinality` and only for still-valid eligible quotes. |
 | Settlement | Demo settlement is a ledger workflow state transition, not production payment or production legal assignment. |
-| Compliance receipt | `ScopedComplianceReceipt` discloses required evidence only, not the full RFQ workflow by default. |
+| Compliance receipt | `ScopedComplianceReceipt` discloses required evidence only, usually after finality, not the full RFQ workflow by default. |
 
 ## Phase Diagram
 
