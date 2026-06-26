@@ -12,11 +12,15 @@ web/    Next.js 14 (App Router + TypeScript) UI prototype of the MVP. See web/RE
 
 ## Web app
 
-The `web/` directory is the Next.js port of the original HTML prototype —
-the four RFQ surfaces (overview, trade, maker, portfolio) built as React
-client components. All data is currently mocked client-side; the component
-boundaries are where Canton wallet / ledger integrations slot in. See
-`web/README.md` for details.
+The `web/` directory is a Next.js prototype of the Receivable Sale RFQ workflow,
+built to match the design prototype `CloakRFQ.dc.html`. A single workspace
+with a **role switcher** across all seven Canton parties (Seller, Funder A/B/C,
+Compliance, Risk Assessor, Coordinator, Auditor/Regulator, Outsider) shows the
+same RFQ from each party's entitled view — demonstrating selective disclosure,
+the happy path, the failure/fallback branch, and a wallet connector that joins
+as the party for the selected role. All data is **mocked client-side** (no
+Daml/ledger yet); the per-role visibility rules in `web/lib/store.tsx` are where
+Canton on-ledger enforcement slots in. See `web/README.md` for details.
 
 ```bash
 cd web
