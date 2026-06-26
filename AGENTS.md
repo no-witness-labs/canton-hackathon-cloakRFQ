@@ -34,6 +34,12 @@ Avoid WIP commits unless the user explicitly asks for checkpoint commits.
 - At minimum, run `git diff --check` before committing.
 - If a relevant tool is unavailable, state that clearly in the PR and final summary.
 
+## Skill Use
+
+- Use `karpathy-guidelines` for code-writing, code-modifying, refactoring, and test-related tasks. Apply it to keep changes simple, scoped, and verifiable.
+- Use `grill-with-docs` for design clarification, business or technical modeling, ADR work, glossary refinement, and major planning decisions.
+- Do not invoke specialized skills for trivial edits unless the user explicitly asks.
+
 ## More Detail
 
 See `docs/AGENT_WORKFLOW.md` for branch naming, commit examples, PR expectations, automatic PR creation, and local push guardrail details.
