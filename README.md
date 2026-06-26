@@ -6,9 +6,21 @@ holds both the planning documentation and the first implementation.
 ## Layout
 
 ```
-docs/   Planning documentation — product brief, PRD, ADRs, technical design, roadmap.
-web/    Next.js 14 (App Router + TypeScript) UI prototype of the MVP. See web/README.md.
+docs/     Planning documentation — product brief, PRD, ADRs, technical design, roadmap.
+ledger/   Daml on-ledger package for CloakRFQ contracts and ledger tests. See ledger/README.md.
+backend/  Off-ledger backend package for ledger-client workflows. See backend/README.md.
+web/      Next.js 14 (App Router + TypeScript) UI prototype of the MVP. See web/README.md.
 ```
+
+## Implementation packages
+
+The implementation uses a monorepo layout with separate folders for each runtime boundary.
+
+- `ledger/` is the Daml package for on-ledger contract models, choices, scripts, and tests.
+- `backend/` is reserved for off-ledger code that submits commands and reads ledger state.
+- `web/` is the frontend demo and currently uses mocked client-side data until the ledger/backend layers are connected.
+
+The current `ledger/` and `backend/` folders are setup-only scaffolds. Phase 1 business templates and backend command flows are intentionally not implemented yet.
 
 ## Web app
 

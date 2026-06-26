@@ -16,6 +16,7 @@ It contains:
 - the MVP implementation handoff spec (`docs/CLOAKRFQ_MVP_BUILD_SPEC.md`);
 - the first high-level technical design note (`docs/technical-design/001-high-level-technical-design.md`);
 - the accepted ADRs created so far (`docs/adr/0001` through `docs/adr/0011`);
+- the initial implementation package layout (`ledger/`, `backend/`, and `web/`);
 - a README describing the bundle.
 
 This package is not complete as production implementation. The following implementation and design details are intentionally still open:
@@ -42,6 +43,13 @@ This package is not complete as production implementation. The following impleme
 | `docs/MANIFEST.md`                                                  | Completeness and inventory notes.                     |
 | `docs/CLOAKRFQ_MVP_BUILD_SPEC.md`                                   | MVP implementation handoff spec.                      |
 | `docs/technical-design/001-high-level-technical-design.md`           | High-level implementation-oriented technical design.  |
+| `ledger/README.md`                                                   | Daml package setup notes for on-ledger code.          |
+| `ledger/daml.yaml`                                                   | Daml package metadata for the ledger scaffold.        |
+| `ledger/daml/CloakRFQ/Setup.daml`                                    | No-op Daml script used as a setup smoke-test target.  |
+| `backend/README.md`                                                  | Backend package setup notes for off-ledger code.      |
+| `backend/package.json`                                               | Backend package metadata placeholder.                 |
+| `web/README.md`                                                      | Frontend demo setup and claim boundaries.             |
+| `web/package.json`                                                   | Frontend package metadata.                            |
 | `docs/adr/0001-receivable-sale-rfq-mvp.md`                          | Receivable Sale instead of secured loan.              |
 | `docs/adr/0002-maximum-practical-privacy-for-rfqs.md`               | Maximum Practical Privacy.                            |
 | `docs/adr/0003-functionality-preserving-privacy.md`                 | Functionality-Preserving Privacy.                     |

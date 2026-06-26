@@ -1,0 +1,7 @@
+module CloakRFQ.Setup where
+
+import Daml.Script
+
+setup : Script ()
+setup = script do
+  pure ()

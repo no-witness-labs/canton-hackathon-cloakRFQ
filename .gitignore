@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+# Daml build output
+.daml/
+ledger/.daml/
+
 # Next.js build output
 .next/
 out/
