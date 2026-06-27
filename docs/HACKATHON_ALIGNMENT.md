@@ -1,5 +1,41 @@
 # CloakRFQ Receipts — Canton Hackathon Alignment
 
+This document records the official hackathon brief (reproduced verbatim below)
+and how CloakRFQ Receipts is positioned against it. The project's own to-dos that
+come out of these requirements (deck, video pitch, live deploy, etc.) are tracked
+as GitHub issues, not here. For the delivery plan see `HACKATHON_ROADMAP.md`.
+
+## Official brief
+
+> Canton is a privacy-enabled Layer 1 blockchain where transactions stay private between the parties involved and multi-party workflows settle atomically.
+>
+> Build something that makes a real user or institution want to show up and start using Canton. Build for a world where users control who sees what using Canton's privacy model.
+
+### Submission Requirements
+
+- Public repository
+- Presentation deck
+- 3 minute video pitch w/ demo
+- Link to live product
+
+### Problem Statements/Themes of the 3 challenges
+
+- Private DeFi (confidential lending, OTC trading, invoice financing)
+- B2B marketplace with blind auctions
+- Private M&A data rooms
+- Invoice or Supply Chain financing
+- Inter-company cross currency netting
+- Agentic commerce with privacy
+- Payments and neobanking services
+- RWA & Tokenized deposits
+
+### Judging Criteria
+
+- Technical execution - Does it work? Is the code clean, well-structured, and properly documented?
+- Originality and creativity - Is this a fresh approach or a new use case? Does it do something we haven't seen before?
+- User experience and design - Could a real user actually use this? Is the interface clear and functional?
+- Real-world applicability - Does this solve a genuine problem? Would someone actually want to use it?
+
 ## Decision
 
 CloakRFQ Receipts will submit under **Track 1: Private DeFi & Capital Markets**.
