@@ -1,17 +1,97 @@
--- | CloakRFQ Receipts — on-ledger package (scaffold).
+-- | CloakRFQ Receipts — Phase 1: RFQ Origination & Eligibility (#9).
 --
--- This module is intentionally empty: issue #13 sets up the buildable project
--- structure only, no business logic. The Receivable Sale RFQ templates land in
--- the phase issues, matching docs/technical-design/001:
---
---   * Phase 1 (#9)  — Receivable, ComplianceAttestation, RiskAttestation,
---                     RFQDisclosurePackage, RFQDiscoveryListing, RFQRequest
---   * Phase 2 (#10) — PrivateQuote, EligibleQuote, SellerQuoteView,
---                     SelectedQuote, SellerControlledFallbackQueue
---   * Phase 3 (#11) — DemoSettlementAsset, SettlementResult,
---                     ScopedComplianceReceipt
---
--- Party-scoped visibility (signatory/observer) is how Canton enforces the
--- selective-disclosure guarantees the UI demonstrates — see the role table in
--- docs/HACKATHON_ALIGNMENT.md.
+-- Receivable, scoped attestations (Compliance / Risk), and the Blind RFQ.
+-- Party-scoped signatories/observers are how Canton enforces selective
+-- disclosure: the raw Debtor identity stays with the Seller, and Funders receive
+-- an attestation-first RFQ that never carries it. Private Quotes (Phase 2, #10)
+-- and On-Ledger Demo Settlement (Phase 3, #11) build on these.
 module CloakRFQ where
+
+data RecourseModel = Recourse | NonRecourse | Negotiable
+  deriving (Eq, Show)
+
+-- | A receivable owned by the Seller. Private to the Seller (sole signatory,
+-- no observers) until it is offered into an RFQ.
+template Receivable
+  with
+    seller : Party
+    ref : Text                   -- opaque reference, e.g. "RCV-9F2A"
+    invoiceId : Text
+    faceValue : Decimal
+    currency : Text
+    daysToDue : Int
+    debtorName : Text            -- raw Debtor identity — Seller-only by default
+    recoursePreference : RecourseModel
+    settlementPreference : Text  -- e.g. "T+2"
+    validityVerified : Bool
+  where
+    signatory seller
+    ensure faceValue > 0.0 && daysToDue >= 0
+
+    -- | Seller opens a Blind RFQ from this Receivable. The resulting RFQRequest
+    -- carries Core Pre-Quote Facts and attestation statuses — never the raw
+    -- Debtor identity (debtorName stays on this contract).
+    nonconsuming choice OpenRFQ : ContractId RFQRequest
+      with
+        coordinator : Party
+        funders : [Party]
+        debtorRisk : Text          -- e.g. "BBB+ · Low" (Risk Attestation result)
+        receivableValidity : Text  -- e.g. "Verified" (Compliance/Risk status)
+      controller seller
+      do
+        create RFQRequest with
+          seller
+          coordinator
+          funders
+          receivableRef = ref
+          faceValue
+          currency
+          daysToDue
+          debtorRisk
+          receivableValidity
+          recoursePreference
+          settlementPreference
+
+-- | Eligibility attestation issued by the Compliance Party. The Seller observes
+-- it; Funders never see the raw data, only the status carried into the RFQ.
+template ComplianceAttestation
+  with
+    complianceParty : Party
+    seller : Party
+    subject : Text
+    result : Text
+  where
+    signatory complianceParty
+    observer seller
+
+-- | Risk attestation issued by the (separate, scoped) Risk Assessor.
+template RiskAttestation
+  with
+    riskAssessor : Party
+    seller : Party
+    subject : Text
+    result : Text
+  where
+    signatory riskAssessor
+    observer seller
+
+-- | The Blind RFQ. Invited Funders and the Coordinator observe it, but it is
+-- attestation-first: Core Pre-Quote Facts and risk/eligibility statuses only —
+-- no raw Debtor identity or invoice document. Funders quote privately against it
+-- in Phase 2; competing Funders will not see each other's Private Quotes.
+template RFQRequest
+  with
+    seller : Party
+    coordinator : Party
+    funders : [Party]
+    receivableRef : Text
+    faceValue : Decimal
+    currency : Text
+    daysToDue : Int
+    debtorRisk : Text
+    receivableValidity : Text
+    recoursePreference : RecourseModel
+    settlementPreference : Text
+  where
+    signatory seller
+    observer (coordinator :: funders)
