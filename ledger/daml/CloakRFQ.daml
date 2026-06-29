@@ -10,6 +10,10 @@ module CloakRFQ where
 data RecourseModel = Recourse | NonRecourse | Negotiable
   deriving (Eq, Show)
 
+-- | Required-disclosure level — itself part of the quote's price (Phase 2).
+data DisclosureLevel = Minimal | Medium | High
+  deriving (Eq, Show)
+
 -- | A receivable owned by the Seller. Private to the Seller (sole signatory,
 -- no observers) until it is offered into an RFQ.
 template Receivable
@@ -95,3 +99,67 @@ template RFQRequest
   where
     signatory seller
     observer (coordinator :: funders)
+
+-- | Phase 2 (#10): a Funder's confidential offer against an RFQ.
+--
+-- This is the privacy heart of the product: `signatory funder`, `observer seller`
+-- only. Competing Funders and the Coordinator are NOT stakeholders, so Canton
+-- makes the quote invisible to them — they cannot read its price or terms.
+--
+-- Placeholders to harden later: Proof-of-Funds is a boolean eligibility flag
+-- (not an on-ledger funds check / lock); the RFQ link is by text ref (not a
+-- typed contract key); quote expiry is display text (not ledger time).
+template PrivateQuote
+  with
+    funder : Party
+    seller : Party
+    rfqRef : Text                  -- which RFQ, by Receivable ref
+    funderLabel : Text             -- pseudonym shown to the Seller, e.g. "VC-7"
+    netPurchasePrice : Decimal
+    advanceRatePct : Int
+    recourse : RecourseModel
+    settlement : Text
+    requiredDisclosure : DisclosureLevel
+    debtorNotification : Text
+    quoteExpiry : Text
+    proofOfFundsPassed : Bool      -- Proof-of-Funds Gate — eligibility only, not a lock
+    complianceEligible : Bool
+  where
+    signatory funder
+    observer seller
+    ensure netPurchasePrice > 0.0
+
+    -- | Seller selects this as the Best Compliant Quote (the Settlement Window
+    -- opens in Phase 3). Consuming, so the other Funders' quotes stay active as
+    -- the Seller-controlled fallback pool. The PoF/compliance gate is enforced
+    -- on-ledger here.
+    choice Accept : ContractId SelectedQuote
+      controller seller
+      do
+        assertMsg "quote must pass the Proof-of-Funds Gate and be compliance-eligible"
+          (proofOfFundsPassed && complianceEligible)
+        create SelectedQuote with
+          seller
+          funder
+          rfqRef
+          funderLabel
+          netPurchasePrice
+          settlement
+          recourse
+          debtorNotification
+
+-- | The Best Compliant Quote selected by the Seller. Visible only to the Seller
+-- and the winning Funder (its two signatories) — not to the other Funders.
+-- Phase 3 (#11) settles this and issues the Scoped Compliance Receipt.
+template SelectedQuote
+  with
+    seller : Party
+    funder : Party
+    rfqRef : Text
+    funderLabel : Text
+    netPurchasePrice : Decimal
+    settlement : Text
+    recourse : RecourseModel
+    debtorNotification : Text
+  where
+    signatory seller, funder

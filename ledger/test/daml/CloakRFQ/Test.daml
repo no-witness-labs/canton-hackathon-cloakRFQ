@@ -59,3 +59,48 @@ phase1 = do
   None <- queryContractId funderA rcv
 
   pure ()
+
+-- | Phase 2 (#10): Funders submit Private Quotes; the Seller selects the Best
+-- Compliant Quote. Proves the headline privacy: competing Funders cannot see
+-- each other's quotes, and the SelectedQuote is scoped to Seller + winner only.
+phase2 : Script ()
+phase2 = do
+  seller  <- allocateParty "Seller"
+  funderA <- allocateParty "FunderA"
+  funderB <- allocateParty "FunderB"
+  let rfqRef = "RCV-9F2A"
+
+  -- Funder A quotes higher but demands High disclosure; Funder B is lower with
+  -- Minimal disclosure ("disclosure is part of the price").
+  qA <- submit funderA do
+    createCmd PrivateQuote with
+      funder = funderA, seller, rfqRef, funderLabel = "VC-7"
+      netPurchasePrice = 468000.0, advanceRatePct = 90
+      recourse = Recourse, settlement = "T+1"
+      requiredDisclosure = High, debtorNotification = "Required"
+      quoteExpiry = "18m", proofOfFundsPassed = True, complianceEligible = True
+  qB <- submit funderB do
+    createCmd PrivateQuote with
+      funder = funderB, seller, rfqRef, funderLabel = "LC-3"
+      netPurchasePrice = 465200.0, advanceRatePct = 85
+      recourse = NonRecourse, settlement = "T+2"
+      requiredDisclosure = Minimal, debtorNotification = "Not required"
+      quoteExpiry = "22m", proofOfFundsPassed = True, complianceEligible = True
+
+  -- Privacy: A's quote is visible to A and the Seller, but NOT to Funder B.
+  Some _ <- queryContractId funderA qA
+  Some _ <- queryContractId seller qA
+  None   <- queryContractId funderB qA
+
+  -- Seller selects the Best Compliant Quote (LC-3: lower price, minimal disclosure).
+  sel <- submit seller do exerciseCmd qB Accept
+
+  -- The SelectedQuote is scoped to Seller + winner (Funder B); Funder A can't see it.
+  Some _ <- queryContractId seller sel
+  Some _ <- queryContractId funderB sel
+  None   <- queryContractId funderA sel
+
+  -- Funder A's unselected quote stays active — the Seller-controlled fallback pool.
+  Some _ <- queryContractId seller qA
+
+  pure ()
