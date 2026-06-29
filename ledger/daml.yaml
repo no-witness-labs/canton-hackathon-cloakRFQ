@@ -1,5 +1,5 @@
 sdk-version: 3.5.1
-name: cloakrfq
+name: cloakrfq-ledger
 source: daml
 version: 0.1.0
 dependencies:

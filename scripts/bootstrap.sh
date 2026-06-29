@@ -13,7 +13,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASE="${1:-http://127.0.0.1:6864}"
-DAR="$ROOT/ledger/.daml/dist/cloakrfq-0.1.0.dar"
+DAR="$ROOT/ledger/.daml/dist/cloakrfq-ledger-0.1.0.dar"
 CONFIG="$ROOT/web/public/ledger-config.json"
 USER_ID="cloakrfq"
 
@@ -66,7 +66,7 @@ mkdir -p "$(dirname "$CONFIG")"
 cat > "$CONFIG" <<JSON
 {
   "jsonApiUrl": "$BASE",
-  "packageRef": "#cloakrfq",
+  "packageRef": "#cloakrfq-ledger",
   "userId": "$USER_ID",
   "parties": {
     "seller": "${PARTY[Seller]}",

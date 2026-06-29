@@ -43,7 +43,7 @@ Stop it with `./scripts/stop-sandbox.sh`.
 2. Launches `dpm sandbox` (single-process Canton) in the background.
 3. Waits for `HTTP JSON API Server started`, then for `/readyz` = 200.
 4. Runs `scripts/bootstrap.sh`, which is idempotent:
-   - uploads `ledger/.daml/dist/cloakrfq-0.1.0.dar`,
+   - uploads `ledger/.daml/dist/cloakrfq-ledger-0.1.0.dar`,
    - allocates one party per role — Seller, Funder A/B/C, Compliance, Risk,
      Coordinator, Auditor, Outsider (reuses existing),
    - writes `web/public/ledger-config.json` (gitignored; the UI fetches it at runtime).
@@ -58,7 +58,7 @@ To re-bootstrap against an already-running sandbox: `./scripts/bootstrap.sh`.
 
 ```bash
 export PATH="$HOME/.dpm/bin:$PATH"
-cd ledger && dpm build            # builds cloakrfq + cloakrfq-test (multi-package)
+cd ledger && dpm build            # builds cloakrfq-ledger + cloakrfq-test (multi-package)
 cd ledger/test && dpm test        # Daml Script tests
 ```
 
