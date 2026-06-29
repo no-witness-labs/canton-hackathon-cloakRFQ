@@ -163,3 +163,81 @@ template SelectedQuote
     debtorNotification : Text
   where
     signatory seller, funder
+
+    -- | Phase 3 (#11): On-Ledger Demo Settlement. Atomic — the winning Funder's
+    -- Demo Settlement Asset transfers to the Seller and a Scoped Compliance
+    -- Receipt is issued, or nothing happens. `viaFallback` records whether this
+    -- quote was promoted after a Commitment Failure.
+    choice Settle : (ContractId SettlementResult, ContractId ScopedComplianceReceipt)
+      with
+        funderAssetCid : ContractId DemoSettlementAsset
+        auditor : Party
+        viaFallback : Bool
+      controller funder
+      do
+        asset <- fetch funderAssetCid
+        assertMsg "winning Funder must own a Demo Settlement Asset covering the price"
+          (asset.owner == funder && asset.amount >= netPurchasePrice)
+        archive funderAssetCid                            -- Funder's payment leaves
+        create DemoSettlementAsset with owner = seller, amount = netPurchasePrice  -- Seller is paid
+        res <- create SettlementResult with
+          seller
+          funder
+          rfqRef
+          netPurchasePrice
+          viaFallback
+        rcpt <- create ScopedComplianceReceipt with
+          seller
+          auditor
+          rfqRef
+          winningFunderLabel = funderLabel
+          settlementStatus = if viaFallback then "Completed via fallback" else "Completed"
+          debtorNotification
+          fallbackUsed = viaFallback
+        pure (res, rcpt)
+
+    -- | Commitment Failure before RFQ Finality: the Selected Quote's Funder
+    -- fails to settle. Archiving frees the Seller to promote a still-active
+    -- Private Quote (the fallback pool) by Accept-ing it.
+    choice Fail : ()
+      controller seller
+      do pure ()
+
+-- | A NON-PRODUCTION demo payment asset (bearer: owner is the sole signatory).
+-- Used only to demonstrate the payment leg of On-Ledger Demo Settlement — it is
+-- not real money, a stablecoin, Canton Coin/Amulet, or bank/custody money.
+template DemoSettlementAsset
+  with
+    owner : Party
+    amount : Decimal
+  where
+    signatory owner
+    ensure amount > 0.0
+
+-- | Outcome of an attempted Receivable Sale settlement. Scoped to the Seller and
+-- the winning Funder only.
+template SettlementResult
+  with
+    seller : Party
+    funder : Party
+    rfqRef : Text
+    netPurchasePrice : Decimal
+    viaFallback : Bool
+  where
+    signatory seller, funder
+
+-- | The ONLY thing an Auditor / Regulator receives: statuses, references, and the
+-- final outcome — never the full RFQ, the Quote Book, raw evidence, or the
+-- unselected Funders. `signatory seller`, `observer auditor`.
+template ScopedComplianceReceipt
+  with
+    seller : Party
+    auditor : Party
+    rfqRef : Text
+    winningFunderLabel : Text       -- pseudonym, not the raw identity
+    settlementStatus : Text
+    debtorNotification : Text
+    fallbackUsed : Bool
+  where
+    signatory seller
+    observer auditor

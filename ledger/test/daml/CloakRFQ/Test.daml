@@ -104,3 +104,65 @@ phase2 = do
   Some _ <- queryContractId seller qA
 
   pure ()
+
+-- A reusable Private Quote submission for the settlement tests.
+submitQuote : Party -> Party -> Text -> Decimal -> DisclosureLevel -> Text -> Script (ContractId PrivateQuote)
+submitQuote funder seller rfqRef price disc notify =
+  submit funder do
+    createCmd PrivateQuote with
+      funder, seller, rfqRef, funderLabel = "Funder"
+      netPurchasePrice = price, advanceRatePct = 85
+      recourse = NonRecourse, settlement = "T+2"
+      requiredDisclosure = disc, debtorNotification = notify
+      quoteExpiry = "22m", proofOfFundsPassed = True, complianceEligible = True
+
+-- | Phase 3 (#11) happy path: On-Ledger Demo Settlement. Proves the Auditor
+-- receives ONLY the Scoped Compliance Receipt — not the settlement result.
+phase3 : Script ()
+phase3 = do
+  seller  <- allocateParty "Seller"
+  funderB <- allocateParty "FunderB"
+  auditor <- allocateParty "Auditor"
+  let rfqRef = "RCV-9F2A"
+
+  qB  <- submitQuote funderB seller rfqRef 465200.0 Minimal "Not required"
+  sel <- submit seller do exerciseCmd qB Accept
+  assetB <- submit funderB do createCmd DemoSettlementAsset with owner = funderB, amount = 465200.0
+  (res, rcpt) <- submit funderB do exerciseCmd sel Settle with funderAssetCid = assetB, auditor, viaFallback = False
+
+  -- Auditor sees the scoped receipt...
+  Some r <- queryContractId auditor rcpt
+  r.settlementStatus === "Completed"
+  -- ...but NOT the settlement result (Seller + Funder only).
+  None <- queryContractId auditor res
+  -- Seller was paid the Demo Settlement Asset.
+  [(_, a)] <- query @DemoSettlementAsset seller
+  a.amount === 465200.0
+  pure ()
+
+-- | Phase 3 failure/fallback branch: the selected Funder fails, the Seller
+-- promotes a fallback quote, and it settles via fallback.
+phase3Fallback : Script ()
+phase3Fallback = do
+  seller  <- allocateParty "Seller"
+  funderA <- allocateParty "FunderA"
+  funderB <- allocateParty "FunderB"
+  auditor <- allocateParty "Auditor"
+  let rfqRef = "RCV-9F2A"
+
+  qA   <- submitQuote funderA seller rfqRef 468000.0 High "Required"
+  qB   <- submitQuote funderB seller rfqRef 465200.0 Minimal "Not required"
+  selB <- submit seller do exerciseCmd qB Accept
+
+  -- Commitment Failure on the selected quote.
+  submit seller do exerciseCmd selB Fail
+
+  -- Seller promotes Funder A from the fallback pool and settles via fallback.
+  selA <- submit seller do exerciseCmd qA Accept
+  assetA <- submit funderA do createCmd DemoSettlementAsset with owner = funderA, amount = 468000.0
+  (_, rcpt) <- submit funderA do exerciseCmd selA Settle with funderAssetCid = assetA, auditor, viaFallback = True
+
+  Some r <- queryContractId auditor rcpt
+  r.settlementStatus === "Completed via fallback"
+  r.fallbackUsed === True
+  pure ()
