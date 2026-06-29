@@ -1,14 +1,61 @@
--- | CloakRFQ Receipts — Daml Script tests (scaffold).
+-- | CloakRFQ Receipts — Daml Script tests.
 --
--- Proves the package + test harness build and that Daml Script runs. The real
--- lifecycle and party-visibility assertions (competing Funders cannot see each
--- other's Private Quote; Coordinator cannot read quote contents; Auditor sees
--- only the Scoped Compliance Receipt) land with issue #22, alongside the phase
--- templates.
+-- Phase 1 (#9) happy path + the first party-visibility proof (#22): a Funder can
+-- see the Blind RFQ it was invited to, but NOT the Seller's Receivable (which
+-- carries the raw Debtor identity). That visibility split is enforced by Canton
+-- via signatory/observer, not by the UI.
 module CloakRFQ.Test where
 
 import Daml.Script
-import CloakRFQ ()
+import DA.Assert ((===))
+import CloakRFQ
 
-scaffold : Script ()
-scaffold = pure ()
+phase1 : Script ()
+phase1 = do
+  seller      <- allocateParty "Seller"
+  compliance  <- allocateParty "Compliance"
+  risk        <- allocateParty "Risk"
+  coordinator <- allocateParty "Coordinator"
+  funderA     <- allocateParty "FunderA"
+  funderB     <- allocateParty "FunderB"
+
+  -- Compliance + Risk issue scoped attestations (Seller observes them).
+  _ <- submit compliance do
+    createCmd ComplianceAttestation with
+      complianceParty = compliance, seller
+      subject = "Seller eligibility", result = "Eligible"
+  _ <- submit risk do
+    createCmd RiskAttestation with
+      riskAssessor = risk, seller
+      subject = "Debtor Risk", result = "BBB+ · Low"
+
+  -- Seller creates a Receivable (private to the Seller — raw Debtor identity).
+  rcv <- submit seller do
+    createCmd Receivable with
+      seller
+      ref = "RCV-9F2A"
+      invoiceId = "INV-4471"
+      faceValue = 480000.0
+      currency = "USD"
+      daysToDue = 45
+      debtorName = "Meridian Retail Group"
+      recoursePreference = Negotiable
+      settlementPreference = "T+2"
+      validityVerified = True
+
+  -- Seller opens the Blind RFQ to two Funders (no raw Debtor identity in it).
+  rfq <- submit seller do
+    exerciseCmd rcv OpenRFQ with
+      coordinator
+      funders = [funderA, funderB]
+      debtorRisk = "BBB+ · Low"
+      receivableValidity = "Verified"
+
+  -- Funder A can see the RFQ it was invited to...
+  Some rfqView <- queryContractId funderA rfq
+  rfqView.receivableRef === "RCV-9F2A"
+
+  -- ...but NOT the Seller's Receivable (it is not a stakeholder there).
+  None <- queryContractId funderA rcv
+
+  pure ()
