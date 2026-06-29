@@ -13,3 +13,12 @@ npm-debug.log*
 
 # Local env
 .env*.local
+
+# Daml / Canton (ledger)
+ledger/.daml/
+ledger/log/
+.daml/
+log/
+
+# Generated at sandbox bootstrap
+web/public/ledger-config.json

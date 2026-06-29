@@ -1,0 +1,4 @@
+# cloakrfq contains the deployable templates; cloakrfq-test contains Daml Script tests.
+packages:
+  - .
+  - ./test

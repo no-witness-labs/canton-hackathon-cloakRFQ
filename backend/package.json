@@ -1,0 +1,10 @@
+{
+  "name": "cloakrfq-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Off-ledger backend for CloakRFQ ledger-client workflows.",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"No backend implementation yet\""
+  }
+}

@@ -1,0 +1,17 @@
+-- | CloakRFQ Receipts — on-ledger package (scaffold).
+--
+-- This module is intentionally empty: issue #13 sets up the buildable project
+-- structure only, no business logic. The Receivable Sale RFQ templates land in
+-- the phase issues, matching docs/technical-design/001:
+--
+--   * Phase 1 (#9)  — Receivable, ComplianceAttestation, RiskAttestation,
+--                     RFQDisclosurePackage, RFQDiscoveryListing, RFQRequest
+--   * Phase 2 (#10) — PrivateQuote, EligibleQuote, SellerQuoteView,
+--                     SelectedQuote, SellerControlledFallbackQueue
+--   * Phase 3 (#11) — DemoSettlementAsset, SettlementResult,
+--                     ScopedComplianceReceipt
+--
+-- Party-scoped visibility (signatory/observer) is how Canton enforces the
+-- selective-disclosure guarantees the UI demonstrates — see the role table in
+-- docs/HACKATHON_ALIGNMENT.md.
+module CloakRFQ where
