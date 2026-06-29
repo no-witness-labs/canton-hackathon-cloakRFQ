@@ -1,0 +1,14 @@
+-- | CloakRFQ Receipts — Daml Script tests (scaffold).
+--
+-- Proves the package + test harness build and that Daml Script runs. The real
+-- lifecycle and party-visibility assertions (competing Funders cannot see each
+-- other's Private Quote; Coordinator cannot read quote contents; Auditor sees
+-- only the Scoped Compliance Receipt) land with issue #22, alongside the phase
+-- templates.
+module CloakRFQ.Test where
+
+import Daml.Script
+import CloakRFQ ()
+
+scaffold : Script ()
+scaffold = pure ()
