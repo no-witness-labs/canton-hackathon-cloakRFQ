@@ -55,7 +55,7 @@ phase1 = do
       riskReceivableData = "Receivable risk evidence"
 
   let riskResult = RiskResult with
-        riskTier = "BBB+"
+        riskTier = LowRisk
 
   riskAttestation <- submit risk do
     exerciseCmd riskProcess RecordRiskAttestation with result = riskResult
@@ -86,7 +86,7 @@ phase1 = do
   complianceView.result.sellerEligible === True
 
   Some riskView <- queryContractId seller riskAttestation
-  riskView.result.riskTier === "BBB+"
+  riskView.result.riskTier === LowRisk
 
   Some rfqView <- queryContractId seller rfq
   rfqView.receivableRef === "RCV-9F2A"
