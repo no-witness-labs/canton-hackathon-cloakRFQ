@@ -18,18 +18,26 @@ phase1 = do
   risk       <- allocateParty "Risk"
   funderA    <- allocateParty "FunderA"
 
+  let terms = ReceivableTerms with
+        faceValue = 480000.0
+        currency = "USD"
+        daysToDue = 45
+        recoursePreference = Negotiable
+        settlementPreference = "T+2"
+
+  let disclosureBoundary = DisclosureBoundary with
+        preQuoteDisclosure = "Core facts only"
+        packageDisclosure = "No raw Debtor identity or invoice document"
+        laterWorkflowDisclosure = "Scoped receipts only"
+
   -- Seller creates a Receivable (private to the Seller - raw Debtor identity).
   rcv <- submit seller do
     createCmd Receivable with
       seller
       ref = "RCV-9F2A"
       invoiceId = "INV-4471"
-      faceValue = 480000.0
-      currency = "USD"
-      daysToDue = 45
       debtorName = "Meridian Retail Group"
-      recoursePreference = Negotiable
-      settlementPreference = "T+2"
+      terms
       validityVerified = True
 
   complianceProcess <- submit seller do
@@ -37,13 +45,16 @@ phase1 = do
       seller
       complianceParty = compliance
       receivableRef = "RCV-9F2A"
-      complianceReceivableData = "Seller eligibility, RFQ eligibility, disclosure constraints"
+      complianceReceivableData = ComplianceReceivableData with
+        sellerEligibilityData = "Seller eligibility evidence"
+        rfqEligibilityData = "RFQ eligibility evidence"
+        disclosureReviewData = "Disclosure constraints"
 
   let complianceResult = ComplianceResult with
         sellerEligible = True
         rfqEligible = True
         packageAccessPolicy = "Eligible Funders may request access in Phase 2"
-        disclosureConstraints = "No raw Debtor identity by default"
+        disclosureBoundary
 
   complianceAttestation <- submit compliance do
     exerciseCmd complianceProcess RecordComplianceResult with result = complianceResult
@@ -53,37 +64,41 @@ phase1 = do
       seller
       riskAssessor = risk
       receivableRef = "RCV-9F2A"
-      riskReceivableData = "Receivable and Debtor risk data"
+      riskReceivableData = RiskReceivableData with
+        debtorRiskData = "Debtor risk data"
+        receivableRiskData = "Receivable performance data"
+
+  let riskResult = RiskResult with
+        riskTier = "BBB+"
+        riskSummary = "Low"
 
   riskAttestation <- submit risk do
-    exerciseCmd riskProcess RecordRiskAttestation with
-      riskTier = "BBB+"
-      riskSummary = "Low"
+    exerciseCmd riskProcess RecordRiskAttestation with result = riskResult
 
   let packageContent = RFQPackageContent with
-        summary = "Core pre-quote facts only"
+        funderReceivableData = FunderReceivableData with
+          packageSummary = "Core pre-quote facts only"
+          paymentProfile = "USD receivable, 45 days to due"
+          performanceSummary = "Verified receivable package"
         complianceStatus = "Eligible"
-        riskTier = "BBB+"
-        disclosureBoundary = "No raw Debtor identity or invoice document"
+        riskResult
+        disclosureBoundary
 
   let rfqParameters = RFQParameters with
-        recoursePreference = Negotiable
-        settlementPreference = "T+2"
         responseDeadline = "2026-07-01T12:00:00Z"
 
   rfqPackage <- submit seller do
     createCmd RFQPackage with
       seller
       receivableRef = "RCV-9F2A"
-      faceValue = 480000.0
-      currency = "USD"
-      daysToDue = 45
+      terms
       packageContent
       rfqParameters
 
   discovery <- submit seller do
     exerciseCmd rfqPackage CreateDiscoveryListing with
-      discoverySummary = "USD receivable, 45 days to due, package access handled in Phase 2"
+      discoverySummary = RFQDiscoverySummary with
+        summary = "USD receivable, 45 days to due, package access handled in Phase 2"
 
   rfq <- submit seller do
     exerciseCmd rfqPackage OpenRFQRequest
@@ -92,10 +107,11 @@ phase1 = do
   complianceView.result.sellerEligible === True
 
   Some riskView <- queryContractId seller riskAttestation
-  riskView.riskTier === "BBB+"
+  riskView.result.riskTier === "BBB+"
 
   Some rfqView <- queryContractId seller rfq
   rfqView.receivableRef === "RCV-9F2A"
+  rfqView.terms.faceValue === 480000.0
 
   -- Phase 1 has no concrete Funder stakeholders.
   None <- queryContractId funderA rcv

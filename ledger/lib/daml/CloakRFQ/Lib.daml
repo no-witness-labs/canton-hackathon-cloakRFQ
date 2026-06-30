@@ -7,26 +7,71 @@ module CloakRFQ.Lib where
 data RecourseModel = Recourse | NonRecourse | Negotiable
   deriving (Eq, Show)
 
+data ReceivableTerms = ReceivableTerms
+  with
+    faceValue : Decimal
+    currency : Text
+    daysToDue : Int
+    recoursePreference : RecourseModel
+    settlementPreference : Text
+  deriving (Eq, Show)
+
+data ComplianceReceivableData = ComplianceReceivableData
+  with
+    sellerEligibilityData : Text
+    rfqEligibilityData : Text
+    disclosureReviewData : Text
+  deriving (Eq, Show)
+
+data RiskReceivableData = RiskReceivableData
+  with
+    debtorRiskData : Text
+    receivableRiskData : Text
+  deriving (Eq, Show)
+
+data FunderReceivableData = FunderReceivableData
+  with
+    packageSummary : Text
+    paymentProfile : Text
+    performanceSummary : Text
+  deriving (Eq, Show)
+
+data DisclosureBoundary = DisclosureBoundary
+  with
+    preQuoteDisclosure : Text
+    packageDisclosure : Text
+    laterWorkflowDisclosure : Text
+  deriving (Eq, Show)
+
 data ComplianceResult = ComplianceResult
   with
     sellerEligible : Bool
     rfqEligible : Bool
     packageAccessPolicy : Text
-    disclosureConstraints : Text
+    disclosureBoundary : DisclosureBoundary
+  deriving (Eq, Show)
+
+data RiskResult = RiskResult
+  with
+    riskTier : Text
+    riskSummary : Text
   deriving (Eq, Show)
 
 data RFQPackageContent = RFQPackageContent
   with
-    summary : Text
+    funderReceivableData : FunderReceivableData
     complianceStatus : Text
-    riskTier : Text
-    disclosureBoundary : Text
+    riskResult : RiskResult
+    disclosureBoundary : DisclosureBoundary
+  deriving (Eq, Show)
+
+data RFQDiscoverySummary = RFQDiscoverySummary
+  with
+    summary : Text
   deriving (Eq, Show)
 
 data RFQParameters = RFQParameters
   with
-    recoursePreference : RecourseModel
-    settlementPreference : Text
     responseDeadline : Text
   deriving (Eq, Show)
 
@@ -36,6 +81,6 @@ isPositiveAmount amount = amount > 0.0
 isNonNegativeDaysToDue : Int -> Bool
 isNonNegativeDaysToDue days = days >= 0
 
-hasValidReceivableTerms : Decimal -> Int -> Bool
-hasValidReceivableTerms faceValue daysToDue =
-  isPositiveAmount faceValue && isNonNegativeDaysToDue daysToDue
+hasValidReceivableTerms : ReceivableTerms -> Bool
+hasValidReceivableTerms terms =
+  isPositiveAmount terms.faceValue && isNonNegativeDaysToDue terms.daysToDue

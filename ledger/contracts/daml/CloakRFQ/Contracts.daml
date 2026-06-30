@@ -14,16 +14,12 @@ template Receivable
     seller : Party
     ref : Text                   -- opaque reference, e.g. "RCV-9F2A"
     invoiceId : Text
-    faceValue : Decimal
-    currency : Text
-    daysToDue : Int
     debtorName : Text            -- raw Debtor identity - Seller-only by default
-    recoursePreference : RecourseModel
-    settlementPreference : Text  -- e.g. "T+2"
+    terms : ReceivableTerms
     validityVerified : Bool
   where
     signatory seller
-    ensure hasValidReceivableTerms faceValue daysToDue
+    ensure hasValidReceivableTerms terms
 
 -- | Compliance workflow around a Receivable. It models MVP eligibility checks,
 -- not production KYC/AML integration or regulation.
@@ -32,7 +28,7 @@ template ComplianceProcess
     seller : Party
     complianceParty : Party
     receivableRef : Text
-    complianceReceivableData : Text
+    complianceReceivableData : ComplianceReceivableData
   where
     signatory seller
     observer complianceParty
@@ -65,23 +61,21 @@ template RiskAssessmentProcess
     seller : Party
     riskAssessor : Party
     receivableRef : Text
-    riskReceivableData : Text
+    riskReceivableData : RiskReceivableData
   where
     signatory seller
     observer riskAssessor
 
     choice RecordRiskAttestation : ContractId RiskAttestation
       with
-        riskTier : Text
-        riskSummary : Text
+        result : RiskResult
       controller riskAssessor
       do
         create RiskAttestation with
           riskAssessor
           seller
           receivableRef
-          riskTier
-          riskSummary
+          result
 
 -- | Risk attestation issued by the separate, scoped Risk Assessor.
 template RiskAttestation
@@ -89,8 +83,7 @@ template RiskAttestation
     riskAssessor : Party
     seller : Party
     receivableRef : Text
-    riskTier : Text
-    riskSummary : Text
+    result : RiskResult
   where
     signatory riskAssessor
     observer seller
@@ -101,18 +94,16 @@ template RFQPackage
   with
     seller : Party
     receivableRef : Text
-    faceValue : Decimal
-    currency : Text
-    daysToDue : Int
+    terms : ReceivableTerms
     packageContent : RFQPackageContent
     rfqParameters : RFQParameters
   where
     signatory seller
-    ensure hasValidReceivableTerms faceValue daysToDue
+    ensure hasValidReceivableTerms terms
 
     nonconsuming choice CreateDiscoveryListing : ContractId RFQDiscoveryListing
       with
-        discoverySummary : Text
+        discoverySummary : RFQDiscoverySummary
       controller seller
       do
         create RFQDiscoveryListing with
@@ -126,9 +117,7 @@ template RFQPackage
         create RFQRequest with
           seller
           receivableRef
-          faceValue
-          currency
-          daysToDue
+          terms
           packageContent
           rfqParameters
 
@@ -138,7 +127,7 @@ template RFQDiscoveryListing
   with
     seller : Party
     receivableRef : Text
-    discoverySummary : Text
+    discoverySummary : RFQDiscoverySummary
   where
     signatory seller
 
@@ -149,11 +138,9 @@ template RFQRequest
   with
     seller : Party
     receivableRef : Text
-    faceValue : Decimal
-    currency : Text
-    daysToDue : Int
+    terms : ReceivableTerms
     packageContent : RFQPackageContent
     rfqParameters : RFQParameters
   where
     signatory seller
-    ensure hasValidReceivableTerms faceValue daysToDue
+    ensure hasValidReceivableTerms terms
