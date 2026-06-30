@@ -1,15 +1,30 @@
 'use client';
 
 import { Icon, type IconName } from '@/lib/icons';
+import { useState, useEffect } from 'react';
 import {
-  useStore, ROLES, LEGEND, RECV, BOUNDARY, DLEVELS, calc, truncParty,
-  type Role, type Quote,
+  useStore, ROLES, LEGEND, BOUNDARY, DLEVELS, calc, truncParty, usd,
+  type Role, type Quote, type ReceivableForm, type AttView,
 } from '@/lib/store';
 
 export default function Workspace() {
   const { state, setRole } = useStore();
   const role = state.role;
   const lg = LEGEND[role];
+
+  if (state.ready === null) return (
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+      <div className="mono t-ink3">Connecting to the Canton ledger…</div>
+    </div>
+  );
+  if (state.ready === false) return (
+    <div style={{ maxWidth: 560, margin: '60px auto', padding: 24 }}>
+      <h1 className="disp" style={{ fontSize: 20, fontWeight: 700 }}>Sandbox not ready</h1>
+      <p className="t-ink3" style={{ marginTop: 8 }}>The Canton ledger isn&apos;t reachable. Bring it up, then reload:</p>
+      <pre style={{ background: 'var(--panel)', padding: 14, borderRadius: 10, marginTop: 10, color: 'var(--ink2)' }}>./scripts/start-sandbox.sh</pre>
+      <p className="t-mut" style={{ marginTop: 8, fontSize: 13 }}>This Workspace now reads live contracts; the per-party proof is at <b>/ledger</b>.</p>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -186,50 +201,158 @@ function Seg({ opts, val, onPick }: { opts: { label: string; value: string | num
 }
 
 /* ============================ SELLER ============================ */
-function SellerView() {
-  const { state, eligible, excludedQ } = useStore();
+const fieldInput: React.CSSProperties = { background: 'rgba(255,255,255,.03)', border: '1px solid var(--line3)', color: 'var(--ink)', borderRadius: 8, padding: '9px 11px', fontSize: 13, fontFamily: 'inherit', width: '100%', outline: 'none' };
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid-seller">
-      <div className="col">
-        {/* receivable */}
-        <section className="panel">
-          <div className="panel-h"><h2>Receivable</h2><span className="spacer" /><span className="h-tag">{RECV.ref}</span></div>
-          <div className="panel-b">
-            <div className="face">{RECV.face}</div>
-            <div className="t-ink3" style={{ fontSize: 12.5, marginTop: 3 }}>Face value · {RECV.currency} · {RECV.invoice}</div>
-            <div className="meta-grid">
-              <div className="meta"><div className="k">Due</div><div className="v">{RECV.due}</div></div>
-              <div className="meta"><div className="k">Recourse pref</div><div className="v">{RECV.recourse}</div></div>
-              <div className="meta"><div className="k">Validity</div><div className="v t-accent" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="check" size={13} sw={2.5} />{RECV.validity}</div></div>
-              <div className="meta"><div className="k">Settle pref</div><div className="v">{RECV.settlePref}</div></div>
-            </div>
-          </div>
-        </section>
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <span className="t-ink3" style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</span>
+      {children}
+    </label>
+  );
+}
+function StatusRow({ k, v, ok }: { k: string; v: string; ok: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+      <span className="t-ink3" style={{ fontSize: 12 }}>{k}</span>
+      <span className="chip" style={{ background: ok ? 'rgba(87,227,160,.12)' : 'rgba(154,161,173,.1)', color: ok ? 'var(--accent)' : 'var(--mut)' }}>{v}</span>
+    </div>
+  );
+}
 
-        {/* debtor */}
-        <section className="panel">
-          <div className="panel-h"><h2>Debtor</h2></div>
-          <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Identity (to you)</span><span style={{ fontSize: 13, fontWeight: 600 }}>{RECV.debtor}</span></div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span><span className="chip accent">{RECV.debtorRisk}</span></div>
-            <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>Funders receive the <span className="t-ink3">Debtor Risk Attestation</span> — not the raw Debtor identity — before quoting.</p>
-          </div>
-        </section>
+function ReceivableForm({ onCreate }: { onCreate: (r: ReceivableForm) => void }) {
+  const [f, setF] = useState<ReceivableForm>({
+    ref: 'RCV-9F2A', invoiceId: 'INV-4471', faceValue: 480000, currency: 'USD', daysToDue: 45,
+    debtorName: 'Meridian Retail Group', recoursePreference: 'Negotiable', settlementPreference: 'T+2',
+  });
+  const set = (p: Partial<ReceivableForm>) => setF((s) => ({ ...s, ...p }));
+  const valid = f.ref.trim() !== '' && f.debtorName.trim() !== '' && f.faceValue > 0 && f.daysToDue >= 0;
+  return (
+    <section className="panel">
+      <div className="panel-h"><h2 className="lg">New Receivable</h2><span className="spacer" /><span className="chip ghost">Seller-only</span></div>
+      <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
+          <Field label="Reference"><input style={fieldInput} value={f.ref} onChange={(e) => set({ ref: e.target.value })} /></Field>
+          <Field label="Invoice ID"><input style={fieldInput} value={f.invoiceId} onChange={(e) => set({ invoiceId: e.target.value })} /></Field>
+          <Field label="Face value"><input style={fieldInput} type="number" value={f.faceValue} onChange={(e) => set({ faceValue: Number(e.target.value) })} /></Field>
+          <Field label="Currency"><input style={fieldInput} value={f.currency} onChange={(e) => set({ currency: e.target.value })} /></Field>
+          <Field label="Days to due"><input style={fieldInput} type="number" value={f.daysToDue} onChange={(e) => set({ daysToDue: Number(e.target.value) })} /></Field>
+          <Field label="Settlement pref"><input style={fieldInput} value={f.settlementPreference} onChange={(e) => set({ settlementPreference: e.target.value })} /></Field>
+        </div>
+        <Field label="Debtor — raw identity, stays with you"><input style={fieldInput} value={f.debtorName} onChange={(e) => set({ debtorName: e.target.value })} /></Field>
+        <Field label="Recourse preference">
+          <Seg opts={[{ label: 'Recourse', value: 'Recourse' }, { label: 'Non-recourse', value: 'Non-recourse' }, { label: 'Negotiable', value: 'Negotiable' }]} val={f.recoursePreference} onPick={(v) => set({ recoursePreference: String(v) })} />
+        </Field>
+        <button className="btn accent block" disabled={!valid} onClick={() => onCreate(f)}><Icon name="plus" size={16} sw={2.4} /> Create Receivable</button>
+      </div>
+    </section>
+  );
+}
 
-        {/* disclosure boundary */}
-        <section className="panel">
-          <div className="panel-h"><h2>Disclosure Boundary</h2></div>
-          <div style={{ padding: '7px 17px 13px' }}>
-            {BOUNDARY.map((b) => (
-              <div key={b.stage} style={{ display: 'flex', gap: 11, padding: '9px 0', borderBottom: '1px solid var(--line3)' }}>
-                <span className="mono t-accent" style={{ fontSize: 10, width: 78, flex: 'none', paddingTop: 1 }}>{b.stage}</span>
-                <span className="t-ink2" style={{ fontSize: 12, lineHeight: 1.45 }}>{b.what}</span>
-              </div>
+function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; risk: AttView | null; comp: AttView | null }) {
+  const [funders, setFunders] = useState<string[]>(['A', 'B', 'C']);
+  const toggle = (k: string) => setFunders((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
+  return (
+    <section className="panel">
+      <div className="panel-h"><h2 className="lg">Open Blind RFQ</h2><span className="spacer" /><span className="chip ghost">attestation-first</span></div>
+      <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+        <p className="t-ink3" style={{ fontSize: 12.5, lineHeight: 1.5 }}>Invite Funders to quote. They receive the risk/eligibility <b>statuses</b> only — never the raw Debtor identity or invoice document.</p>
+        <Field label="Invite Funders">
+          <div style={{ display: 'flex', gap: 8 }}>
+            {['A', 'B', 'C'].map((k) => (
+              <button key={k} className={'btn sm ' + (funders.includes(k) ? 'accent' : 'dark')} style={{ flex: 1 }} onClick={() => toggle(k)}>Funder {k}</button>
             ))}
           </div>
-        </section>
+        </Field>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <StatusRow k="Debtor risk (carried in)" v={risk ? risk.result : 'Unrated — no Risk Attestation'} ok={!!risk} />
+          <StatusRow k="Eligibility (carried in)" v={comp ? 'Verified' : 'Unverified — no Compliance Attestation'} ok={!!comp} />
+        </div>
+        <button className="btn accent block" disabled={funders.length === 0} onClick={() => onOpen(funders)}><Icon name="send" size={16} sw={2.4} /> Open RFQ to {funders.length} Funder{funders.length === 1 ? '' : 's'}</button>
       </div>
+    </section>
+  );
+}
 
+function StepHint({ title, body, risk, comp }: { title: string; body: string; risk: AttView | null; comp: AttView | null }) {
+  return (
+    <section className="panel">
+      <div className="panel-h"><h2 className="lg">{title}</h2></div>
+      <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.55 }}>{body}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <StatusRow k="Compliance attestation" v={comp ? comp.result : 'Not issued'} ok={!!comp} />
+          <StatusRow k="Risk attestation" v={risk ? risk.result : 'Not issued'} ok={!!risk} />
+        </div>
+        <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Tip: issue these from the <b>Compliance</b> and <b>Risk Assessor</b> roles — they&apos;re carried into the RFQ.</p>
+      </div>
+    </section>
+  );
+}
+
+function SellerView() {
+  const { state, eligible, excludedQ, createReceivable, openRFQ } = useStore();
+  const rcv = state.receivable;
+  const { riskAtt: risk, complianceAtt: comp } = state;
+
+  // Step 1 — originate the Receivable
+  if (!rcv) return (
+    <div className="grid-seller">
+      <div className="col"><ReceivableForm onCreate={createReceivable} /></div>
+      <div className="col"><StepHint title="Step 1 · Originate" body="Create the Receivable you want to finance. It is private to you on the ledger — the raw Debtor identity never leaves this contract. Next you'll open a Blind RFQ to invited Funders." risk={risk} comp={comp} /></div>
+    </div>
+  );
+
+  const left = (
+    <div className="col">
+      <section className="panel">
+        <div className="panel-h"><h2>Receivable</h2><span className="spacer" /><span className="h-tag">{rcv.ref}</span></div>
+        <div className="panel-b">
+          <div className="face">{usd(rcv.faceValue)}</div>
+          <div className="t-ink3" style={{ fontSize: 12.5, marginTop: 3 }}>Face value · {rcv.currency} · {rcv.invoiceId}</div>
+          <div className="meta-grid">
+            <div className="meta"><div className="k">Due</div><div className="v">in {rcv.daysToDue} days</div></div>
+            <div className="meta"><div className="k">Recourse pref</div><div className="v">{rcv.recoursePreference}</div></div>
+            <div className="meta"><div className="k">Validity</div><div className="v t-accent" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="check" size={13} sw={2.5} />Verified</div></div>
+            <div className="meta"><div className="k">Settle pref</div><div className="v">{rcv.settlementPreference}</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-h"><h2>Debtor</h2></div>
+        <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Identity (to you)</span><span style={{ fontSize: 13, fontWeight: 600 }}>{rcv.debtorName}</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span>{risk ? <span className="chip accent">{risk.result}</span> : <span className="chip ghost">pending</span>}</div>
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>Funders receive the <span className="t-ink3">Debtor Risk Attestation</span> — not the raw Debtor identity — before quoting.</p>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-h"><h2>Disclosure Boundary</h2></div>
+        <div style={{ padding: '7px 17px 13px' }}>
+          {BOUNDARY.map((b) => (
+            <div key={b.stage} style={{ display: 'flex', gap: 11, padding: '9px 0', borderBottom: '1px solid var(--line3)' }}>
+              <span className="mono t-accent" style={{ fontSize: 10, width: 78, flex: 'none', paddingTop: 1 }}>{b.stage}</span>
+              <span className="t-ink2" style={{ fontSize: 12, lineHeight: 1.45 }}>{b.what}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+
+  // Step 2 — open the Blind RFQ
+  if (!state.rfqOpen) return (
+    <div className="grid-seller">
+      {left}
+      <div className="col"><OpenRFQPanel onOpen={openRFQ} risk={risk} comp={comp} /></div>
+    </div>
+  );
+
+  // Step 3+ — quote view
+  return (
+    <div className="grid-seller">
+      {left}
       <div className="col">
         <div className="hook">
           <span className="hook-ic"><Icon name="plus" size={16} /></span>
@@ -248,6 +371,7 @@ function SellerView() {
           </div>
 
           <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {eligible.length === 0 && <div className="t-mut" style={{ fontSize: 12.5, padding: '8px 2px', lineHeight: 1.5 }}>No Private Quotes yet. Switch to a <b>Funder</b> to submit one against this RFQ.</div>}
             {eligible.map((q) => <QuoteCard key={q.key} q={q} />)}
             {excludedQ && (
               <div className="excluded">
@@ -442,7 +566,9 @@ function ActionZone() {
 /* ============================ FUNDER ============================ */
 function FunderView() {
   const { state, qByKey, curDraft, setFunderTab, setDraft, submitQuote } = useStore();
-  const ft = state.funderTab;
+  const invited = state.rfqFunders;
+  useEffect(() => { if (invited.length && !invited.includes(state.funderTab)) setFunderTab(invited[0]); }, [invited, state.funderTab, setFunderTab]);
+  const ft = invited.includes(state.funderTab) ? state.funderTab : (invited[0] ?? state.funderTab);
   const cf = qByKey(ft);
   const draft = curDraft();
   const dc = calc(draft.net, draft.advPct);
@@ -456,25 +582,37 @@ function FunderView() {
   else if (ph === 'settling') { if (state.settleVia === ft) { fout = 'Settling — On-Ledger Demo Settlement in progress'; foc = '#e8c15f'; } else if (state.selected === ft) { fout = 'Selected — in Settlement Window'; foc = '#57e3a0'; } else if (fbi >= 0) { fout = 'In fallback queue · position ' + (fbi + 1); foc = '#e8c15f'; } else { fout = 'Unselected'; foc = '#6b7280'; } }
   else if (ph === 'selected') { if (state.selected === ft) { fout = 'Selected as Best Compliant Quote'; foc = '#57e3a0'; } else if (fbi >= 0) { fout = 'In fallback queue · position ' + (fbi + 1); foc = '#e8c15f'; } else { fout = 'Not selected — quote still valid'; foc = '#6b7280'; } }
 
-  const pkg = [
-    { label: 'Receivable amount', value: '$480,000 USD', redacted: false },
-    { label: 'Payment timing', value: 'Due in 45 days · T+45', redacted: false },
-    { label: 'Receivable validity', value: 'Verified (attestation)', redacted: false },
-    { label: 'Debtor payment risk', value: 'BBB+ · Low (Risk Attestation)', redacted: false },
-    { label: 'Seller eligibility', value: 'Eligible (attestation)', redacted: false },
-    { label: 'Jurisdiction / compliance', value: 'Eligible (attestation)', redacted: false },
-    { label: 'Recourse preference', value: 'Non-recourse preferred', redacted: false },
-    { label: 'Settlement preference', value: 'T+2', redacted: false },
+  const rcv = state.receivable;
+  const pkg = rcv ? [
+    { label: 'Receivable amount', value: `${usd(rcv.faceValue)} ${rcv.currency}`, redacted: false },
+    { label: 'Payment timing', value: `Due in ${rcv.daysToDue} days`, redacted: false },
+    { label: 'Receivable validity', value: state.complianceAtt ? 'Verified (attestation)' : 'Unverified', redacted: false },
+    { label: 'Debtor payment risk', value: state.riskAtt ? `${state.riskAtt.result} (Risk Attestation)` : 'Unrated — no attestation', redacted: false },
+    { label: 'Seller eligibility', value: state.complianceAtt ? 'Eligible (attestation)' : 'Unverified — no attestation', redacted: false },
+    { label: 'Recourse preference', value: rcv.recoursePreference, redacted: false },
+    { label: 'Settlement preference', value: rcv.settlementPreference, redacted: false },
     { label: 'Raw Debtor identity', value: 'withheld pre-quote', redacted: true },
     { label: 'Invoice document', value: 'withheld pre-quote', redacted: true },
-  ];
+  ] : [];
+
+  if (!state.rfqOpen) return (
+    <div style={{ maxWidth: 600, margin: '40px auto' }}>
+      <section className="panel">
+        <div className="panel-h"><h2 className="lg">No open RFQ</h2><span className="spacer" /><span className="chip ghost">waiting</span></div>
+        <div className="panel-b">
+          <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.6 }}>The Seller hasn&apos;t opened a Blind RFQ yet. Once you&apos;re invited, your RFQ Disclosure Package and quote composer appear here.</p>
+          <p className="t-mut" style={{ fontSize: 12, marginTop: 8 }}>Switch to <span className="t-accent">Seller</span> to create a Receivable and open the RFQ.</p>
+        </div>
+      </section>
+    </div>
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
         <div className="eyebrow" style={{ marginBottom: 8 }}>You are quoting as</div>
         <div className="funder-tabs">
-          {['A', 'B', 'C'].map((k) => {
+          {invited.map((k) => {
             const q = qByKey(k);
             return (
               <button key={k} className={'ftab' + (k === ft ? ' on' : '')} onClick={() => setFunderTab(k)}>
@@ -517,7 +655,7 @@ function FunderView() {
                   <span className="mono t-ink3" style={{ fontSize: 18 }}>$</span>
                   <input value={draft.net.toLocaleString('en-US')} inputMode="numeric"
                     onChange={(e) => setDraft({ net: parseInt(String(e.target.value).replace(/[^0-9]/g, '')) || 0 })} />
-                  <span className="mono t-mut" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>/ $480,000 face</span>
+                  <span className="mono t-mut" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>/ {rcv ? usd(rcv.faceValue) : '$0'} face</span>
                 </div>
               </div>
 
@@ -568,37 +706,36 @@ function FunderView() {
 
 /* ============================ COMPLIANCE ============================ */
 function ComplianceView() {
-  const attest = [
-    { party: 'Compliance Party', subject: 'Seller eligibility — Northwind Components', result: 'Eligible' },
-    { party: 'Compliance Party', subject: 'Jurisdiction & transaction eligibility', result: 'Eligible' },
-    { party: 'Compliance Party', subject: 'Funder VC-7 eligibility', result: 'Eligible' },
-    { party: 'Compliance Party', subject: 'Funder LC-3 eligibility', result: 'Eligible' },
-    { party: 'Compliance Party', subject: 'Funder HF-9 eligibility', result: 'Eligible' },
-  ];
-  const pof = [
-    { label: 'Funder · VC-7', status: 'Passed', ok: true },
-    { label: 'Funder · LC-3', status: 'Passed', ok: true },
-    { label: 'Funder · HF-9', status: 'Passed', ok: true },
-    { label: 'Funder · OX-2', status: 'Failed — excluded', ok: false },
-  ];
+  const { state, eligible, excludedQ, issueCompliance } = useStore();
+  const att = state.complianceAtt;
   return (
     <div className="grid-2">
       <section className="panel">
-        <div className="panel-h"><h2 className="lg">Eligibility attestations</h2><span className="spacer" /><span className="h-tag">Compliance Party</span></div>
-        <div style={{ padding: '6px 18px 12px' }}>
-          {attest.map((a) => <AttestRow key={a.subject} a={a} tone="accent" />)}
+        <div className="panel-h"><h2 className="lg">Eligibility attestation</h2><span className="spacer" /><span className="h-tag">Compliance Party</span></div>
+        <div style={{ padding: '6px 18px 14px' }}>
+          {att
+            ? <><AttestRow a={{ party: 'Compliance Party', subject: att.subject, result: att.result }} tone="accent" />
+                <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Issued on-ledger. The Seller observes it; the <span className="t-ink3">status</span> — not the raw data — is carried into the RFQ.</p></>
+            : <AttestForm tone="accent" label="Issue Compliance Attestation" subjectDefault="Seller eligibility — Northwind Components" resultDefault="Eligible" onIssue={issueCompliance} />}
         </div>
       </section>
       <div className="col">
         <section className="panel">
           <div className="panel-h"><h2>Proof-of-Funds Gate</h2></div>
           <div style={{ padding: '6px 17px 13px' }}>
-            {pof.map((p) => (
-              <div key={p.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 0', borderBottom: '1px solid var(--line3)' }}>
-                <span className="mono" style={{ fontSize: 13 }}>{p.label}</span>
-                <span className={'chip ' + (p.ok ? 'accent' : 'red')}>{p.status}</span>
+            {eligible.length === 0 && !excludedQ && <p className="t-mut" style={{ fontSize: 12, padding: '8px 0' }}>No Private Quotes submitted yet.</p>}
+            {eligible.map((q) => (
+              <div key={q.key} style={attRowStyle}>
+                <span className="mono" style={{ fontSize: 13 }}>Funder · {q.label}</span>
+                <span className="chip accent">Passed</span>
               </div>
             ))}
+            {excludedQ && (
+              <div style={attRowStyle}>
+                <span className="mono" style={{ fontSize: 13 }}>Funder · {excludedQ.label}</span>
+                <span className="chip red">Failed — excluded</span>
+              </div>
+            )}
             <p className="t-mut" style={{ fontSize: 11, lineHeight: 1.5, marginTop: 10, paddingTop: 11, borderTop: '1px solid var(--line3)' }}>Proof-of-Funds is <span className="t-ink3">bid-eligibility evidence only</span> — not a funds lock, reserve, escrow, or settlement guarantee.</p>
           </div>
         </section>
@@ -610,17 +747,17 @@ function ComplianceView() {
 
 /* ============================ RISK ============================ */
 function RiskView() {
-  const attest = [
-    { party: 'Risk Assessor', subject: 'Receivable validity — INV-4471', result: 'Verified' },
-    { party: 'Risk Assessor', subject: 'Debtor Risk — Meridian Retail Group', result: 'BBB+ · Low' },
-    { party: 'Risk Assessor', subject: 'Receivable Risk — dilution & dispute', result: 'Low' },
-  ];
+  const { state, issueRisk } = useStore();
+  const att = state.riskAtt;
   return (
     <div className="grid-2">
       <section className="panel">
-        <div className="panel-h"><h2 className="lg">Risk attestations</h2><span className="spacer" /><span className="h-tag">Risk Assessor</span></div>
-        <div style={{ padding: '6px 18px 12px' }}>
-          {attest.map((a) => <AttestRow key={a.subject} a={a} tone="amber" />)}
+        <div className="panel-h"><h2 className="lg">Risk attestation</h2><span className="spacer" /><span className="h-tag">Risk Assessor</span></div>
+        <div style={{ padding: '6px 18px 14px' }}>
+          {att
+            ? <><AttestRow a={{ party: 'Risk Assessor', subject: att.subject, result: att.result }} tone="amber" />
+                <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Issued on-ledger. Funders receive this <span className="t-ink3">status</span> in the RFQ — never the raw Debtor records.</p></>
+            : <AttestForm tone="amber" label="Issue Risk Attestation" subjectDefault="Debtor Risk — Meridian Retail Group" resultDefault="BBB+ · Low" onIssue={issueRisk} />}
         </div>
       </section>
       <div className="col">
@@ -652,6 +789,22 @@ function AttestRow({ a, tone }: { a: { party: string; subject: string; result: s
   );
 }
 
+const attRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 0', borderBottom: '1px solid var(--line3)' };
+function AttestForm({ label, subjectDefault, resultDefault, tone, onIssue }: { label: string; subjectDefault: string; resultDefault: string; tone: 'accent' | 'amber'; onIssue: (subject: string, result: string) => void }) {
+  const [subject, setSubject] = useState(subjectDefault);
+  const [result, setResult] = useState(resultDefault);
+  const valid = subject.trim() !== '' && result.trim() !== '';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
+      <Field label="Subject"><input style={fieldInput} value={subject} onChange={(e) => setSubject(e.target.value)} /></Field>
+      <Field label="Result / status"><input style={fieldInput} value={result} onChange={(e) => setResult(e.target.value)} /></Field>
+      <button className="btn accent block" disabled={!valid} onClick={() => onIssue(subject, result)}>
+        <Icon name={tone === 'accent' ? 'check' : 'risk'} size={15} sw={2.3} /> {label}
+      </button>
+    </div>
+  );
+}
+
 function HiddenNote({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="panel dashed" style={{ padding: '16px 17px' }}>
@@ -666,21 +819,27 @@ function HiddenNote({ title, children }: { title: string; children: React.ReactN
 
 /* ============================ COORDINATOR ============================ */
 function CoordinatorView() {
-  const { state, fallbackUsed } = useStore();
+  const { state, eligible, fallbackUsed } = useStore();
   const ph = state.phase;
+  const rcv = state.receivable;
   const done = '#57e3a0', active = '#e8c15f', pend = '#3a3f48';
-  let selSub = 'pending', selC: string = pend, setSub = 'pending', setC: string = pend, finSub = 'pending', finC: string = pend;
-  if (ph === 'quoting') { selSub = 'Seller comparing eligible quotes'; selC = active; } else { selSub = 'Best Compliant Quote selected'; selC = done; }
+  const post = ph === 'selected' || ph === 'settling' || ph === 'failed' || ph === 'settled';
+
+  let selSub = 'pending', selC: string = pend;
+  if (ph === 'quoting') { selSub = eligible.length ? 'Seller comparing eligible quotes' : 'awaiting Private Quotes'; selC = eligible.length ? active : pend; }
+  else if (post) { selSub = 'Best Compliant Quote selected'; selC = done; }
+  let setSub = 'pending', setC: string = pend;
   if (ph === 'settling') { setSub = 'attempting On-Ledger Demo Settlement'; setC = active; }
   else if (ph === 'failed') { setSub = 'Commitment Failure — fallback available'; setC = '#f0795f'; }
   else if (ph === 'settled') { setSub = 'completed' + (fallbackUsed ? ' via fallback' : ''); setC = done; }
-  if (ph === 'settled') { finSub = 'reached'; finC = done; } else if (ph === 'failed') { finSub = 'pending — fallback in progress'; finC = active; }
+  const finC: string = ph === 'settled' ? done : ph === 'failed' ? active : pend;
+  const finSub = ph === 'settled' ? 'reached' : ph === 'failed' ? 'pending — fallback in progress' : 'pending';
 
   const steps = [
-    { n: '1', label: 'Receivable created', sub: 'RCV-9F2A · $480,000', color: done },
-    { n: '2', label: 'Blind RFQ opened', sub: '4 Funders invited', color: done },
-    { n: '3', label: 'Disclosure Packages delivered', sub: 'attestation-first', color: done },
-    { n: '4', label: 'Private Quotes submitted', sub: '4 received · 1 failed PoF gate', color: done },
+    { n: '1', label: 'Receivable created', sub: rcv ? `${rcv.ref} · ${usd(rcv.faceValue)}` : 'awaiting origination', color: rcv ? done : (ph === 'origination' ? active : pend) },
+    { n: '2', label: 'Blind RFQ opened', sub: state.rfqOpen ? `${state.rfqFunders.length} Funder${state.rfqFunders.length === 1 ? '' : 's'} invited` : 'pending', color: state.rfqOpen ? done : (rcv ? active : pend) },
+    { n: '3', label: 'Disclosure Packages delivered', sub: state.rfqOpen ? 'attestation-first' : 'pending', color: state.rfqOpen ? done : pend },
+    { n: '4', label: 'Private Quotes submitted', sub: `${eligible.length} received`, color: eligible.length ? done : (state.rfqOpen ? active : pend) },
     { n: '5', label: 'Seller selection', sub: selSub, color: selC },
     { n: '6', label: 'Settlement Window', sub: setSub, color: setC },
     { n: '7', label: 'RFQ Finality', sub: finSub, color: finC },
@@ -689,7 +848,7 @@ function CoordinatorView() {
   return (
     <div className="grid-2">
       <section className="panel">
-        <div className="panel-h"><h2 className="lg">RFQ workflow status</h2><span className="spacer" /><span className="h-tag">routing only · RFQ-4471</span></div>
+        <div className="panel-h"><h2 className="lg">RFQ workflow status</h2><span className="spacer" /><span className="h-tag">routing only · {rcv?.ref ?? '—'}</span></div>
         <div style={{ padding: 18 }}>
           {steps.map((t, i) => {
             const dotBg = t.color === pend ? '#1b1e24' : t.color;
@@ -716,9 +875,9 @@ function CoordinatorView() {
             <span className="t-ink3" style={{ fontSize: 12.5 }}>Private Quote contents — <span className="t-ink2" style={{ fontWeight: 600 }}>not disclosed to Coordinator</span></span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {['VC-7', 'LC-3', 'HF-9'].map((l) => (
+            {(state.rfqFunders.length ? state.rfqFunders.map((k) => 'Funder ' + k) : ['—']).map((l) => (
               <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="mono t-mut" style={{ fontSize: 11, width: 64, flex: 'none' }}>{l}</span>
+                <span className="mono t-mut" style={{ fontSize: 11, width: 72, flex: 'none' }}>{l}</span>
                 <span className="bar" style={{ flex: 1, height: 26 }} />
               </div>
             ))}
@@ -728,7 +887,7 @@ function CoordinatorView() {
         <section className="panel" style={{ padding: '16px 17px' }}>
           <div className="eyebrow" style={{ marginBottom: 11 }}>Parties routed</div>
           <div className="routed">
-            {['Seller', '4 Funders', 'Compliance', 'Risk Assessor', 'Auditor'].map((p) => <span key={p}>{p}</span>)}
+            {['Seller', `${state.rfqFunders.length} Funders`, 'Compliance', 'Risk Assessor', 'Auditor'].map((p) => <span key={p}>{p}</span>)}
           </div>
         </section>
       </div>
