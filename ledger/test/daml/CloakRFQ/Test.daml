@@ -1,9 +1,9 @@
--- | CloakRFQ Receipts — Daml Script tests.
+-- | CloakRFQ Receipts - Daml Script tests.
 --
--- Phase 1 (#9) happy path + the first party-visibility proof (#22): a Funder can
--- see the Blind RFQ it was invited to, but NOT the Seller's Receivable (which
--- carries the raw Debtor identity). That visibility split is enforced by Canton
--- via signatory/observer, not by the UI.
+-- Phase 1 (#9) proves the design boundary: the Seller creates a stable
+-- Receivable, Compliance and Risk run scoped workflow processes, the Seller
+-- prepares package/discovery/RFQ state, and no concrete Funder is a Phase 1
+-- stakeholder.
 module CloakRFQ.Test where
 
 import Daml.Script
@@ -12,24 +12,12 @@ import CloakRFQ
 
 phase1 : Script ()
 phase1 = do
-  seller      <- allocateParty "Seller"
-  compliance  <- allocateParty "Compliance"
-  risk        <- allocateParty "Risk"
-  coordinator <- allocateParty "Coordinator"
-  funderA     <- allocateParty "FunderA"
-  funderB     <- allocateParty "FunderB"
+  seller     <- allocateParty "Seller"
+  compliance <- allocateParty "Compliance"
+  risk       <- allocateParty "Risk"
+  funderA    <- allocateParty "FunderA"
 
-  -- Compliance + Risk issue scoped attestations (Seller observes them).
-  _ <- submit compliance do
-    createCmd ComplianceAttestation with
-      complianceParty = compliance, seller
-      subject = "Seller eligibility", result = "Eligible"
-  _ <- submit risk do
-    createCmd RiskAttestation with
-      riskAssessor = risk, seller
-      subject = "Debtor Risk", result = "BBB+ · Low"
-
-  -- Seller creates a Receivable (private to the Seller — raw Debtor identity).
+  -- Seller creates a Receivable (private to the Seller - raw Debtor identity).
   rcv <- submit seller do
     createCmd Receivable with
       seller
@@ -43,19 +31,76 @@ phase1 = do
       settlementPreference = "T+2"
       validityVerified = True
 
-  -- Seller opens the Blind RFQ to two Funders (no raw Debtor identity in it).
-  rfq <- submit seller do
-    exerciseCmd rcv OpenRFQ with
-      coordinator
-      funders = [funderA, funderB]
-      debtorRisk = "BBB+ · Low"
-      receivableValidity = "Verified"
+  complianceProcess <- submit seller do
+    createCmd ComplianceProcess with
+      seller
+      complianceParty = compliance
+      receivableRef = "RCV-9F2A"
+      complianceReceivableData = "Seller eligibility, RFQ eligibility, disclosure constraints"
 
-  -- Funder A can see the RFQ it was invited to...
-  Some rfqView <- queryContractId funderA rfq
+  let complianceResult = ComplianceResult with
+        sellerEligible = True
+        rfqEligible = True
+        packageAccessPolicy = "Eligible Funders may request access in Phase 2"
+        disclosureConstraints = "No raw Debtor identity by default"
+
+  complianceAttestation <- submit compliance do
+    exerciseCmd complianceProcess RecordComplianceResult with result = complianceResult
+
+  riskProcess <- submit seller do
+    createCmd RiskAssessmentProcess with
+      seller
+      riskAssessor = risk
+      receivableRef = "RCV-9F2A"
+      riskReceivableData = "Receivable and Debtor risk data"
+
+  riskAttestation <- submit risk do
+    exerciseCmd riskProcess RecordRiskAttestation with
+      riskTier = "BBB+"
+      riskSummary = "Low"
+
+  let packageContent = RFQPackageContent with
+        summary = "Core pre-quote facts only"
+        complianceStatus = "Eligible"
+        riskTier = "BBB+"
+        disclosureBoundary = "No raw Debtor identity or invoice document"
+
+  let rfqParameters = RFQParameters with
+        recoursePreference = Negotiable
+        settlementPreference = "T+2"
+        responseDeadline = "2026-07-01T12:00:00Z"
+
+  rfqPackage <- submit seller do
+    createCmd RFQPackage with
+      seller
+      receivableRef = "RCV-9F2A"
+      faceValue = 480000.0
+      currency = "USD"
+      daysToDue = 45
+      packageContent
+      rfqParameters
+
+  discovery <- submit seller do
+    exerciseCmd rfqPackage CreateDiscoveryListing with
+      discoverySummary = "USD receivable, 45 days to due, package access handled in Phase 2"
+
+  rfq <- submit seller do
+    exerciseCmd rfqPackage OpenRFQRequest
+
+  Some complianceView <- queryContractId seller complianceAttestation
+  complianceView.result.sellerEligible === True
+
+  Some riskView <- queryContractId seller riskAttestation
+  riskView.riskTier === "BBB+"
+
+  Some rfqView <- queryContractId seller rfq
   rfqView.receivableRef === "RCV-9F2A"
 
-  -- ...but NOT the Seller's Receivable (it is not a stakeholder there).
+  -- Phase 1 has no concrete Funder stakeholders.
   None <- queryContractId funderA rcv
+  None <- queryContractId funderA complianceAttestation
+  None <- queryContractId funderA riskAttestation
+  None <- queryContractId funderA discovery
+  None <- queryContractId funderA rfq
 
   pure ()

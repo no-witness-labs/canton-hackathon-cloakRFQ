@@ -1,17 +1,38 @@
--- | CloakRFQ Receipts — Phase 1: RFQ Origination & Eligibility (#9).
+-- | CloakRFQ Receipts - Phase 1: RFQ Origination & Eligibility (#9).
 --
--- Receivable, scoped attestations (Compliance / Risk), and the Blind RFQ.
--- Party-scoped signatories/observers are how Canton enforces selective
--- disclosure: the raw Debtor identity stays with the Seller, and Funders receive
--- an attestation-first RFQ that never carries it. Private Quotes (Phase 2, #10)
--- and On-Ledger Demo Settlement (Phase 3, #11) build on these.
+-- Receivable, scoped workflow processes, package preparation, discovery, and
+-- the Seller-side RFQ request. Phase 1 does not include a ledger-level
+-- Coordinator and does not issue package access to specific Funders.
 module CloakRFQ where
 
 data RecourseModel = Recourse | NonRecourse | Negotiable
   deriving (Eq, Show)
 
--- | A receivable owned by the Seller. Private to the Seller (sole signatory,
--- no observers) until it is offered into an RFQ.
+data ComplianceResult = ComplianceResult
+  with
+    sellerEligible : Bool
+    rfqEligible : Bool
+    packageAccessPolicy : Text
+    disclosureConstraints : Text
+  deriving (Eq, Show)
+
+data RFQPackageContent = RFQPackageContent
+  with
+    summary : Text
+    complianceStatus : Text
+    riskTier : Text
+    disclosureBoundary : Text
+  deriving (Eq, Show)
+
+data RFQParameters = RFQParameters
+  with
+    recoursePreference : RecourseModel
+    settlementPreference : Text
+    responseDeadline : Text
+  deriving (Eq, Show)
+
+-- | A stable receivable object owned by the Seller. Raw Debtor identity remains
+-- Seller-only by default.
 template Receivable
   with
     seller : Party
@@ -20,7 +41,7 @@ template Receivable
     faceValue : Decimal
     currency : Text
     daysToDue : Int
-    debtorName : Text            -- raw Debtor identity — Seller-only by default
+    debtorName : Text            -- raw Debtor identity - Seller-only by default
     recoursePreference : RecourseModel
     settlementPreference : Text  -- e.g. "T+2"
     validityVerified : Bool
@@ -28,70 +49,135 @@ template Receivable
     signatory seller
     ensure faceValue > 0.0 && daysToDue >= 0
 
-    -- | Seller opens a Blind RFQ from this Receivable. The resulting RFQRequest
-    -- carries Core Pre-Quote Facts and attestation statuses — never the raw
-    -- Debtor identity (debtorName stays on this contract).
-    nonconsuming choice OpenRFQ : ContractId RFQRequest
-      with
-        coordinator : Party
-        funders : [Party]
-        debtorRisk : Text          -- e.g. "BBB+ · Low" (Risk Attestation result)
-        receivableValidity : Text  -- e.g. "Verified" (Compliance/Risk status)
-      controller seller
-      do
-        create RFQRequest with
-          seller
-          coordinator
-          funders
-          receivableRef = ref
-          faceValue
-          currency
-          daysToDue
-          debtorRisk
-          receivableValidity
-          recoursePreference
-          settlementPreference
+-- | Compliance workflow around a Receivable. It models MVP eligibility checks,
+-- not production KYC/AML integration or regulation.
+template ComplianceProcess
+  with
+    seller : Party
+    complianceParty : Party
+    receivableRef : Text
+    complianceReceivableData : Text
+  where
+    signatory seller
+    observer complianceParty
 
--- | Eligibility attestation issued by the Compliance Party. The Seller observes
--- it; Funders never see the raw data, only the status carried into the RFQ.
+    choice RecordComplianceResult : ContractId ComplianceAttestation
+      with
+        result : ComplianceResult
+      controller complianceParty
+      do
+        create ComplianceAttestation with
+          complianceParty
+          seller
+          receivableRef
+          result
+
+-- | Eligibility attestation issued by the Compliance Party. The Seller observes it.
 template ComplianceAttestation
   with
     complianceParty : Party
     seller : Party
-    subject : Text
-    result : Text
+    receivableRef : Text
+    result : ComplianceResult
   where
     signatory complianceParty
     observer seller
 
--- | Risk attestation issued by the (separate, scoped) Risk Assessor.
+-- | Optional risk workflow around a Receivable.
+template RiskAssessmentProcess
+  with
+    seller : Party
+    riskAssessor : Party
+    receivableRef : Text
+    riskReceivableData : Text
+  where
+    signatory seller
+    observer riskAssessor
+
+    choice RecordRiskAttestation : ContractId RiskAttestation
+      with
+        riskTier : Text
+        riskSummary : Text
+      controller riskAssessor
+      do
+        create RiskAttestation with
+          riskAssessor
+          seller
+          receivableRef
+          riskTier
+          riskSummary
+
+-- | Risk attestation issued by the separate, scoped Risk Assessor.
 template RiskAttestation
   with
     riskAssessor : Party
     seller : Party
-    subject : Text
-    result : Text
+    receivableRef : Text
+    riskTier : Text
+    riskSummary : Text
   where
     signatory riskAssessor
     observer seller
 
--- | The Blind RFQ. Invited Funders and the Coordinator observe it, but it is
--- attestation-first: Core Pre-Quote Facts and risk/eligibility statuses only —
--- no raw Debtor identity or invoice document. Funders quote privately against it
--- in Phase 2; competing Funders will not see each other's Private Quotes.
-template RFQRequest
+-- | Seller-prepared package content. Phase 1 prepares the package, but does not
+-- issue it to a concrete Funder.
+template RFQPackage
   with
     seller : Party
-    coordinator : Party
-    funders : [Party]
     receivableRef : Text
     faceValue : Decimal
     currency : Text
     daysToDue : Int
-    debtorRisk : Text
-    receivableValidity : Text
-    recoursePreference : RecourseModel
-    settlementPreference : Text
+    packageContent : RFQPackageContent
+    rfqParameters : RFQParameters
   where
     signatory seller
-    observer (coordinator :: funders)
+    ensure faceValue > 0.0 && daysToDue >= 0
+
+    nonconsuming choice CreateDiscoveryListing : ContractId RFQDiscoveryListing
+      with
+        discoverySummary : Text
+      controller seller
+      do
+        create RFQDiscoveryListing with
+          seller
+          receivableRef
+          discoverySummary
+
+    nonconsuming choice OpenRFQRequest : ContractId RFQRequest
+      controller seller
+      do
+        create RFQRequest with
+          seller
+          receivableRef
+          faceValue
+          currency
+          daysToDue
+          packageContent
+          rfqParameters
+
+-- | Partial discovery information only. Visibility remains Seller-led in this
+-- Phase 1 implementation; Phase 2 decides concrete package access.
+template RFQDiscoveryListing
+  with
+    seller : Party
+    receivableRef : Text
+    discoverySummary : Text
+  where
+    signatory seller
+
+-- | Seller-side RFQ request that makes the workflow ready for Phase 2 package
+-- access and Private Quoting. It has no Coordinator or Funder stakeholders in
+-- Phase 1.
+template RFQRequest
+  with
+    seller : Party
+    receivableRef : Text
+    faceValue : Decimal
+    currency : Text
+    daysToDue : Int
+    packageContent : RFQPackageContent
+    rfqParameters : RFQParameters
+  where
+    signatory seller
+    ensure faceValue > 0.0 && daysToDue >= 0
