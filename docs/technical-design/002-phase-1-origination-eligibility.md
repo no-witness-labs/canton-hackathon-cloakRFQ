@@ -140,6 +140,20 @@ Decision: keep `Receivable` as a stable object and use workflow contracts for co
 2. Should compliance and risk attestations be consumed or kept active when `RFQPackage` is created?
 3. Should package data include a package version or hash before Phase 2 package access is implemented?
 
+## Undecided Implementation Options
+
+### Contract keys for package uniqueness
+
+`RFQPackage` package data should be immutable after creation. One option is to use a Daml contract key to enforce at most one active package for a given Seller and Receivable reference, for example `(seller, receivableRef)` with `seller` as maintainer.
+
+This is not yet a decision. Before implementation, verify the exact Daml/Canton SDK and Daml-LF target requirements for contract keys. The current package configuration uses SDK `3.5.1` and LF target `2.1`; LF target `2.3` may be considered if a required key feature or Canton deployment constraint needs it. Do not change the target version until this is confirmed.
+
+Open points:
+
+1. Should Phase 1 enforce one active `RFQPackage` per `(seller, receivableRef)`?
+2. Does the selected Canton/Daml environment require LF target `2.3` for the desired key behavior?
+3. If package replacement is ever needed, should the model archive the old package and create a new keyed package, or introduce explicit versioning?
+
 ## Non-Goals
 
 - No Funder-specific package issuance in Phase 1.
