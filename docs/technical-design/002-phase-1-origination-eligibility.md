@@ -14,44 +14,43 @@ Phase 1 ends when:
 
 - the Receivable is represented on ledger;
 - applicable compliance assumptions and statuses are represented;
-- risk assessment inputs and outputs are represented where used;
-- RFQ package content is prepared;
-- public or semi-public discovery information is available;
-- the RFQ is ready for Phase 2 package access and Private Quoting.
+- mandatory risk assessment output is represented;
+- RFQ package data is prepared for later disclosure.
 
-Phase 1 does not know specific Funders yet. Funder requests, invitations, access decisions for a concrete Funder, and Private Quotes belong to Phase 2.
+Phase 1 does not know specific Funders yet. Funder requests, invitations, package access decisions, listing/discovery behavior, and Private Quotes belong to Phase 2.
 
 ## Working Assumptions
 
 - There is no ledger-level Coordinator in Phase 1.
 - Compliance is included in Phase 1. Regulation is not part of Phase 1; direct regulator/auditor receipt visibility belongs to later settlement/finality flows.
 - Risk Assessor is a party.
-- Risk Assessor does not set final quote prices. Funders price risk themselves in Phase 2.
+- Risk assessment is mandatory for Phase 1 package creation.
+- Risk Assessor provides a risk tier, but does not decide whether the risk is acceptable. Funders make that decision in Phase 2.
 - Phase 1 prepares package content, but does not issue it to specific Funders.
 - The RFQ package contains selectively disclosed information derived from Seller data, Risk Assessor output, and compliance output.
-- The RFQ package may be a common package for all eligible Funders rather than a Funder-specific package. Phase 2 will decide whether package access is common, access-scoped, or Funder-specific.
+- The RFQ package is Seller-controlled in Phase 1. Phase 2 will decide whether package access is public, common to eligible Funders, access-scoped, or Funder-specific.
 
 ## Candidate Parties
 
 | Party | Phase 1 role |
 |---|---|
-| Seller | Owns or creates the Receivable, defines RFQ parameters, controls disclosure boundaries, prepares package content, and opens the RFQ. |
+| Seller | Owns or creates the Receivable, prepares package data, and controls when the package is ready for later disclosure. |
 | Compliance Party | Checks eligibility, KYC/AML/sanctions/policy status, disclosure rules, RFQ eligibility, and package access rules. |
-| Risk Assessor | Optionally assesses Debtor or Receivable risk and produces risk assessment output for the Seller before package issuance. |
+| Risk Assessor | Assesses Debtor or Receivable risk and produces a mandatory risk tier for the Seller before package creation. |
 
 Compliance checks are MVP workflow checks or attestations. They do not imply real KYC/AML integration unless that integration is explicitly added later.
 
 ## Candidate Data Partitions
 
-Receivable information should be separated for selective disclosure instead of stored as one monolithic payload.
+Receivable information should be separated for selective disclosure instead of stored as one monolithic payload. For the MVP, detailed partition payloads remain opaque instead of being modeled as separate structured data types.
 
 | Data partition | Purpose |
 |---|---|
-| `ComplianceReceivableData` | Data needed for compliance evaluation. |
-| `RiskReceivableData` | Data needed by the Risk Assessor. |
-| `FunderReceivableData` | Data intended for the eventual RFQ package shown to eligible Funders. |
+| Compliance input | Data needed for compliance evaluation. It is not disclosed through the package by default. |
+| Risk input | Data needed by the Risk Assessor. It is not disclosed through the package by default. |
+| `RFQPackageData` | Package-safe data prepared for later disclosure to Funders in Phase 2. |
 
-The exact fields are not decided in this note.
+The exact compliance and risk input fields are intentionally deferred until the workflow needs them.
 
 ## Candidate Contracts
 
@@ -62,7 +61,7 @@ These names are implementation candidates, not final Daml names.
 | `Receivable` | Canonical on-ledger object for the Receivable and its partitioned data references. |
 | `ComplianceProcess` | Tracks compliance processing for Seller eligibility, RFQ eligibility, disclosure constraints, and package access rules. It does not model regulation in Phase 1. |
 | `RiskAssessmentProcess` | Tracks risk assessment work and produces a `RiskAttestation` for the Seller. |
-| `RFQPackage` | Represents final package content prepared for eligible Funders. It contains selectively disclosed information derived by the Seller from Seller data, compliance output, and risk output. It is not issued to a specific Funder in Phase 1. |
+| `RFQPackage` | Represents package-safe data prepared for later disclosure. It contains an aggregate compliance status and mandatory risk tier, both verified against attestations. It is not issued to a specific Funder in Phase 1. |
 
 ## Package Boundary
 
@@ -81,17 +80,11 @@ This section names the first likely Daml templates and data types. It is still a
 
 | Data type | Purpose |
 |---|---|
-| `ReceivableId` | Stable identifier for the Receivable in the demo workflow. |
-| `ReceivableTerms` | Commercial core such as face value, currency, due date, and recourse preference. |
-| `ComplianceReceivableData` | Receivable data used by the Compliance Party. |
-| `RiskReceivableData` | Receivable and Debtor risk data sent to the Risk Assessor. |
-| `FunderReceivableData` | Selectively disclosed data intended for eventual eligible Funders. |
-| `DisclosureBoundary` | Seller-defined disclosure constraints for pre-quote, package, and later workflow contexts. |
-| `ComplianceResult` | MVP compliance output for Seller eligibility, RFQ eligibility, package access policy, and disclosure constraints. |
-| `RiskAttestation` | Risk output returned to the Seller. It includes at least `riskTier`; exact fields remain open. |
-| `RFQPackageContent` | Selectively disclosed package content derived by the Seller from Seller data, compliance output, and risk output. |
-| `RFQDiscoverySummary` | Partial public or semi-public discovery information. |
-| `RFQParameters` | RFQ timing, settlement preference, package policy, and other Phase 1 RFQ settings. |
+| `ReceivableTerms` | MVP commercial core: face value, currency, and days to due. |
+| `ComplianceResult` | MVP compliance output with `sellerEligible` and `rfqEligible`. |
+| `RiskTier` | Closed MVP risk tier: `LowRisk`, `MediumRisk`, or `HighRisk`. |
+| `RiskResult` | Risk output returned to the Seller, currently the mandatory `riskTier`. |
+| `RFQPackageData` | Package-safe data prepared for Phase 2: `terms`, `complianceOk`, `riskTier`, and `responseDeadline`. |
 
 ### Templates
 
@@ -99,21 +92,18 @@ This section names the first likely Daml templates and data types. It is still a
 |---|---|---|
 | `Receivable` | Seller-led | Represents the Receivable and references or contains partitioned data. |
 | `ComplianceProcess` | Seller and Compliance Party boundary TBD | Runs MVP compliance checks and produces `ComplianceResult`. |
-| `RiskAssessmentProcess` | Seller and Risk Assessor boundary TBD | Runs optional risk assessment and produces `RiskAttestation` for the Seller. |
-| `RFQPackage` | Seller-led | Stores final package content prepared for eligible Funders; not issued to a specific Funder in Phase 1. |
-| `RFQDiscoveryListing` | Seller-led; public/semi-public visibility TBD | Stores partial discovery data only. |
-| `RFQRequest` | Seller-led | Opens the RFQ for Phase 2 package access and Private Quoting. |
+| `RiskAssessmentProcess` | Seller and Risk Assessor boundary TBD | Runs mandatory risk assessment and produces `RiskAttestation` for the Seller. |
+| `RFQPackage` | Seller-led | Stores package-safe data prepared for Phase 2; not issued to a specific Funder in Phase 1. |
 
 ### Choice Sketch
 
 | Template | Candidate choice | Purpose |
 |---|---|---|
 | `Receivable` | `StartCompliance` | Start compliance processing around the Receivable. |
-| `Receivable` | `StartRiskAssessment` | Start optional risk assessment around the Receivable. |
+| `Receivable` | `StartRiskAssessment` | Start mandatory risk assessment around the Receivable. |
 | `ComplianceProcess` | `RecordComplianceResult` | Record eligibility, access, and disclosure outputs. |
 | `RiskAssessmentProcess` | `RecordRiskAttestation` | Record risk output for the Seller. |
-| `RFQPackage` | `CreateDiscoveryListing` | Create partial discovery listing from package-safe data. |
-| `RFQPackage` | `OpenRFQRequest` | Open Seller-side RFQ workflow for Phase 2. |
+| TBD | `CreateRFQPackage` | Create package data while verifying `complianceOk` and `riskTier` against the relevant attestations. |
 
 The exact placement of choices remains open. In particular, `Receivable` should stay a stable object, so lifecycle choices may move to wrapper workflow templates during implementation.
 
@@ -133,31 +123,29 @@ Option B: `Receivable` is a stable object and workflow contracts perform actions
 - Easier to keep selective disclosure boundaries explicit.
 - More contracts to implement.
 
-Decision: keep `Receivable` as a stable object and use workflow contracts for compliance, risk assessment, package preparation, discovery, and RFQ opening.
+Decision: keep `Receivable` as a stable object and use workflow contracts for compliance, risk assessment, and package preparation. Discovery/listing and Funder requests belong to Phase 2.
 
 ## Candidate Step Order
 
 1. Seller creates or references `Receivable` with partitioned data.
 2. Compliance Party runs `ComplianceProcess`.
-3. Risk Assessor runs `RiskAssessmentProcess`, if risk assessment is used.
-4. `RiskAssessmentProcess` produces `RiskAttestation` for the Seller. The attestation may contain private risk information.
-5. Seller derives selectively disclosed package content from receivable data, compliance output, and risk output.
-6. Seller creates `RFQPackage`.
-7. Seller creates `RFQDiscoveryListing` with partial discovery data only.
-8. Seller opens `RFQRequest`.
+3. Risk Assessor runs mandatory `RiskAssessmentProcess`.
+4. `RiskAssessmentProcess` produces `RiskAttestation` for the Seller. The attestation contains the risk tier used in the package.
+5. Seller derives package-safe `RFQPackageData` from receivable terms, compliance output, and risk output.
+6. Seller creates `RFQPackage`. The package may exist whether `complianceOk` is true or false, but `complianceOk` must equal `sellerEligible && rfqEligible`, and `riskTier` must match the `RiskAttestation`.
 
 ## Open Questions
 
-1. Should `RFQPackage` be common for all eligible Funders, or can Phase 2 derive Funder-specific package views from a common Phase 1 package?
-2. What exact fields should `RiskAttestation` contain beyond at least `riskTier`?
-3. What exact output should `ComplianceProcess` produce for Seller eligibility, RFQ eligibility, disclosure constraints, and package access policy?
-4. What minimal fields belong in `ComplianceReceivableData`, `RiskReceivableData`, and `FunderReceivableData` for the demo?
-5. Should `RFQRequest` reference `RFQPackage` directly, or should it reference a package version/hash/status object?
+1. Which template or choice should create `RFQPackage` while verifying compliance and risk attestation accuracy?
+2. Should compliance and risk attestations be consumed or kept active when `RFQPackage` is created?
+3. Should package data include a package version or hash before Phase 2 package access is implemented?
 
 ## Non-Goals
 
 - No Funder-specific package issuance in Phase 1.
 - No Funder package access request in Phase 1.
+- No public/semi-public listing or discovery contract in Phase 1.
+- No Funder-originated RFQ request in Phase 1.
 - No Private Quote submission in Phase 1.
 - No Seller quote selection in Phase 1.
 - No settlement or fallback in Phase 1.
