@@ -57,7 +57,8 @@ To re-bootstrap against an already-running sandbox: `./scripts/bootstrap.sh`.
 ## 4. Verifying the build (CI-style)
 
 ```bash
-export PATH="$HOME/.dpm/bin:$PATH"
+export JAVA_HOME="$HOME/.local/jvm/openjdk-17/usr/lib/jvm/java-17-openjdk-amd64"
+export PATH="$JAVA_HOME/bin:$HOME/.dpm/bin:$PATH"
 cd ledger && dpm build --all            # builds cloakrfq-lib + cloakrfq-contracts + cloakrfq-test (multi-package)
 cd ledger/test && dpm test        # Daml Script tests
 ```
@@ -77,7 +78,7 @@ cd ledger/test && dpm test        # Daml Script tests
 
 ### `JCE cannot authenticate the provider BC`
 Canton is on the wrong JDK (e.g. Oracle JDK 20). Use OpenJDK 17/21:
-`brew install openjdk@17`, or set `CLOAKRFQ_JAVA_HOME`, then re-run `./scripts/start-sandbox.sh`.
+Install OpenJDK 17, use the local `~/.local/jvm/openjdk-17` install, or set `CLOAKRFQ_JAVA_HOME`, then re-run `./scripts/start-sandbox.sh`.
 
 ### DAR upload returns HTTP 400 on startup
 The JSON API logged "started" before the participant was fully ready. The start

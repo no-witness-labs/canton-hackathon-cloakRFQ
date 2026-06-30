@@ -3,9 +3,9 @@
 -- Receivable, scoped workflow processes, package preparation, discovery, and
 -- the Seller-side RFQ request. Phase 1 does not include a ledger-level
 -- Coordinator and does not issue package access to specific Funders.
-module CloakRFQ where
+module CloakRFQ.Contracts where
 
-import CloakRFQ.Core
+import CloakRFQ.Lib
 
 -- | A stable receivable object owned by the Seller. Raw Debtor identity remains
 -- Seller-only by default.

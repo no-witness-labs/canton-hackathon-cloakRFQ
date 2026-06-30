@@ -2,7 +2,7 @@
 --
 -- This package intentionally contains no templates, choices, or party
 -- authorization rules. Deployable ledger behavior lives in cloakrfq-contracts.
-module CloakRFQ.Core where
+module CloakRFQ.Lib where
 
 data RecourseModel = Recourse | NonRecourse | Negotiable
   deriving (Eq, Show)
