@@ -146,12 +146,12 @@ Decision: keep `Receivable` as a stable object and use workflow contracts for co
 
 `RFQPackage` package data should be immutable after creation. One option is to use a Daml contract key to enforce at most one active package for a given Seller and Receivable reference, for example `(seller, receivableRef)` with `seller` as maintainer.
 
-This is not yet a decision. Before implementation, verify the exact Daml/Canton SDK and Daml-LF target requirements for contract keys. The current package configuration uses SDK `3.5.1` and LF target `2.1`; LF target `2.3` may be considered if a required key feature or Canton deployment constraint needs it. Do not change the target version until this is confirmed.
+This is not yet a decision. A local spike with SDK `3.5.1` verified that contract keys fail under LF target `2.1` with a compiler error saying keys are supported from `2.3`, and the same keyed template builds under LF target `2.3`. The current package configuration still uses LF target `2.1`; do not change the target version until the Phase 1 package-key design is accepted and the target is checked against the intended Canton deployment environment.
 
 Open points:
 
 1. Should Phase 1 enforce one active `RFQPackage` per `(seller, receivableRef)`?
-2. Does the selected Canton/Daml environment require LF target `2.3` for the desired key behavior?
+2. Should the ledger packages move from LF target `2.1` to `2.3` to support contract keys?
 3. If package replacement is ever needed, should the model archive the old package and create a new keyed package, or introduce explicit versioning?
 
 ## Non-Goals
