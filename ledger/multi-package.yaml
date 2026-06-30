@@ -1,4 +1,6 @@
-# cloakrfq contains the deployable templates; cloakrfq-test contains Daml Script tests.
+# cloakrfq-core contains shared pure domain code; cloakrfq-ledger contains
+# deployable templates; cloakrfq-test contains Daml Script tests.
 packages:
+  - ./core
   - .
   - ./test

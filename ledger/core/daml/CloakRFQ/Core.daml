@@ -1,0 +1,41 @@
+-- | Shared domain data and pure helpers for CloakRFQ.
+--
+-- This package intentionally contains no templates, choices, or party
+-- authorization rules. Deployable ledger behavior lives in cloakrfq-ledger.
+module CloakRFQ.Core where
+
+data RecourseModel = Recourse | NonRecourse | Negotiable
+  deriving (Eq, Show)
+
+data ComplianceResult = ComplianceResult
+  with
+    sellerEligible : Bool
+    rfqEligible : Bool
+    packageAccessPolicy : Text
+    disclosureConstraints : Text
+  deriving (Eq, Show)
+
+data RFQPackageContent = RFQPackageContent
+  with
+    summary : Text
+    complianceStatus : Text
+    riskTier : Text
+    disclosureBoundary : Text
+  deriving (Eq, Show)
+
+data RFQParameters = RFQParameters
+  with
+    recoursePreference : RecourseModel
+    settlementPreference : Text
+    responseDeadline : Text
+  deriving (Eq, Show)
+
+isPositiveAmount : Decimal -> Bool
+isPositiveAmount amount = amount > 0.0
+
+isNonNegativeDaysToDue : Int -> Bool
+isNonNegativeDaysToDue days = days >= 0
+
+hasValidReceivableTerms : Decimal -> Int -> Bool
+hasValidReceivableTerms faceValue daysToDue =
+  isPositiveAmount faceValue && isNonNegativeDaysToDue daysToDue

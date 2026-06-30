@@ -8,6 +8,7 @@ module CloakRFQ.Test where
 
 import Daml.Script
 import DA.Assert ((===))
+import CloakRFQ.Core
 import CloakRFQ
 
 phase1 : Script ()

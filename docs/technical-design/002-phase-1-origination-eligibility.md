@@ -64,6 +64,15 @@ These names are implementation candidates, not final Daml names.
 | `RiskAssessmentProcess` | Tracks risk assessment work and produces a `RiskAttestation` for the Seller. |
 | `RFQPackage` | Represents final package content prepared for eligible Funders. It contains selectively disclosed information derived by the Seller from Seller data, compliance output, and risk output. It is not issued to a specific Funder in Phase 1. |
 
+## Package Boundary
+
+Phase 1 uses two Daml packages:
+
+- `cloakrfq-core` contains reusable domain data types and pure helper functions. It must not contain templates, choices, signatories, observers, controllers, or ledger authorization policy.
+- `cloakrfq-ledger` contains deployable templates, choices, and party visibility rules. It imports `cloakrfq-core`.
+
+This keeps shared domain code reusable while preserving a clear boundary around ledger behavior.
+
 ## Candidate Daml Surface
 
 This section names the first likely Daml templates and data types. It is still a design target, not final Daml code.

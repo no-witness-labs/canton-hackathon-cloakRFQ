@@ -5,31 +5,7 @@
 -- Coordinator and does not issue package access to specific Funders.
 module CloakRFQ where
 
-data RecourseModel = Recourse | NonRecourse | Negotiable
-  deriving (Eq, Show)
-
-data ComplianceResult = ComplianceResult
-  with
-    sellerEligible : Bool
-    rfqEligible : Bool
-    packageAccessPolicy : Text
-    disclosureConstraints : Text
-  deriving (Eq, Show)
-
-data RFQPackageContent = RFQPackageContent
-  with
-    summary : Text
-    complianceStatus : Text
-    riskTier : Text
-    disclosureBoundary : Text
-  deriving (Eq, Show)
-
-data RFQParameters = RFQParameters
-  with
-    recoursePreference : RecourseModel
-    settlementPreference : Text
-    responseDeadline : Text
-  deriving (Eq, Show)
+import CloakRFQ.Core
 
 -- | A stable receivable object owned by the Seller. Raw Debtor identity remains
 -- Seller-only by default.
@@ -47,7 +23,7 @@ template Receivable
     validityVerified : Bool
   where
     signatory seller
-    ensure faceValue > 0.0 && daysToDue >= 0
+    ensure hasValidReceivableTerms faceValue daysToDue
 
 -- | Compliance workflow around a Receivable. It models MVP eligibility checks,
 -- not production KYC/AML integration or regulation.
@@ -132,7 +108,7 @@ template RFQPackage
     rfqParameters : RFQParameters
   where
     signatory seller
-    ensure faceValue > 0.0 && daysToDue >= 0
+    ensure hasValidReceivableTerms faceValue daysToDue
 
     nonconsuming choice CreateDiscoveryListing : ContractId RFQDiscoveryListing
       with
@@ -180,4 +156,4 @@ template RFQRequest
     rfqParameters : RFQParameters
   where
     signatory seller
-    ensure faceValue > 0.0 && daysToDue >= 0
+    ensure hasValidReceivableTerms faceValue daysToDue

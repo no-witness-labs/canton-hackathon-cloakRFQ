@@ -1,11 +1,9 @@
 sdk-version: 3.5.1
-name: cloakrfq-ledger
+name: cloakrfq-core
 source: daml
 version: 0.1.0
 dependencies:
   - daml-prim
   - daml-stdlib
-data-dependencies:
-  - core/.daml/dist/cloakrfq-core-0.1.0.dar
 build-options:
   - --target=2.1
