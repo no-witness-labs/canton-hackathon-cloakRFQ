@@ -100,6 +100,18 @@ const create = (name: string, createArguments: Record<string, unknown>) => ({ Cr
 const exercise = (name: string, contractId: string, choice: string, choiceArgument: Record<string, unknown> = {}) =>
   ({ ExerciseCommand: { templateId: tpl(name), contractId, choice, choiceArgument } });
 
+/** Create `name` as `party`; returns the new contractId. */
+export async function createAs(party: string, name: string, args: Record<string, unknown>): Promise<string> {
+  const r = await submit(party, create(name, args), 'create');
+  return r.created.find((c) => c.template === name)?.contractId ?? '';
+}
+
+/** Exercise `choice` on a contract as `party`; returns the created contracts. */
+export async function exerciseAs(party: string, name: string, contractId: string, choice: string, arg: Record<string, unknown> = {}): Promise<{ template: string; contractId: string }[]> {
+  const r = await submit(party, exercise(name, contractId, choice, arg), 'exercise');
+  return r.created;
+}
+
 /** Seed the canonical demo scenario (Northwind / $480K / VC-7, LC-3, HF-9).
  *  Idempotent-ish: safe to call once after the sandbox is up. */
 export async function seedDemo(): Promise<void> {

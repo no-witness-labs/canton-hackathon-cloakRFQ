@@ -1,16 +1,20 @@
 'use client';
 
 /**
- * CloakRFQ Receipts — demo state engine.
+ * CloakRFQ Receipts — Workspace state engine, LIVE-backed.
  *
- * Ported from the CloakRFQ.dc.html prototype (the visual + UX source of truth).
- * One Receivable Sale RFQ, seven Canton-party roles. Each role reads the SAME
- * state but is entitled to a different slice — selective disclosure. All data is
- * placeholder; in the real app each role view is backed by a Daml contract view.
+ * Same role-switcher UI as the prototype, but the data is read from the Canton
+ * ledger (via lib/ledger.ts) and the actions issue real Daml commands. Quotes are
+ * cached client-side by A/B/C key so the views (qByKey / winner / fallback) work
+ * exactly as before even after a quote is archived on settlement.
+ *
+ * Per-party Canton enforcement is demonstrated on /ledger; here the Seller's view
+ * provides the shared deal state and the role switches the lens.
  */
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { PartyRole } from './types';
+import { loadConfig, getParties, listActive, seedDemo, createAs, exerciseAs, type Contract } from './ledger';
 
 export type Role = PartyRole;
 export type Phase = 'quoting' | 'selected' | 'settling' | 'failed' | 'settled';
@@ -60,7 +64,6 @@ export const Q: Quote[] = [
   { key: 'A', label: 'VC-7', name: 'Vanta Credit', net: '$468,000', fees: '$1,200', disc: '2.50%', netNum: 468000, advPctNum: 90, adv: '90%', advAmt: '$432,000', reserve: '$48,000', allIn: '$12,000', allInPct: '2.50%', effApr: '≈20.3%', recourse: 'Recourse', settle: 'T+1', disclosure: 'Debtor identity + payment history', dLevel: 'High', dColor: '#f0795f', dRank: 2, notify: 'Required', expiry: '18m', eligible: true },
   { key: 'B', label: 'LC-3', name: 'Lumen Capital', net: '$465,200', fees: '$900', disc: '3.08%', netNum: 465200, advPctNum: 85, adv: '85%', advAmt: '$408,000', reserve: '$72,000', allIn: '$14,800', allInPct: '3.08%', effApr: '≈25.0%', recourse: 'Non-recourse', settle: 'T+2', disclosure: 'Attestations only', dLevel: 'Minimal', dColor: '#57e3a0', dRank: 0, notify: 'Not required', expiry: '22m', eligible: true },
   { key: 'C', label: 'HF-9', name: 'Harbour Funding', net: '$466,800', fees: '$1,500', disc: '2.75%', netNum: 466800, advPctNum: 88, adv: '88%', advAmt: '$422,400', reserve: '$57,600', allIn: '$13,200', allInPct: '2.75%', effApr: '≈22.3%', recourse: 'Negotiable', settle: 'T+3', disclosure: 'Debtor identity only', dLevel: 'Medium', dColor: '#e8c15f', dRank: 1, notify: 'Required', expiry: '12m', eligible: true },
-  { key: 'D', label: 'OX-2', name: 'Onyx Partners', net: '$470,000', fees: '$0', disc: '2.08%', netNum: 470000, advPctNum: 92, adv: '92%', advAmt: '$441,600', reserve: '$38,400', allIn: '$10,000', allInPct: '2.08%', effApr: '≈16.9%', recourse: 'Recourse', settle: 'T+1', disclosure: 'Full file + audited accounts', dLevel: 'High', dColor: '#f0795f', dRank: 2, notify: 'Required', expiry: '—', eligible: false },
 ];
 
 export const DLEVELS = [
@@ -107,12 +110,41 @@ export function calc(net: number, advPct: number): Calc {
 export interface Draft { key: string; net: number; advPct: number; recourse: string; settle: string; dLevel: string; notify: string; }
 type QuoteEdit = Partial<Quote>;
 
+/* ---- live <-> UI mapping ---- */
+const LABEL_TO_KEY: Record<string, string> = { 'VC-7': 'A', 'LC-3': 'B', 'HF-9': 'C' };
+const KEY_TO_LABEL: Record<string, string> = { A: 'VC-7', B: 'LC-3', C: 'HF-9' };
+const RECOURSE_UI: Record<string, string> = { Recourse: 'Recourse', NonRecourse: 'Non-recourse', Negotiable: 'Negotiable' };
+const UI_RECOURSE: Record<string, string> = { 'Recourse': 'Recourse', 'Non-recourse': 'NonRecourse', 'Negotiable': 'Negotiable' };
+const keyOfLabel = (label: string) => LABEL_TO_KEY[label] ?? label;
+
+function quoteFromContract(c: Contract): { q: Quote; funder: string } {
+  const a = c.args as Record<string, string>;
+  const label = String(a.funderLabel);
+  const key = keyOfLabel(label);
+  const netNum = parseFloat(a.netPurchasePrice);
+  const advPct = parseInt(a.advanceRatePct, 10) || 0;
+  const cal = calc(netNum, advPct);
+  const dl = DLEVELS.find((d) => d.dLevel === a.requiredDisclosure) ?? DLEVELS[0];
+  return {
+    funder: String(a.funder),
+    q: {
+      key, label, name: FUNDER_PARTY_NAMES[key] ?? label,
+      net: cal.net, fees: '$0', disc: cal.disc, netNum, advPctNum: advPct,
+      adv: cal.adv, advAmt: cal.advAmt, reserve: cal.reserve, allIn: cal.allIn, allInPct: cal.allInPct, effApr: cal.effApr,
+      recourse: RECOURSE_UI[a.recourse] ?? a.recourse, settle: a.settlement,
+      disclosure: dl.disclosure, dLevel: dl.dLevel, dColor: dl.dColor, dRank: dl.dRank,
+      notify: a.debtorNotification, expiry: a.quoteExpiry, eligible: a.proofOfFundsPassed === true || a.proofOfFundsPassed === 'true',
+    },
+  };
+}
+
 interface State {
   role: Role; phase: Phase; selected: string | null; fallback: string[];
   winner: string | null; settleVia: string | null; funderTab: string;
   quoteEdits: Record<string, QuoteEdit>; draft: Draft | null;
   toast: string | null; toastColor: string;
   walletState: WalletState; walletMenuOpen: boolean;
+  ready: boolean | null; quotesCache: Record<string, Quote>;
 }
 
 interface StoreCtx {
@@ -151,9 +183,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>({
     role: 'seller', phase: 'quoting', selected: null, fallback: [], winner: null,
     settleVia: null, funderTab: 'B', quoteEdits: {}, draft: null, toast: null, toastColor: '#57e3a0',
-    walletState: 'disconnected', walletMenuOpen: false,
+    walletState: 'disconnected', walletMenuOpen: false, ready: null, quotesCache: {},
   });
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const cidByKey = useRef<Record<string, string>>({});
+  const funderByKey = useRef<Record<string, string>>({});
+  const selectedCid = useRef<string | null>(null);
+  const viaFb = useRef(false);
   const patch = useCallback((p: Partial<State>) => setState((s) => ({ ...s, ...p })), []);
 
   const toast = useCallback((msg: string, color = '#57e3a0') => {
@@ -162,12 +198,43 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     timers.current.push(setTimeout(() => setState((s) => ({ ...s, toast: null })), 2600));
   }, []);
 
-  const qByKey = useCallback((k: string): Quote => {
-    const base = Q.find((q) => q.key === k)!;
-    return { ...base, ...(state.quoteEdits[k] || {}) };
-  }, [state.quoteEdits]);
+  // Read the Seller's view → the shared deal state (quotes, selection, receipt).
+  const refreshData = useCallback(async () => {
+    const cs = await listActive(getParties().seller);
+    const fresh: Record<string, Quote> = {};
+    for (const c of cs) {
+      if (c.template === 'PrivateQuote') {
+        const { q, funder } = quoteFromContract(c);
+        fresh[q.key] = q;
+        cidByKey.current[q.key] = c.contractId;
+        funderByKey.current[q.key] = funder;
+      }
+    }
+    const sel = cs.find((c) => c.template === 'SelectedQuote');
+    selectedCid.current = sel ? sel.contractId : null;
+    const rec = cs.find((c) => c.template === 'ScopedComplianceReceipt');
+    const selKey = sel ? keyOfLabel(String((sel.args as Record<string, string>).funderLabel)) : null;
+    const winKey = rec ? keyOfLabel(String((rec.args as Record<string, string>).winningFunderLabel)) : null;
+    setState((s) => ({
+      ...s,
+      quotesCache: { ...s.quotesCache, ...fresh },
+      quoteEdits: { ...s.quoteEdits, ...Object.fromEntries(Object.keys(fresh).map((k) => [k, {} as QuoteEdit])) },
+    }));
+    return { selKey, winKey, settled: !!rec, selectedExists: !!sel, hasQuotes: Object.keys(fresh).length > 0 };
+  }, []);
 
-  const resolvedQ = useMemo(() => Q.map((q) => ({ ...q, ...(state.quoteEdits[q.key] || {}) })), [state.quoteEdits]);
+  // Initial load: config → seed if empty → derive starting phase.
+  useEffect(() => { (async () => {
+    const ok = await loadConfig();
+    if (!ok) { patch({ ready: false }); return; }
+    let r = await refreshData();
+    if (!r.hasQuotes) { try { await seedDemo(); r = await refreshData(); } catch (e) { toast(String(e), '#f0795f'); } }
+    const phase: Phase = r.settled ? 'settled' : r.selectedExists ? 'selected' : 'quoting';
+    patch({ ready: true, phase, selected: r.selKey ?? null, winner: r.winKey ?? null });
+  })(); }, [refreshData, patch, toast]);
+
+  const qByKey = useCallback((k: string): Quote => state.quotesCache[k] ?? Q.find((q) => q.key === k) ?? Q[0], [state.quotesCache]);
+  const resolvedQ = useMemo(() => Object.values(state.quotesCache).sort((a, b) => a.key.localeCompare(b.key)), [state.quotesCache]);
   const eligible = useMemo(() => resolvedQ.filter((q) => q.eligible), [resolvedQ]);
   const excludedQ = useMemo(() => resolvedQ.find((q) => !q.eligible), [resolvedQ]);
   const fallbackUsed = !!(state.winner && state.selected && state.winner !== state.selected);
@@ -192,18 +259,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const submitQuote = useCallback(() => {
     const ft = state.funderTab;
     const d = curDraft();
-    const dl = DLEVELS.find((x) => x.dLevel === d.dLevel) || DLEVELS[0];
-    const edit: QuoteEdit = { ...calc(d.net, d.advPct), recourse: d.recourse, settle: d.settle, notify: d.notify, disclosure: dl.disclosure, dLevel: dl.dLevel, dColor: dl.dColor, dRank: dl.dRank };
-    setState((s) => ({ ...s, quoteEdits: { ...s.quoteEdits, [ft]: edit }, draft: null }));
-    toast('Private Quote submitted to RFQ-4471 — hidden from competing Funders', '#57e3a0');
-  }, [state.funderTab, curDraft, toast]);
+    toast('Submitting Private Quote…', '#57e3a0');
+    (async () => {
+      try {
+        const P = getParties();
+        const funder = P[('funder' + ft) as 'funderA' | 'funderB' | 'funderC'];
+        await createAs(funder, 'PrivateQuote', {
+          funder, seller: P.seller, rfqRef: 'RCV-9F2A', funderLabel: KEY_TO_LABEL[ft] ?? ('F-' + ft),
+          netPurchasePrice: d.net.toFixed(1), advanceRatePct: String(d.advPct),
+          recourse: UI_RECOURSE[d.recourse] ?? d.recourse, settlement: d.settle,
+          requiredDisclosure: d.dLevel, debtorNotification: d.notify, quoteExpiry: '—',
+          proofOfFundsPassed: true, complianceEligible: true,
+        });
+        await refreshData();
+        setState((s) => ({ ...s, draft: null }));
+        toast('Private Quote submitted — hidden from competing Funders', '#57e3a0');
+      } catch (e) { toast(String(e), '#f0795f'); }
+    })();
+  }, [state.funderTab, curDraft, toast, refreshData]);
 
   const onSelect = useCallback((key: string) => {
     if (state.phase !== 'quoting') return;
     const others = eligible.filter((q) => q.key !== key).sort((a, b) => a.dRank - b.dRank).map((q) => q.key);
+    viaFb.current = false;
     patch({ phase: 'selected', selected: key, fallback: others });
-    toast('Selected ' + qByKey(key).name + ' as Best Compliant Quote', '#57e3a0');
-  }, [state.phase, eligible, qByKey, patch, toast]);
+    toast('Selecting ' + qByKey(key).name + '…', '#57e3a0');
+    (async () => {
+      try { await exerciseAs(getParties().seller, 'PrivateQuote', cidByKey.current[key], 'Accept', {}); await refreshData(); toast('Selected ' + qByKey(key).name + ' as Best Compliant Quote', '#57e3a0'); }
+      catch (e) { toast(String(e), '#f0795f'); patch({ phase: 'quoting', selected: null, fallback: [] }); }
+    })();
+  }, [state.phase, eligible, qByKey, patch, toast, refreshData]);
 
   const moveFb = useCallback((key: string, dir: number) => {
     setState((s) => {
@@ -215,34 +300,61 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const onSettle = useCallback(() => {
-    const k = state.selected;
-    patch({ phase: 'settling', settleVia: k });
-    timers.current.push(setTimeout(() => {
-      patch({ phase: 'settled', winner: k, settleVia: null });
-      toast('Settled atomically with ' + qByKey(k!).name, '#57e3a0');
-    }, 1600));
-  }, [state.selected, qByKey, patch, toast]);
+  const settleKey = useCallback(async (key: string, fb: boolean) => {
+    const P = getParties();
+    const q = qByKey(key);
+    const funder = funderByKey.current[key];
+    const assetCid = await createAs(funder, 'DemoSettlementAsset', { owner: funder, amount: q.netNum.toFixed(1) });
+    await exerciseAs(funder, 'SelectedQuote', selectedCid.current!, 'Settle', { funderAssetCid: assetCid, auditor: P.auditor, viaFallback: fb });
+    await refreshData();
+  }, [qByKey, refreshData]);
 
-  const onFail = useCallback(() => { patch({ phase: 'failed' }); toast('Commitment Failure on Selected Quote', '#f0795f'); }, [patch, toast]);
+  const onSettle = useCallback(() => {
+    const k = state.selected; if (!k) return;
+    patch({ phase: 'settling', settleVia: k });
+    (async () => {
+      try { await settleKey(k, viaFb.current); patch({ phase: 'settled', winner: k, settleVia: null }); toast('Settled atomically with ' + qByKey(k).name, '#57e3a0'); }
+      catch (e) { toast(String(e), '#f0795f'); patch({ phase: 'selected', settleVia: null }); }
+    })();
+  }, [state.selected, qByKey, patch, toast, settleKey]);
+
+  const onFail = useCallback(() => {
+    patch({ phase: 'failed' });
+    toast('Commitment Failure on Selected Quote', '#f0795f');
+    (async () => {
+      try { await exerciseAs(getParties().seller, 'SelectedQuote', selectedCid.current!, 'Fail', {}); await refreshData(); }
+      catch (e) { toast(String(e), '#f0795f'); }
+    })();
+  }, [patch, toast, refreshData]);
 
   const onPromote = useCallback(() => {
-    setState((s) => {
-      const k = s.fallback[0];
-      timers.current.push(setTimeout(() => {
+    const k = state.fallback[0]; if (!k) return;
+    viaFb.current = true;
+    patch({ phase: 'settling', settleVia: k });
+    (async () => {
+      try {
+        await exerciseAs(getParties().seller, 'PrivateQuote', cidByKey.current[k], 'Accept', {});
+        await refreshData();
+        await settleKey(k, true);
         patch({ phase: 'settled', winner: k, settleVia: null });
         toast('Fallback promoted — settled with ' + qByKey(k).name, '#e8c15f');
-      }, 1600));
-      return { ...s, phase: 'settling', settleVia: k };
-    });
-  }, [qByKey, patch, toast]);
+      } catch (e) { toast(String(e), '#f0795f'); patch({ phase: 'failed', settleVia: null }); }
+    })();
+  }, [state.fallback, qByKey, patch, toast, refreshData, settleKey]);
 
-  const onReset = useCallback(() => patch({ phase: 'quoting', selected: null, fallback: [], winner: null, settleVia: null }), [patch]);
+  const onReset = useCallback(() => {
+    toast('Reloading from ledger…', '#9aa1ad');
+    (async () => {
+      const r = await refreshData();
+      const phase: Phase = r.settled ? 'settled' : r.selectedExists ? 'selected' : 'quoting';
+      patch({ phase, selected: r.selKey ?? null, winner: r.winKey ?? null, fallback: [], settleVia: null });
+    })();
+  }, [refreshData, patch, toast]);
 
   const walletParty = useCallback((role: Role): WalletParty | null => {
     if (role === 'funder') {
       const q = qByKey(state.funderTab);
-      return { name: FUNDER_PARTY_NAMES[state.funderTab], badge: 'Funder · ' + q.label, id: FUNDER_PARTY_IDS[state.funderTab], node: 'participant-funder-pool' };
+      return { name: FUNDER_PARTY_NAMES[state.funderTab] ?? q.name, badge: 'Funder · ' + q.label, id: FUNDER_PARTY_IDS[state.funderTab] ?? '', node: 'participant-funder-pool' };
     }
     if (role === 'outsider') return null;
     return WALLET_PARTIES[role] ?? null;

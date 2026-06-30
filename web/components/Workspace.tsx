@@ -11,6 +11,20 @@ export default function Workspace() {
   const role = state.role;
   const lg = LEGEND[role];
 
+  if (state.ready === null) return (
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+      <div className="mono t-ink3">Connecting to the Canton ledger…</div>
+    </div>
+  );
+  if (state.ready === false) return (
+    <div style={{ maxWidth: 560, margin: '60px auto', padding: 24 }}>
+      <h1 className="disp" style={{ fontSize: 20, fontWeight: 700 }}>Sandbox not ready</h1>
+      <p className="t-ink3" style={{ marginTop: 8 }}>The Canton ledger isn&apos;t reachable. Bring it up, then reload:</p>
+      <pre style={{ background: 'var(--panel)', padding: 14, borderRadius: 10, marginTop: 10, color: 'var(--ink2)' }}>./scripts/start-sandbox.sh</pre>
+      <p className="t-mut" style={{ marginTop: 8, fontSize: 13 }}>This Workspace now reads live contracts; the per-party proof is at <b>/ledger</b>.</p>
+    </div>
+  );
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header className="topbar">
