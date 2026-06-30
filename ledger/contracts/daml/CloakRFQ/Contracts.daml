@@ -1,25 +1,10 @@
 -- | CloakRFQ Receipts - Phase 1: RFQ Origination & Eligibility (#9).
 --
--- Receivable, scoped workflow processes, package preparation, discovery, and
--- the Seller-side RFQ request. Phase 1 does not include a ledger-level
--- Coordinator and does not issue package access to specific Funders.
+-- Scoped compliance, risk, and package preparation workflow state. The
+-- represented Receivable source asset lives in CloakRFQ.Receivable.
 module CloakRFQ.Contracts where
 
 import CloakRFQ.Lib
-
--- | A stable receivable object owned by the Seller. Raw Debtor identity remains
--- Seller-only by default.
-template Receivable
-  with
-    seller : Party
-    ref : Text                   -- opaque reference, e.g. "RCV-9F2A"
-    invoiceId : Text
-    debtorName : Text            -- raw Debtor identity - Seller-only by default
-    terms : ReceivableTerms
-    validityVerified : Bool
-  where
-    signatory seller
-    ensure hasValidReceivableTerms terms
 
 -- | Compliance workflow around a Receivable. It models MVP eligibility checks,
 -- not production KYC/AML integration or regulation.

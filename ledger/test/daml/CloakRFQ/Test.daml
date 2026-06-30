@@ -10,6 +10,7 @@ import Daml.Script
 import DA.Assert ((===))
 import CloakRFQ.Lib
 import CloakRFQ.Contracts
+import CloakRFQ.Receivable
 
 phase1 : Script ()
 phase1 = do
@@ -23,11 +24,11 @@ phase1 = do
         currency = "USD"
         daysToDue = 45
 
-  -- Seller creates a Receivable (private to the Seller - raw Debtor identity).
+  -- Seller self-registers a private represented Receivable.
   rcv <- submit seller do
     createCmd Receivable with
-      seller
-      ref = "RCV-9F2A"
+      registrar = seller
+      owner = seller
       invoiceId = "INV-4471"
       debtorName = "Meridian Retail Group"
       terms
@@ -37,7 +38,7 @@ phase1 = do
     createCmd ComplianceProcess with
       seller
       complianceParty = compliance
-      receivableRef = "RCV-9F2A"
+      receivableRef = "INV-4471"
       complianceReceivableData = "MVP eligibility evidence"
 
   let complianceResult = ComplianceResult with
@@ -51,7 +52,7 @@ phase1 = do
     createCmd RiskAssessmentProcess with
       seller
       riskAssessor = risk
-      receivableRef = "RCV-9F2A"
+      receivableRef = "INV-4471"
       riskReceivableData = "Receivable risk evidence"
 
   let riskResult = RiskResult with
@@ -69,7 +70,7 @@ phase1 = do
   rfqPackage <- submit seller do
     createCmd RFQPackage with
       seller
-      receivableRef = "RCV-9F2A"
+      receivableRef = "INV-4471"
       terms
       packageContent
       rfqParameters
@@ -89,7 +90,7 @@ phase1 = do
   riskView.result.riskTier === LowRisk
 
   Some rfqView <- queryContractId seller rfq
-  rfqView.receivableRef === "RCV-9F2A"
+  rfqView.receivableRef === "INV-4471"
   rfqView.terms.faceValue === 480000.0
 
   -- Phase 1 has no concrete Funder stakeholders.

@@ -34,7 +34,7 @@ Phase 1 does not know specific Funders yet. Funder requests, invitations, packag
 
 | Party | Phase 1 role |
 |---|---|
-| Seller | Owns or creates the Receivable, prepares package data, and controls when the package is ready for later disclosure. |
+| Seller | Self-registers the pre-existing Receivable for the MVP, owns the represented Receivable, prepares package data, and controls when the package is ready for later disclosure. |
 | Compliance Party | Checks eligibility, KYC/AML/sanctions/policy status, disclosure rules, RFQ eligibility, and package access rules. |
 | Risk Assessor | Assesses Debtor or Receivable risk and produces a mandatory risk tier for the Seller before package creation. |
 
@@ -58,7 +58,7 @@ These names are implementation candidates, not final Daml names.
 
 | Contract | Purpose |
 |---|---|
-| `Receivable` | Canonical on-ledger object for the Receivable and its partitioned data references. |
+| `Receivable` | NFT-like represented receivable for a pre-existing invoice. For the MVP, the Seller self-registers it and remains the owner. |
 | `ComplianceProcess` | Tracks compliance processing for Seller eligibility, RFQ eligibility, disclosure constraints, and package access rules. It does not model regulation in Phase 1. |
 | `RiskAssessmentProcess` | Tracks risk assessment work and produces a `RiskAttestation` for the Seller. |
 | `RFQPackage` | Represents package-safe data prepared for later disclosure. It contains an aggregate compliance status and mandatory risk tier, both verified against attestations. It is not issued to a specific Funder in Phase 1. |
@@ -90,7 +90,7 @@ This section names the first likely Daml templates and data types. It is still a
 
 | Template | Signatories / controllers to decide | Purpose |
 |---|---|---|
-| `Receivable` | Seller-led | Represents the Receivable and references or contains partitioned data. |
+| `Receivable` | Seller self-registration | Represents the pre-existing Receivable as an immutable, NFT-like ledger object keyed by `(registrar, invoiceId)`. |
 | `ComplianceProcess` | Seller and Compliance Party boundary TBD | Runs MVP compliance checks and produces `ComplianceResult`. |
 | `RiskAssessmentProcess` | Seller and Risk Assessor boundary TBD | Runs mandatory risk assessment and produces `RiskAttestation` for the Seller. |
 | `RFQPackage` | Seller-led | Stores package-safe data prepared for Phase 2; not issued to a specific Funder in Phase 1. |
@@ -125,9 +125,25 @@ Option B: `Receivable` is a stable object and workflow contracts perform actions
 
 Decision: keep `Receivable` as a stable object and use workflow contracts for compliance, risk assessment, and package preparation. Discovery/listing and Funder requests belong to Phase 2.
 
+## Receivable Registration Decision
+
+The real-world receivable is a prerequisite asset for the MVP. Phase 1 does not create the legal receivable itself; it creates an on-ledger representation used by the RFQ workflow.
+
+For the hackathon MVP, use Seller self-registration:
+
+- `Receivable` is the NFT-like represented receivable state object.
+- `registrar` is the party that records the receivable on-ledger.
+- `owner` is the Seller/current owner of the represented receivable.
+- MVP self-registration requires `registrar == owner`.
+- The uniqueness key is `(registrar, invoiceId)`, maintained by `registrar`.
+- Sensitive fields such as raw Debtor identity may live on `Receivable` because it is not disclosed to Funders in Phase 1.
+- Compliance can later attest whether the Seller and RFQ are eligible, including whether the self-registration assumption is acceptable for the MVP flow.
+
+This does not claim production legal validation, production assignment, or a complete asset registry. A future third-party registrar model would need its own proposal/acceptance and authorization design.
+
 ## Candidate Step Order
 
-1. Seller creates or references `Receivable` with partitioned data.
+1. Seller self-registers a pre-existing `Receivable` as an immutable, NFT-like ledger object.
 2. Compliance Party runs `ComplianceProcess`.
 3. Risk Assessor runs mandatory `RiskAssessmentProcess`.
 4. `RiskAssessmentProcess` produces `RiskAttestation` for the Seller. The attestation contains the risk tier used in the package.
@@ -146,12 +162,12 @@ Decision: keep `Receivable` as a stable object and use workflow contracts for co
 
 `RFQPackage` package data should be immutable after creation. One option is to use a Daml contract key to enforce at most one active package for a given Seller and Receivable reference, for example `(seller, receivableRef)` with `seller` as maintainer.
 
-This is not yet a decision. A local spike with SDK `3.5.1` verified that contract keys fail under LF target `2.1` with a compiler error saying keys are supported from `2.3`, and the same keyed template builds under LF target `2.3`. The current package configuration still uses LF target `2.1`; do not change the target version until the Phase 1 package-key design is accepted and the target is checked against the intended Canton deployment environment.
+This is not yet a decision. A local spike with SDK `3.5.1` verified that contract keys fail under LF target `2.1` with a compiler error saying keys are supported from `2.3`, and the same keyed template builds under LF target `2.3`. The current package configuration uses LF target `2.3`; keep this target under review against the intended Canton deployment environment as package-key usage is implemented.
 
 Open points:
 
 1. Should Phase 1 enforce one active `RFQPackage` per `(seller, receivableRef)`?
-2. Should the ledger packages move from LF target `2.1` to `2.3` to support contract keys?
+2. Is LF target `2.3` acceptable for the intended Canton deployment environment?
 3. If package replacement is ever needed, should the model archive the old package and create a new keyed package, or introduce explicit versioning?
 
 ## Non-Goals
