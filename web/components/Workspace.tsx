@@ -1,7 +1,7 @@
 'use client';
 
 import { Icon, type IconName } from '@/lib/icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   useStore, ROLES, LEGEND, BOUNDARY, DLEVELS, calc, truncParty, usd,
   type Role, type Quote, type ReceivableForm, type AttView,
@@ -566,7 +566,9 @@ function ActionZone() {
 /* ============================ FUNDER ============================ */
 function FunderView() {
   const { state, qByKey, curDraft, setFunderTab, setDraft, submitQuote } = useStore();
-  const ft = state.funderTab;
+  const invited = state.rfqFunders;
+  useEffect(() => { if (invited.length && !invited.includes(state.funderTab)) setFunderTab(invited[0]); }, [invited, state.funderTab, setFunderTab]);
+  const ft = invited.includes(state.funderTab) ? state.funderTab : (invited[0] ?? state.funderTab);
   const cf = qByKey(ft);
   const draft = curDraft();
   const dc = calc(draft.net, draft.advPct);
@@ -610,7 +612,7 @@ function FunderView() {
       <div>
         <div className="eyebrow" style={{ marginBottom: 8 }}>You are quoting as</div>
         <div className="funder-tabs">
-          {['A', 'B', 'C'].map((k) => {
+          {invited.map((k) => {
             const q = qByKey(k);
             return (
               <button key={k} className={'ftab' + (k === ft ? ' on' : '')} onClick={() => setFunderTab(k)}>

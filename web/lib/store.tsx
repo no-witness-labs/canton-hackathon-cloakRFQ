@@ -380,7 +380,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           receivableValidity: state.complianceAtt ? 'Verified' : 'Unverified',
         });
         const d = await refreshData();
-        patch({ phase: phaseFrom(d) });
+        patch({ phase: phaseFrom(d), funderTab: funderKeys[0] ?? 'A' });
         toast('Blind RFQ opened — attestation-first, no raw Debtor identity', '#57e3a0');
       } catch (e) { toast(String(e), '#f0795f'); }
     })();
