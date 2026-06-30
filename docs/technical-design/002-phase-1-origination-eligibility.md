@@ -137,9 +137,10 @@ For the hackathon MVP, use Seller self-registration:
 - MVP self-registration requires `registrar == owner`.
 - The uniqueness key is `(registrar, invoiceId)`, maintained by `registrar`.
 - Sensitive fields such as raw Debtor identity may live on `Receivable` because it is not disclosed to Funders in Phase 1.
+- The `Receivable` source object should contain source facts only; eligibility and verification conclusions belong in later workflow attestations.
 - Compliance can later attest whether the Seller and RFQ are eligible, including whether the self-registration assumption is acceptable for the MVP flow.
 
-This does not claim production legal validation, production assignment, or a complete asset registry. A future third-party registrar model would need its own proposal/acceptance and authorization design.
+A future third-party registrar model would need its own proposal/acceptance and authorization design.
 
 ## Candidate Step Order
 

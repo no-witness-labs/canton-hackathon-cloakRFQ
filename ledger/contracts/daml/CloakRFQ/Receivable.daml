@@ -1,8 +1,8 @@
 -- | NFT-like represented Receivable used as the Phase 1 source asset.
 --
 -- The real-world receivable is assumed to exist before the MVP workflow. This
--- contract is the Seller's self-registered on-ledger representation of that
--- receivable, not a production legal validation or assignment.
+-- contract is a simplified self-registered on-ledger representation used by the
+-- Seller to start the RFQ workflow.
 module CloakRFQ.Receivable where
 
 import CloakRFQ.Lib
@@ -11,6 +11,8 @@ import CloakRFQ.Lib
 --
 -- MVP self-registration requires registrar and owner to be the same Seller.
 -- The key enforces one active represented receivable per registrar and invoice.
+-- Eligibility and verification conclusions are recorded by later workflow
+-- attestations, not duplicated on this source object.
 template Receivable
   with
     registrar : Party
@@ -18,7 +20,6 @@ template Receivable
     invoiceId : Text
     debtorName : Text            -- raw Debtor identity - Seller-only by default
     terms : ReceivableTerms
-    validityVerified : Bool
   where
     signatory registrar
     ensure registrar == owner && hasValidReceivableTerms terms

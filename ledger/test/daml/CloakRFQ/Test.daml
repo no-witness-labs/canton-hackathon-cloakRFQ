@@ -32,7 +32,6 @@ phase1 = do
       invoiceId = "INV-4471"
       debtorName = "Meridian Retail Group"
       terms
-      validityVerified = True
 
   complianceProcess <- submit seller do
     createCmd ComplianceProcess with
