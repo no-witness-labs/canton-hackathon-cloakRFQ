@@ -68,8 +68,8 @@ These names are implementation candidates, not final Daml names.
 
 Phase 1 uses two Daml packages:
 
-- `cloakrfq-core` contains reusable domain data types and pure helper functions. It must not contain templates, choices, signatories, observers, controllers, or ledger authorization policy.
-- `cloakrfq-ledger` contains deployable templates, choices, and party visibility rules. It imports `cloakrfq-core`.
+- `cloakrfq-domain` contains reusable domain data types and pure helper functions. It must not contain templates, choices, signatories, observers, controllers, or ledger authorization policy.
+- `cloakrfq-contracts` contains deployable templates, choices, and party visibility rules. It imports `cloakrfq-domain`.
 
 This keeps shared domain code reusable while preserving a clear boundary around ledger behavior.
 

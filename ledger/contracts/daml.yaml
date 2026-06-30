@@ -1,9 +1,11 @@
 sdk-version: 3.5.1
-name: cloakrfq-core
+name: cloakrfq-contracts
 source: daml
 version: 0.1.0
 dependencies:
   - daml-prim
   - daml-stdlib
+data-dependencies:
+  - ../domain/.daml/dist/cloakrfq-domain-0.1.0.dar
 build-options:
   - --target=2.1

@@ -43,7 +43,7 @@ Stop it with `./scripts/stop-sandbox.sh`.
 2. Launches `dpm sandbox` (single-process Canton) in the background.
 3. Waits for `HTTP JSON API Server started`, then for `/readyz` = 200.
 4. Runs `scripts/bootstrap.sh`, which is idempotent:
-   - uploads `ledger/.daml/dist/cloakrfq-ledger-0.1.0.dar`,
+   - uploads `ledger/contracts/.daml/dist/cloakrfq-contracts-0.1.0.dar`,
    - allocates one party per role — Seller, Funder A/B/C, Compliance, Risk,
      Coordinator, Auditor, Outsider (reuses existing),
    - writes `web/public/ledger-config.json` (gitignored; the UI fetches it at runtime).
@@ -58,7 +58,7 @@ To re-bootstrap against an already-running sandbox: `./scripts/bootstrap.sh`.
 
 ```bash
 export PATH="$HOME/.dpm/bin:$PATH"
-cd ledger && dpm build            # builds cloakrfq-ledger + cloakrfq-test (multi-package)
+cd ledger && dpm build            # builds cloakrfq-domain + cloakrfq-contracts + cloakrfq-test (multi-package)
 cd ledger/test && dpm test        # Daml Script tests
 ```
 
@@ -66,7 +66,9 @@ cd ledger/test && dpm test        # Daml Script tests
 
 | Folder | Role |
 | --- | --- |
-| `ledger/` | on-ledger Daml package (templates, choices, Daml Script tests) |
+| `ledger/domain/` | shared Daml domain package (`cloakrfq-domain`) |
+| `ledger/contracts/` | deployable Daml contract package (`cloakrfq-contracts`) |
+| `ledger/test/` | Daml Script tests (`cloakrfq-test`) |
 | `backend/` | off-ledger ledger client / integration glue (placeholder until #21) |
 | `web/` | Next.js UI (mock today; #21 wires it to the live ledger) |
 | `scripts/` | dev orchestration (sandbox + bootstrap) |

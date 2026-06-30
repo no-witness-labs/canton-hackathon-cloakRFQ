@@ -19,7 +19,7 @@ export JAVA_HOME
 export PATH="$JAVA_HOME/bin:$HOME/.dpm/bin:$PATH"
 
 echo "→ Java: $(java -version 2>&1 | head -1)"
-[ -f .daml/dist/cloakrfq-ledger-0.1.0.dar ] || { echo "→ Building DAR"; dpm build; }
+[ -f contracts/.daml/dist/cloakrfq-contracts-0.1.0.dar ] || { echo "→ Building DAR"; dpm build; }
 
 echo "→ Starting Canton sandbox (logs: ledger/log/canton.log)"
 rm -f log/canton.log
