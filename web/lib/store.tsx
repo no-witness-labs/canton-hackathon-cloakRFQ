@@ -253,9 +253,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const rec = cs.find((c) => c.template === 'ScopedComplianceReceipt');
     const selKey = sel ? keyOfLabel(String((sel.args as Record<string, string>).funderLabel)) : null;
     const winKey = rec ? keyOfLabel(String((rec.args as Record<string, string>).winningFunderLabel)) : null;
+    // Synthesize the winning quote so the selected/settled view still renders after a
+    // page reload — the winner's PrivateQuote is archived on Accept, and the
+    // SelectedQuote is archived on the (consuming) Settle. Pre-settle we recover it
+    // from the SelectedQuote (has recourse/settlement); post-settle from the
+    // SettlementResult + receipt. Advance %/disclosure aren't on-chain there → "—".
+    const synth: Record<string, Quote> = {};
+    const synthWinner = (wkey: string, label: string, netNum: number, recourse: string, settle: string, notify: string) => {
+      const cal = calc(netNum, 0);
+      synth[wkey] = {
+        key: wkey, label, name: FUNDER_PARTY_NAMES[wkey] ?? label,
+        net: usd(netNum), fees: '$0', disc: cal.disc, netNum, advPctNum: 0,
+        adv: '—', advAmt: '—', reserve: '—', allIn: cal.allIn, allInPct: cal.allInPct, effApr: cal.effApr,
+        recourse, settle, disclosure: '—', dLevel: '—', dColor: '#9aa1ad', dRank: 0,
+        notify, expiry: '—', eligible: true,
+      };
+    };
+    if (sel) {
+      const a = sel.args as Record<string, string>;
+      synthWinner(keyOfLabel(String(a.funderLabel)), String(a.funderLabel), parseFloat(String(a.netPurchasePrice)),
+        RECOURSE_UI[String(a.recourse)] ?? String(a.recourse), String(a.settlement), String(a.debtorNotification));
+    } else if (rec) {
+      const ra = rec.args as Record<string, string>;
+      const sr = cs.find((c) => c.template === 'SettlementResult');
+      const netNum = sr ? parseFloat(String((sr.args as Record<string, string>).netPurchasePrice)) : 0;
+      synthWinner(keyOfLabel(String(ra.winningFunderLabel)), String(ra.winningFunderLabel), netNum, '—', '—', String(ra.debtorNotification));
+    }
     setState((s) => ({
       ...s,
-      quotesCache: { ...s.quotesCache, ...fresh },
+      quotesCache: { ...synth, ...s.quotesCache, ...fresh },
       quoteEdits: { ...s.quoteEdits, ...Object.fromEntries(Object.keys(fresh).map((k) => [k, {} as QuoteEdit])) },
       receivable, rfqOpen, rfqFunders, complianceAtt, riskAtt,
     }));
