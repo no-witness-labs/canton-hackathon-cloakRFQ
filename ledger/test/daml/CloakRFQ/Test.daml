@@ -22,13 +22,6 @@ phase1 = do
         faceValue = 480000.0
         currency = "USD"
         daysToDue = 45
-        recoursePreference = Negotiable
-        settlementPreference = "T+2"
-
-  let disclosureBoundary = DisclosureBoundary with
-        preQuoteDisclosure = "Core facts only"
-        packageDisclosure = "No raw Debtor identity or invoice document"
-        laterWorkflowDisclosure = "Scoped receipts only"
 
   -- Seller creates a Receivable (private to the Seller - raw Debtor identity).
   rcv <- submit seller do
@@ -45,16 +38,11 @@ phase1 = do
       seller
       complianceParty = compliance
       receivableRef = "RCV-9F2A"
-      complianceReceivableData = ComplianceReceivableData with
-        sellerEligibilityData = "Seller eligibility evidence"
-        rfqEligibilityData = "RFQ eligibility evidence"
-        disclosureReviewData = "Disclosure constraints"
+      complianceReceivableData = "MVP eligibility evidence"
 
   let complianceResult = ComplianceResult with
         sellerEligible = True
         rfqEligible = True
-        packageAccessPolicy = "Eligible Funders may request access in Phase 2"
-        disclosureBoundary
 
   complianceAttestation <- submit compliance do
     exerciseCmd complianceProcess RecordComplianceResult with result = complianceResult
@@ -64,25 +52,16 @@ phase1 = do
       seller
       riskAssessor = risk
       receivableRef = "RCV-9F2A"
-      riskReceivableData = RiskReceivableData with
-        debtorRiskData = "Debtor risk data"
-        receivableRiskData = "Receivable performance data"
+      riskReceivableData = "Receivable risk evidence"
 
   let riskResult = RiskResult with
         riskTier = "BBB+"
-        riskSummary = "Low"
 
   riskAttestation <- submit risk do
     exerciseCmd riskProcess RecordRiskAttestation with result = riskResult
 
   let packageContent = RFQPackageContent with
-        funderReceivableData = FunderReceivableData with
-          packageSummary = "Core pre-quote facts only"
-          paymentProfile = "USD receivable, 45 days to due"
-          performanceSummary = "Verified receivable package"
-        complianceStatus = "Eligible"
-        riskResult
-        disclosureBoundary
+        summary = "Core pre-quote facts only"
 
   let rfqParameters = RFQParameters with
         responseDeadline = "2026-07-01T12:00:00Z"

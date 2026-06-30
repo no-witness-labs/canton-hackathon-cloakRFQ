@@ -28,7 +28,7 @@ template ComplianceProcess
     seller : Party
     complianceParty : Party
     receivableRef : Text
-    complianceReceivableData : ComplianceReceivableData
+    complianceReceivableData : Text
   where
     signatory seller
     observer complianceParty
@@ -61,7 +61,7 @@ template RiskAssessmentProcess
     seller : Party
     riskAssessor : Party
     receivableRef : Text
-    riskReceivableData : RiskReceivableData
+    riskReceivableData : Text
   where
     signatory seller
     observer riskAssessor

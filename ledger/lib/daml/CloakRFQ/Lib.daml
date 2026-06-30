@@ -4,65 +4,27 @@
 -- authorization rules. Deployable ledger behavior lives in cloakrfq-contracts.
 module CloakRFQ.Lib where
 
-data RecourseModel = Recourse | NonRecourse | Negotiable
-  deriving (Eq, Show)
-
 data ReceivableTerms = ReceivableTerms
   with
     faceValue : Decimal
     currency : Text
     daysToDue : Int
-    recoursePreference : RecourseModel
-    settlementPreference : Text
-  deriving (Eq, Show)
-
-data ComplianceReceivableData = ComplianceReceivableData
-  with
-    sellerEligibilityData : Text
-    rfqEligibilityData : Text
-    disclosureReviewData : Text
-  deriving (Eq, Show)
-
-data RiskReceivableData = RiskReceivableData
-  with
-    debtorRiskData : Text
-    receivableRiskData : Text
-  deriving (Eq, Show)
-
-data FunderReceivableData = FunderReceivableData
-  with
-    packageSummary : Text
-    paymentProfile : Text
-    performanceSummary : Text
-  deriving (Eq, Show)
-
-data DisclosureBoundary = DisclosureBoundary
-  with
-    preQuoteDisclosure : Text
-    packageDisclosure : Text
-    laterWorkflowDisclosure : Text
   deriving (Eq, Show)
 
 data ComplianceResult = ComplianceResult
   with
     sellerEligible : Bool
     rfqEligible : Bool
-    packageAccessPolicy : Text
-    disclosureBoundary : DisclosureBoundary
   deriving (Eq, Show)
 
 data RiskResult = RiskResult
   with
     riskTier : Text
-    riskSummary : Text
   deriving (Eq, Show)
 
 data RFQPackageContent = RFQPackageContent
   with
-    funderReceivableData : FunderReceivableData
-    complianceStatus : Text
-    riskResult : RiskResult
-    disclosureBoundary : DisclosureBoundary
+    summary : Text
   deriving (Eq, Show)
 
 data RFQDiscoverySummary = RFQDiscoverySummary
