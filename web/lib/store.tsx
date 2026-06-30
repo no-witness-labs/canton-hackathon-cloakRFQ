@@ -14,10 +14,10 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { PartyRole } from './types';
-import { loadConfig, getParties, listActive, seedDemo, createAs, exerciseAs, type Contract } from './ledger';
+import { loadConfig, getParties, listActive, createAs, exerciseAs, type Contract } from './ledger';
 
 export type Role = PartyRole;
-export type Phase = 'quoting' | 'selected' | 'settling' | 'failed' | 'settled';
+export type Phase = 'origination' | 'preRfq' | 'quoting' | 'selected' | 'settling' | 'failed' | 'settled';
 
 export const ROLES: { id: Role; label: string; sub: string }[] = [
   { id: 'seller', label: 'Seller', sub: 'Northwind Components' },
@@ -138,6 +138,15 @@ function quoteFromContract(c: Contract): { q: Quote; funder: string } {
   };
 }
 
+/* ---- live origination state (manual flow) ---- */
+export interface ReceivableForm {
+  ref: string; invoiceId: string; faceValue: number; currency: string; daysToDue: number;
+  debtorName: string; recoursePreference: string; settlementPreference: string;
+}
+export interface ReceivableView extends ReceivableForm { cid: string }
+export interface AttView { subject: string; result: string }
+const KEY_BY_FUNDER_ROLE: Record<string, string> = { funderA: 'A', funderB: 'B', funderC: 'C' };
+
 interface State {
   role: Role; phase: Phase; selected: string | null; fallback: string[];
   winner: string | null; settleVia: string | null; funderTab: string;
@@ -145,6 +154,8 @@ interface State {
   toast: string | null; toastColor: string;
   walletState: WalletState; walletMenuOpen: boolean;
   ready: boolean | null; quotesCache: Record<string, Quote>;
+  receivable: ReceivableView | null; rfqOpen: boolean; rfqFunders: string[];
+  complianceAtt: AttView | null; riskAtt: AttView | null;
 }
 
 interface StoreCtx {
@@ -158,6 +169,10 @@ interface StoreCtx {
   setRole: (id: Role) => void;
   setFunderTab: (k: string) => void;
   setDraft: (patch: Partial<Draft>) => void;
+  createReceivable: (r: ReceivableForm) => void;
+  openRFQ: (funderKeys: string[]) => void;
+  issueCompliance: (subject: string, result: string) => void;
+  issueRisk: (subject: string, result: string) => void;
   submitQuote: () => void;
   onSelect: (k: string) => void;
   moveFb: (k: string, dir: number) => void;
@@ -181,14 +196,16 @@ export function useStore(): StoreCtx {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>({
-    role: 'seller', phase: 'quoting', selected: null, fallback: [], winner: null,
-    settleVia: null, funderTab: 'B', quoteEdits: {}, draft: null, toast: null, toastColor: '#57e3a0',
+    role: 'seller', phase: 'origination', selected: null, fallback: [], winner: null,
+    settleVia: null, funderTab: 'A', quoteEdits: {}, draft: null, toast: null, toastColor: '#57e3a0',
     walletState: 'disconnected', walletMenuOpen: false, ready: null, quotesCache: {},
+    receivable: null, rfqOpen: false, rfqFunders: [], complianceAtt: null, riskAtt: null,
   });
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const cidByKey = useRef<Record<string, string>>({});
   const funderByKey = useRef<Record<string, string>>({});
   const selectedCid = useRef<string | null>(null);
+  const receivableCid = useRef<string | null>(null);
   const viaFb = useRef(false);
   const patch = useCallback((p: Partial<State>) => setState((s) => ({ ...s, ...p })), []);
 
@@ -198,16 +215,37 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     timers.current.push(setTimeout(() => setState((s) => ({ ...s, toast: null })), 2600));
   }, []);
 
-  // Read the Seller's view → the shared deal state (quotes, selection, receipt).
+  // Read the Seller's view → the shared deal state (receivable, RFQ, attestations,
+  // quotes, selection, receipt). The Seller observes all of these on-ledger.
   const refreshData = useCallback(async () => {
-    const cs = await listActive(getParties().seller);
+    const P = getParties();
+    const funderKeyByParty: Record<string, string> = { [P.funderA]: 'A', [P.funderB]: 'B', [P.funderC]: 'C' };
+    const cs = await listActive(P.seller);
     const fresh: Record<string, Quote> = {};
+    let receivable: ReceivableView | null = null;
+    let rfqOpen = false; let rfqFunders: string[] = [];
+    let complianceAtt: AttView | null = null; let riskAtt: AttView | null = null;
     for (const c of cs) {
+      const a = c.args as Record<string, unknown>;
       if (c.template === 'PrivateQuote') {
         const { q, funder } = quoteFromContract(c);
-        fresh[q.key] = q;
-        cidByKey.current[q.key] = c.contractId;
-        funderByKey.current[q.key] = funder;
+        fresh[q.key] = q; cidByKey.current[q.key] = c.contractId; funderByKey.current[q.key] = funder;
+      } else if (c.template === 'Receivable') {
+        receivableCid.current = c.contractId;
+        receivable = {
+          cid: c.contractId, ref: String(a.ref), invoiceId: String(a.invoiceId),
+          faceValue: parseFloat(String(a.faceValue)), currency: String(a.currency),
+          daysToDue: parseInt(String(a.daysToDue), 10) || 0, debtorName: String(a.debtorName),
+          recoursePreference: RECOURSE_UI[String(a.recoursePreference)] ?? String(a.recoursePreference),
+          settlementPreference: String(a.settlementPreference),
+        };
+      } else if (c.template === 'RFQRequest') {
+        rfqOpen = true;
+        rfqFunders = (Array.isArray(a.funders) ? a.funders : []).map((p) => funderKeyByParty[String(p)]).filter(Boolean);
+      } else if (c.template === 'ComplianceAttestation') {
+        complianceAtt = { subject: String(a.subject), result: String(a.result) };
+      } else if (c.template === 'RiskAttestation') {
+        riskAtt = { subject: String(a.subject), result: String(a.result) };
       }
     }
     const sel = cs.find((c) => c.template === 'SelectedQuote');
@@ -219,19 +257,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...s,
       quotesCache: { ...s.quotesCache, ...fresh },
       quoteEdits: { ...s.quoteEdits, ...Object.fromEntries(Object.keys(fresh).map((k) => [k, {} as QuoteEdit])) },
+      receivable, rfqOpen, rfqFunders, complianceAtt, riskAtt,
     }));
-    return { selKey, winKey, settled: !!rec, selectedExists: !!sel, hasQuotes: Object.keys(fresh).length > 0 };
+    return {
+      selKey, winKey, settled: !!rec, selectedExists: !!sel,
+      hasQuotes: Object.keys(fresh).length > 0, hasReceivable: !!receivable, rfqOpen,
+    };
   }, []);
 
-  // Initial load: config → seed if empty → derive starting phase.
+  // Derive the workflow phase from live contracts.
+  const phaseFrom = (r: { settled: boolean; selectedExists: boolean; rfqOpen: boolean; hasReceivable: boolean }): Phase =>
+    r.settled ? 'settled' : r.selectedExists ? 'selected' : r.rfqOpen ? 'quoting' : r.hasReceivable ? 'preRfq' : 'origination';
+
+  // Initial load: config → read live state → derive starting phase (fully manual,
+  // no pre-seeding — the deal is built by hand through the role views).
   useEffect(() => { (async () => {
     const ok = await loadConfig();
     if (!ok) { patch({ ready: false }); return; }
-    let r = await refreshData();
-    if (!r.hasQuotes) { try { await seedDemo(); r = await refreshData(); } catch (e) { toast(String(e), '#f0795f'); } }
-    const phase: Phase = r.settled ? 'settled' : r.selectedExists ? 'selected' : 'quoting';
-    patch({ ready: true, phase, selected: r.selKey ?? null, winner: r.winKey ?? null });
-  })(); }, [refreshData, patch, toast]);
+    const r = await refreshData();
+    patch({ ready: true, phase: phaseFrom(r), selected: r.selKey ?? null, winner: r.winKey ?? null });
+  })(); }, [refreshData, patch]);
 
   const qByKey = useCallback((k: string): Quote => state.quotesCache[k] ?? Q.find((q) => q.key === k) ?? Q[0], [state.quotesCache]);
   const resolvedQ = useMemo(() => Object.values(state.quotesCache).sort((a, b) => a.key.localeCompare(b.key)), [state.quotesCache]);
@@ -265,7 +310,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const P = getParties();
         const funder = P[('funder' + ft) as 'funderA' | 'funderB' | 'funderC'];
         await createAs(funder, 'PrivateQuote', {
-          funder, seller: P.seller, rfqRef: 'RCV-9F2A', funderLabel: KEY_TO_LABEL[ft] ?? ('F-' + ft),
+          funder, seller: P.seller, rfqRef: state.receivable?.ref ?? 'RFQ', funderLabel: KEY_TO_LABEL[ft] ?? ('F-' + ft),
           netPurchasePrice: d.net.toFixed(1), advanceRatePct: String(d.advPct),
           recourse: UI_RECOURSE[d.recourse] ?? d.recourse, settlement: d.settle,
           requiredDisclosure: d.dLevel, debtorNotification: d.notify, quoteExpiry: '—',
@@ -276,7 +321,68 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         toast('Private Quote submitted — hidden from competing Funders', '#57e3a0');
       } catch (e) { toast(String(e), '#f0795f'); }
     })();
-  }, [state.funderTab, curDraft, toast, refreshData]);
+  }, [state.funderTab, state.receivable, curDraft, toast, refreshData]);
+
+  // ---- origination (manual flow) ----
+  const createReceivable = useCallback((r: ReceivableForm) => {
+    toast('Creating Receivable…', '#57e3a0');
+    (async () => {
+      try {
+        const P = getParties();
+        await createAs(P.seller, 'Receivable', {
+          seller: P.seller, ref: r.ref, invoiceId: r.invoiceId, faceValue: r.faceValue.toFixed(1),
+          currency: r.currency, daysToDue: String(r.daysToDue), debtorName: r.debtorName,
+          recoursePreference: UI_RECOURSE[r.recoursePreference] ?? r.recoursePreference,
+          settlementPreference: r.settlementPreference, validityVerified: true,
+        });
+        const d = await refreshData();
+        patch({ phase: phaseFrom(d) });
+        toast('Receivable created — private to you', '#57e3a0');
+      } catch (e) { toast(String(e), '#f0795f'); }
+    })();
+  }, [patch, toast, refreshData]);
+
+  const openRFQ = useCallback((funderKeys: string[]) => {
+    toast('Opening Blind RFQ…', '#57e3a0');
+    (async () => {
+      try {
+        const P = getParties();
+        const funders = funderKeys.map((k) => P[('funder' + k) as 'funderA' | 'funderB' | 'funderC']);
+        await exerciseAs(P.seller, 'Receivable', receivableCid.current!, 'OpenRFQ', {
+          coordinator: P.coordinator, funders,
+          debtorRisk: state.riskAtt?.result ?? 'Unrated',
+          receivableValidity: state.complianceAtt ? 'Verified' : 'Unverified',
+        });
+        const d = await refreshData();
+        patch({ phase: phaseFrom(d) });
+        toast('Blind RFQ opened — attestation-first, no raw Debtor identity', '#57e3a0');
+      } catch (e) { toast(String(e), '#f0795f'); }
+    })();
+  }, [state.riskAtt, state.complianceAtt, patch, toast, refreshData]);
+
+  const issueCompliance = useCallback((subject: string, result: string) => {
+    toast('Issuing Compliance Attestation…', '#57e3a0');
+    (async () => {
+      try {
+        const P = getParties();
+        await createAs(P.compliance, 'ComplianceAttestation', { complianceParty: P.compliance, seller: P.seller, subject, result });
+        await refreshData();
+        toast('Compliance Attestation issued', '#57e3a0');
+      } catch (e) { toast(String(e), '#f0795f'); }
+    })();
+  }, [toast, refreshData]);
+
+  const issueRisk = useCallback((subject: string, result: string) => {
+    toast('Issuing Risk Attestation…', '#57e3a0');
+    (async () => {
+      try {
+        const P = getParties();
+        await createAs(P.risk, 'RiskAttestation', { riskAssessor: P.risk, seller: P.seller, subject, result });
+        await refreshData();
+        toast('Risk Attestation issued', '#57e3a0');
+      } catch (e) { toast(String(e), '#f0795f'); }
+    })();
+  }, [toast, refreshData]);
 
   const onSelect = useCallback((key: string) => {
     if (state.phase !== 'quoting') return;
@@ -346,8 +452,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     toast('Reloading from ledger…', '#9aa1ad');
     (async () => {
       const r = await refreshData();
-      const phase: Phase = r.settled ? 'settled' : r.selectedExists ? 'selected' : 'quoting';
-      patch({ phase, selected: r.selKey ?? null, winner: r.winKey ?? null, fallback: [], settleVia: null });
+      patch({ phase: phaseFrom(r), selected: r.selKey ?? null, winner: r.winKey ?? null, fallback: [], settleVia: null });
     })();
   }, [refreshData, patch, toast]);
 
@@ -370,9 +475,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<StoreCtx>(() => ({
     state, qByKey, resolvedQ, eligible, excludedQ, fallbackUsed, curDraft,
-    setRole, setFunderTab, setDraft, submitQuote, onSelect, moveFb, onSettle, onFail, onPromote, onReset,
+    setRole, setFunderTab, setDraft, createReceivable, openRFQ, issueCompliance, issueRisk,
+    submitQuote, onSelect, moveFb, onSettle, onFail, onPromote, onReset,
     walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet,
-  }), [state, qByKey, resolvedQ, eligible, excludedQ, fallbackUsed, curDraft, setRole, setFunderTab, setDraft, submitQuote, onSelect, moveFb, onSettle, onFail, onPromote, onReset, walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet]);
+  }), [state, qByKey, resolvedQ, eligible, excludedQ, fallbackUsed, curDraft, setRole, setFunderTab, setDraft, createReceivable, openRFQ, issueCompliance, issueRisk, submitQuote, onSelect, moveFb, onSettle, onFail, onPromote, onReset, walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

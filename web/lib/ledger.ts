@@ -112,38 +112,93 @@ export async function exerciseAs(party: string, name: string, contractId: string
   return r.created;
 }
 
-/** Seed the canonical demo scenario (Northwind / $480K / VC-7, LC-3, HF-9).
- *  Idempotent-ish: safe to call once after the sandbox is up. */
-export async function seedDemo(): Promise<void> {
+// ============================================================================
+// DEMO SCENARIO — edit these values to change what gets seeded on load.
+// (Funders can also submit their own quotes live via the Workspace composer.)
+//
+// Contract-enforced constraints: faceValue > 0, daysToDue >= 0, netPurchasePrice > 0;
+// recourse ∈ Recourse|NonRecourse|Negotiable; requiredDisclosure ∈ Minimal|Medium|High.
+// A quote with proofOfFundsPassed:false is shown excluded and cannot be selected.
+//
+// NOTE: the Workspace maps the labels VC-7/LC-3/HF-9 → A/B/C. Prices/terms are safe
+// to change freely; if you RENAME a label, also update LABEL_TO_KEY/NAMES in store.tsx.
+// ============================================================================
+type EnumRecourse = 'Recourse' | 'NonRecourse' | 'Negotiable';
+type EnumDisclosure = 'Minimal' | 'Medium' | 'High';
+export interface QuoteSpec {
+  funder: Role; label: string; netPurchasePrice: string; advanceRatePct: number;
+  recourse: EnumRecourse; settlement: string; requiredDisclosure: EnumDisclosure;
+  debtorNotification: string; quoteExpiry: string; proofOfFundsPassed: boolean; complianceEligible: boolean;
+}
+export interface Scenario {
+  receivable: { ref: string; invoiceId: string; faceValue: string; currency: string; daysToDue: string; debtorName: string; recoursePreference: EnumRecourse; settlementPreference: string };
+  attestations: { compliance: string; risk: string };
+  quotes: QuoteSpec[];
+}
+
+export const SCENARIOS: Record<string, Scenario> = {
+  base: {
+    receivable: { ref: 'RCV-9F2A', invoiceId: 'INV-4471', faceValue: '480000.0', currency: 'USD', daysToDue: '45', debtorName: 'Meridian Retail Group', recoursePreference: 'Negotiable', settlementPreference: 'T+2' },
+    attestations: { compliance: 'Eligible', risk: 'BBB+ · Low' },
+    quotes: [
+      { funder: 'funderA', label: 'VC-7', netPurchasePrice: '468000.0', advanceRatePct: 90, recourse: 'Recourse',    settlement: 'T+1', requiredDisclosure: 'High',    debtorNotification: 'Required',     quoteExpiry: '18m', proofOfFundsPassed: true, complianceEligible: true },
+      { funder: 'funderB', label: 'LC-3', netPurchasePrice: '465200.0', advanceRatePct: 85, recourse: 'NonRecourse', settlement: 'T+2', requiredDisclosure: 'Minimal', debtorNotification: 'Not required', quoteExpiry: '22m', proofOfFundsPassed: true, complianceEligible: true },
+      { funder: 'funderC', label: 'HF-9', netPurchasePrice: '466800.0', advanceRatePct: 88, recourse: 'Negotiable', settlement: 'T+3', requiredDisclosure: 'Medium',  debtorNotification: 'Required',     quoteExpiry: '12m', proofOfFundsPassed: true, complianceEligible: true },
+    ],
+  },
+  // Example variant: VC-7 FAILS the Proof-of-Funds Gate → shown excluded, not selectable.
+  stressed: {
+    receivable: { ref: 'RCV-9F2A', invoiceId: 'INV-4471', faceValue: '480000.0', currency: 'USD', daysToDue: '30', debtorName: 'Meridian Retail Group', recoursePreference: 'Recourse', settlementPreference: 'T+1' },
+    attestations: { compliance: 'Eligible', risk: 'BB · Medium' },
+    quotes: [
+      { funder: 'funderA', label: 'VC-7', netPurchasePrice: '470000.0', advanceRatePct: 92, recourse: 'Recourse',    settlement: 'T+1', requiredDisclosure: 'High',    debtorNotification: 'Required',     quoteExpiry: '10m', proofOfFundsPassed: false, complianceEligible: true },
+      { funder: 'funderB', label: 'LC-3', netPurchasePrice: '462000.0', advanceRatePct: 80, recourse: 'NonRecourse', settlement: 'T+3', requiredDisclosure: 'Minimal', debtorNotification: 'Not required', quoteExpiry: '20m', proofOfFundsPassed: true,  complianceEligible: true },
+      { funder: 'funderC', label: 'HF-9', netPurchasePrice: '466000.0', advanceRatePct: 88, recourse: 'Negotiable', settlement: 'T+2', requiredDisclosure: 'Medium',  debtorNotification: 'Required',     quoteExpiry: '14m', proofOfFundsPassed: true,  complianceEligible: true },
+    ],
+  },
+};
+
+/** The scenario seedDemo() uses. Switch to SCENARIOS.stressed — or edit base above. */
+export const SCENARIO: Scenario = SCENARIOS.base;
+
+let seedingPromise: Promise<void> | null = null;
+
+/** Seed the active demo scenario. Guarded so React StrictMode double-mounts (dev)
+ *  or a double-click can't create duplicate contracts; a failed seed clears the guard. */
+export function seedDemo(): Promise<void> {
+  if (!seedingPromise) seedingPromise = doSeed().catch((e) => { seedingPromise = null; throw e; });
+  return seedingPromise;
+}
+
+async function doSeed(): Promise<void> {
   const p = cfg.parties;
+  // Idempotent against the ledger: if a scenario is already seeded, do nothing.
+  // (The ledger is append-only — to re-seed with new values, restart the sandbox.)
+  const existing = await listActive(p.seller);
+  if (existing.some((c) => c.template === 'PrivateQuote')) return;
+  const s = SCENARIO;
 
   await submit(p.compliance, create('ComplianceAttestation',
-    { complianceParty: p.compliance, seller: p.seller, subject: 'Seller eligibility', result: 'Eligible' }), 'seed');
+    { complianceParty: p.compliance, seller: p.seller, subject: 'Seller eligibility', result: s.attestations.compliance }), 'seed');
   await submit(p.risk, create('RiskAttestation',
-    { riskAssessor: p.risk, seller: p.seller, subject: 'Debtor Risk', result: 'BBB+ · Low' }), 'seed');
+    { riskAssessor: p.risk, seller: p.seller, subject: 'Debtor Risk', result: s.attestations.risk }), 'seed');
 
-  const rcv = await submit(p.seller, create('Receivable', {
-    seller: p.seller, ref: 'RCV-9F2A', invoiceId: 'INV-4471',
-    faceValue: '480000.0', currency: 'USD', daysToDue: '45',
-    debtorName: 'Meridian Retail Group', recoursePreference: 'Negotiable',
-    settlementPreference: 'T+2', validityVerified: true,
-  }), 'seed');
+  const rcv = await submit(p.seller, create('Receivable', { seller: p.seller, ...s.receivable, validityVerified: true }), 'seed');
   const rcvCid = rcv.created.find((c) => c.template === 'Receivable')!.contractId;
 
   await submit(p.seller, exercise('Receivable', rcvCid, 'OpenRFQ', {
     coordinator: p.coordinator, funders: [p.funderA, p.funderB, p.funderC],
-    debtorRisk: 'BBB+ · Low', receivableValidity: 'Verified',
+    debtorRisk: s.attestations.risk, receivableValidity: 'Verified',
   }), 'seed');
 
-  const quote = (funder: string, label: string, price: string, adv: number, recourse: string, settle: string, disc: string, notify: string, expiry: string) =>
-    submit(funder, create('PrivateQuote', {
-      funder, seller: p.seller, rfqRef: 'RCV-9F2A', funderLabel: label,
-      netPurchasePrice: price, advanceRatePct: String(adv), recourse, settlement: settle,
-      requiredDisclosure: disc, debtorNotification: notify, quoteExpiry: expiry,
-      proofOfFundsPassed: true, complianceEligible: true,
+  for (const q of s.quotes) {
+    const funder = p[q.funder];
+    await submit(funder, create('PrivateQuote', {
+      funder, seller: p.seller, rfqRef: s.receivable.ref, funderLabel: q.label,
+      netPurchasePrice: q.netPurchasePrice, advanceRatePct: String(q.advanceRatePct),
+      recourse: q.recourse, settlement: q.settlement, requiredDisclosure: q.requiredDisclosure,
+      debtorNotification: q.debtorNotification, quoteExpiry: q.quoteExpiry,
+      proofOfFundsPassed: q.proofOfFundsPassed, complianceEligible: q.complianceEligible,
     }), 'seed');
-
-  await quote(p.funderA, 'VC-7', '468000.0', 90, 'Recourse', 'T+1', 'High', 'Required', '18m');
-  await quote(p.funderB, 'LC-3', '465200.0', 85, 'NonRecourse', 'T+2', 'Minimal', 'Not required', '22m');
-  await quote(p.funderC, 'HF-9', '466800.0', 88, 'Negotiable', 'T+3', 'Medium', 'Required', '12m');
+  }
 }
