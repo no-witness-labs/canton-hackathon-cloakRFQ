@@ -1,4 +1,4 @@
--- | Shared domain data and pure helpers for CloakRFQ.
+-- | Shared data and pure helpers for CloakRFQ.
 --
 -- This package intentionally contains no templates, choices, or party
 -- authorization rules. Deployable ledger behavior lives in cloakrfq-contracts.

@@ -7,7 +7,7 @@ dependencies:
   - daml-stdlib
   - daml-script
 data-dependencies:
-  - ../domain/.daml/dist/cloakrfq-domain-0.1.0.dar
+  - ../lib/.daml/dist/cloakrfq-lib-0.1.0.dar
   - ../contracts/.daml/dist/cloakrfq-contracts-0.1.0.dar
 build-options:
   - --target=2.1

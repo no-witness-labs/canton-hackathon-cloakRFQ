@@ -1,6 +1,6 @@
-# cloakrfq-domain contains shared pure domain code; cloakrfq-contracts contains
+# cloakrfq-lib contains shared pure library code; cloakrfq-contracts contains
 # deployable templates; cloakrfq-test contains Daml Script tests.
 packages:
-  - ./domain
+  - ./lib
   - ./contracts
   - ./test

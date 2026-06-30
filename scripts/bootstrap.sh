@@ -21,7 +21,7 @@ USER_ID="cloakrfq"
 # non-stakeholder party sees nothing.
 ROLES=(Seller FunderA FunderB FunderC Compliance Risk Coordinator Auditor Outsider)
 
-[ -f "$DAR" ] || { echo "DAR not found at $DAR — run 'dpm build' from ledger/ first." >&2; exit 1; }
+[ -f "$DAR" ] || { echo "DAR not found at $DAR — run 'dpm build --all' from ledger/ first." >&2; exit 1; }
 
 echo "→ Uploading DAR to $BASE"
 code=000

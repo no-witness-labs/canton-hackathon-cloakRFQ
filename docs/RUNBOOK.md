@@ -39,7 +39,7 @@ Stop it with `./scripts/stop-sandbox.sh`.
 
 ## 3. What start-sandbox.sh does
 
-1. Pins `JAVA_HOME` to OpenJDK 17 and builds the DAR if missing (`dpm build` in `ledger/`).
+1. Pins `JAVA_HOME` to OpenJDK 17 and builds the DAR if missing (`dpm build --all` in `ledger/`).
 2. Launches `dpm sandbox` (single-process Canton) in the background.
 3. Waits for `HTTP JSON API Server started`, then for `/readyz` = 200.
 4. Runs `scripts/bootstrap.sh`, which is idempotent:
@@ -58,7 +58,7 @@ To re-bootstrap against an already-running sandbox: `./scripts/bootstrap.sh`.
 
 ```bash
 export PATH="$HOME/.dpm/bin:$PATH"
-cd ledger && dpm build            # builds cloakrfq-domain + cloakrfq-contracts + cloakrfq-test (multi-package)
+cd ledger && dpm build --all            # builds cloakrfq-lib + cloakrfq-contracts + cloakrfq-test (multi-package)
 cd ledger/test && dpm test        # Daml Script tests
 ```
 
@@ -66,7 +66,7 @@ cd ledger/test && dpm test        # Daml Script tests
 
 | Folder | Role |
 | --- | --- |
-| `ledger/domain/` | shared Daml domain package (`cloakrfq-domain`) |
+| `ledger/lib/` | shared Daml library package (`cloakrfq-lib`) |
 | `ledger/contracts/` | deployable Daml contract package (`cloakrfq-contracts`) |
 | `ledger/test/` | Daml Script tests (`cloakrfq-test`) |
 | `backend/` | off-ledger ledger client / integration glue (placeholder until #21) |

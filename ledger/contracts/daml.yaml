@@ -6,6 +6,6 @@ dependencies:
   - daml-prim
   - daml-stdlib
 data-dependencies:
-  - ../domain/.daml/dist/cloakrfq-domain-0.1.0.dar
+  - ../lib/.daml/dist/cloakrfq-lib-0.1.0.dar
 build-options:
   - --target=2.1
