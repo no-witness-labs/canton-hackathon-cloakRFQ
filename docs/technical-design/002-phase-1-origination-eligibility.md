@@ -22,7 +22,7 @@ Phase 1 does not know specific Funders yet. Funder requests, invitations, packag
 ## Working Assumptions
 
 - There is no ledger-level Coordinator in Phase 1.
-- Compliance is included in Phase 1. Regulation is not part of Phase 1; direct regulator/auditor receipt visibility belongs to later settlement/finality flows.
+- Compliance is included in Phase 1. Regulation is not part of Phase 1; direct regulator/auditor certificate visibility belongs to later settlement/finality flows.
 - Risk Assessor is a party.
 - Risk assessment is mandatory for Phase 1 package creation.
 - Risk Assessor provides a risk tier, but does not decide whether the risk is acceptable. Funders make that decision in Phase 2.
@@ -60,7 +60,7 @@ These names are implementation candidates, not final Daml names.
 |---|---|
 | `Receivable` | NFT-like represented receivable for a pre-existing invoice. For the MVP, the Seller self-registers it and remains the owner. |
 | `ComplianceAttestation` | Compliance Party-signed detailed compliance output for the Seller package workflow. It contains scoped Seller disclosure and a `ComplianceResult`. |
-| `ComplianceReceipt` | Minimal Compliance Party-signed proof derived from a `ComplianceAttestation`. It can be included in or referenced by the RFQ package without exposing the full compliance disclosure. |
+| `ComplianceCertificate` | Minimal Compliance Party-signed credential derived from a `ComplianceAttestation`. It can be included in or referenced by the RFQ package without exposing the full compliance disclosure. The MVP version is simplified, but the name reflects the intended formal credential semantics. |
 | `RiskAssessmentProcess` | Tracks risk assessment work and produces a `RiskAttestation` for the Seller. |
 | `RFQPackage` | Represents package-safe data prepared for later disclosure. It contains an aggregate compliance status and mandatory risk tier, both verified against attestations. It is not issued to a specific Funder in Phase 1. |
 
@@ -95,16 +95,16 @@ This section names the first likely Daml templates and data types. It is still a
 |---|---|---|
 | `Receivable` | Seller self-registration | Represents the pre-existing Receivable as an immutable, NFT-like ledger object keyed by `(registrar, invoiceId)`. |
 | `ComplianceAttestation` | Compliance Party signatory, Seller observer | Records Compliance Party authority over the detailed compliance result and the disclosed information it evaluated. |
-| `ComplianceReceipt` | Compliance Party signatory, observers TBD | Minimal receipt derived from `ComplianceAttestation`; intended to support package authenticity while preserving privacy. |
+| `ComplianceCertificate` | Compliance Party signatory, observers TBD | Minimal certificate derived from `ComplianceAttestation`; intended to support package authenticity while preserving privacy, with room to become a reusable formal credential later. |
 | `RiskAssessmentProcess` | Seller and Risk Assessor boundary TBD | Runs mandatory risk assessment and produces `RiskAttestation` for the Seller. |
-| `RFQPackage` | Seller-led | Thin on-ledger package anchor for a Seller-controlled funding workflow. It references or is linked to authority outputs such as compliance and risk receipts; it is not issued to a specific Funder in Phase 1. |
+| `RFQPackage` | Seller-led | Thin on-ledger package anchor for a Seller-controlled funding workflow. It references or is linked to authority outputs such as compliance and risk certificates; it is not issued to a specific Funder in Phase 1. |
 
 ### Choice Sketch
 
 | Template | Candidate choice | Purpose |
 |---|---|---|
 | `Receivable` | `StartRiskAssessment` | Start mandatory risk assessment around the Receivable. |
-| `ComplianceAttestation` | `CreateComplianceReceipt` | Derive a minimal compliance receipt from the detailed Compliance Party-signed attestation. |
+| `ComplianceAttestation` | `CreateComplianceCertificate` | Derive a minimal compliance certificate from the detailed Compliance Party-signed attestation. |
 | `RiskAssessmentProcess` | `RecordRiskAttestation` | Record risk output for the Seller. |
 | TBD | `CreateRFQPackage` | Create package data while verifying `complianceOk` and `riskTier` against the relevant attestations. |
 
@@ -164,22 +164,22 @@ Keep `ComplianceResult` as the current two booleans:
 - `sellerEligible : Bool`
 - `rfqEligible : Bool`
 
-## Compliance Receipt Direction
+## Compliance Certificate Direction
 
-`ComplianceReceipt` should be a separate contract related to `ComplianceAttestation`, not an independent Seller-created claim.
+`ComplianceCertificate` should be a separate contract related to `ComplianceAttestation`, not an independent Seller-created claim.
 
-The purpose of `ComplianceReceipt` is to preserve authenticity and privacy:
+The purpose of `ComplianceCertificate` is to preserve authenticity and privacy while naming the artifact as a formal compliance credential:
 
 - authenticity: it is signed by the Compliance Party or visibly derived from a Compliance Party-signed `ComplianceAttestation`;
 - privacy: it does not expose the full `ComplianceDisclosure`.
 
-The receipt should be minimal and linked to the package and receivable with explicit workflow identifiers. Do not introduce hashes, ZK, or encryption in Phase 1.
+The certificate should be minimal and linked to the package and receivable with explicit workflow identifiers. Do not introduce hashes, ZK, or encryption in Phase 1.
 
-The Daml authorization reason for deriving the receipt from the attestation is that a contract create requires the authority of the created contract signatories, and consequences of exercising a choice are authorized by the choice actors plus the signatories of the exercised contract. A Seller-authored boolean is therefore not enough; the receipt must be Compliance Party-signed or produced from a Compliance Party-signed contract.
+The Daml authorization reason for deriving the certificate from the attestation is that a contract create requires the authority of the created contract signatories, and consequences of exercising a choice are authorized by the choice actors plus the signatories of the exercised contract. A Seller-authored boolean is therefore not enough; the certificate must be Compliance Party-signed or produced from a Compliance Party-signed contract.
 
-The Canton privacy reason for separating receipt from attestation is that later parties may need to see or use the minimal receipt without seeing the private `ComplianceDisclosure`. If a later non-stakeholder must use the receipt, Phase 2 may need explicit disclosure or another visibility mechanism.
+The Canton privacy reason for separating certificate from attestation is that later parties may need to see or use the minimal certificate without seeing the private `ComplianceDisclosure`. If a later non-stakeholder must use the certificate, Phase 2 may need explicit disclosure or another visibility mechanism.
 
-Candidate receipt fields:
+Candidate certificate fields:
 
 - `complianceParty : Party`
 - `seller : Party`
@@ -187,7 +187,7 @@ Candidate receipt fields:
 - `receivableRef : Text`
 - `policyVersion : Text`
 
-The existence of a `ComplianceReceipt` may mean compliance passed, instead of storing another boolean. This is still open.
+The existence of a `ComplianceCertificate` may mean compliance passed, instead of storing another boolean. This is still open.
 
 The likely creation pattern is a choice on `ComplianceAttestation`, tentatively controlled by the Seller as part of the Seller-driven package workflow. The exact controller remains flexible until the package workflow is finalized.
 
@@ -198,7 +198,7 @@ The RFQ package should be modeled as a thin on-ledger anchor plus related contra
 The full package can be assembled by the application off-ledger from:
 
 - the on-ledger `RFQPackage` anchor;
-- related authority contracts or receipts such as `ComplianceReceipt`;
+- related authority contracts or certificates such as `ComplianceCertificate`;
 - package-safe metadata;
 - later Phase 2 disclosure or access artifacts.
 
@@ -228,7 +228,7 @@ A future third-party registrar model would need its own proposal/acceptance and 
 1. Seller self-registers a pre-existing `Receivable` as an immutable, NFT-like ledger object.
 2. Seller prepares package workflow state and gathers required authority outputs.
 3. Compliance Party creates `ComplianceAttestation` from scoped `ComplianceDisclosure`.
-4. `ComplianceAttestation` may produce a minimal `ComplianceReceipt` for package use.
+4. `ComplianceAttestation` may produce a minimal `ComplianceCertificate` for package use.
 5. Risk Assessor runs mandatory `RiskAssessmentProcess`.
 6. `RiskAssessmentProcess` produces `RiskAttestation` for the Seller. The attestation contains the risk tier used in the package.
 7. Seller derives package-safe `RFQPackageData` from receivable terms, compliance output, and risk output.
@@ -236,12 +236,12 @@ A future third-party registrar model would need its own proposal/acceptance and 
 
 ## Open Questions
 
-1. Should the existence of `ComplianceReceipt` mean compliance passed, or should it also store an explicit `compliancePassed : Bool`?
-2. Who should control `CreateComplianceReceipt`: Seller, Compliance Party, or both?
+1. Should the existence of `ComplianceCertificate` mean compliance passed, or should it also store an explicit `compliancePassed : Bool`?
+2. Who should control `CreateComplianceCertificate`: Seller, Compliance Party, or both?
 3. Which template or choice should create `RFQPackage` while verifying compliance and risk attestation accuracy?
 4. Should compliance and risk attestations be consumed or kept active when `RFQPackage` is created?
 5. Should package data include package versioning before Phase 2 package access is implemented?
-6. Does Phase 1 need a separate risk receipt concept similar to `ComplianceReceipt`, or is `RiskAttestation` enough for the first implementation?
+6. Does Phase 1 need a separate risk certificate concept similar to `ComplianceCertificate`, or is `RiskAttestation` enough for the first implementation?
 
 ## Undecided Implementation Options
 
