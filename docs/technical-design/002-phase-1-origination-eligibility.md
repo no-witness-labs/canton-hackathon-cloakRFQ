@@ -62,6 +62,7 @@ These names are implementation candidates, not final Daml names.
 | `ComplianceAttestation` | Compliance Party-signed detailed compliance output for the Seller package workflow. It contains scoped Seller disclosure and a `ComplianceResult`. |
 | `ComplianceCertificate` | Minimal Compliance Party-signed credential derived from a `ComplianceAttestation`. It can be included in or referenced by the RFQ package without exposing the full compliance disclosure. The MVP version is simplified, but the name reflects the intended formal credential semantics. |
 | `RiskAssessmentProcess` | Tracks risk assessment work and produces a `RiskAttestation` for the Seller. |
+| `RiskCertificate` | Minimal Risk Assessor-signed credential derived from a `RiskAttestation`. It can be included in or referenced by the RFQ package without exposing full risk assessment inputs. |
 | `RFQPackage` | Represents package-safe data prepared for later disclosure. It contains an aggregate compliance status and mandatory risk tier, both verified against attestations. It is not issued to a specific Funder in Phase 1. |
 
 ## Package Boundary
@@ -97,6 +98,7 @@ This section names the first likely Daml templates and data types. It is still a
 | `ComplianceAttestation` | Compliance Party signatory, Seller observer | Records Compliance Party authority over the detailed compliance result and the disclosed information it evaluated. |
 | `ComplianceCertificate` | Compliance Party signatory, observers TBD | Minimal certificate derived from `ComplianceAttestation`; intended to support package authenticity while preserving privacy, with room to become a reusable formal credential later. |
 | `RiskAssessmentProcess` | Seller and Risk Assessor boundary TBD | Runs mandatory risk assessment and produces `RiskAttestation` for the Seller. |
+| `RiskCertificate` | Risk Assessor signatory, observers TBD | Minimal certificate derived from `RiskAttestation`; intended to support package authenticity while preserving privacy, with room to become a reusable formal credential later. |
 | `RFQPackage` | Seller-led | Thin on-ledger package anchor for a Seller-controlled funding workflow. It references or is linked to authority outputs such as compliance and risk certificates; it is not issued to a specific Funder in Phase 1. |
 
 ### Choice Sketch
@@ -106,6 +108,7 @@ This section names the first likely Daml templates and data types. It is still a
 | `Receivable` | `StartRiskAssessment` | Start mandatory risk assessment around the Receivable. |
 | `ComplianceAttestation` | `CreateComplianceCertificate` | Derive a minimal compliance certificate from the detailed Compliance Party-signed attestation. |
 | `RiskAssessmentProcess` | `RecordRiskAttestation` | Record risk output for the Seller. |
+| `RiskAttestation` | `CreateRiskCertificate` | Derive a minimal risk certificate from the detailed Risk Assessor-signed attestation. |
 | TBD | `CreateRFQPackage` | Create package data while verifying `complianceOk` and `riskTier` against the relevant attestations. |
 
 The exact placement of choices remains open. In particular, `Receivable` should stay a stable object, so lifecycle choices may move to wrapper workflow templates during implementation.
@@ -194,6 +197,27 @@ Confirmed: do not include `compliancePassed : Bool` on `ComplianceCertificate`. 
 
 Do not enforce `ComplianceCertificate` uniqueness on-ledger in Phase 1. Duplicate certificates for the same package are redundant, but not a core security failure because each certificate must still be Compliance Party-authorized. Add contract-key uniqueness later only if duplicate certificates create real workflow or verifier ambiguity.
 
+## Risk Certificate Direction
+
+`RiskCertificate` should mirror the compliance attestation/certificate split. `RiskAttestation` remains the detailed Risk Assessor-signed risk output, while `RiskCertificate` is a minimal package-facing credential derived from it.
+
+The purpose of `RiskCertificate` is to preserve authenticity and privacy:
+
+- authenticity: it is signed by the Risk Assessor or visibly derived from a Risk Assessor-signed `RiskAttestation`;
+- privacy: it does not expose full risk assessment inputs.
+
+Candidate certificate fields:
+
+- `riskAssessor : Party`
+- `seller : Party`
+- `packageId : Text`
+- `receivableRef : Text`
+- `riskTier : RiskTier`
+- `riskPolicyVersion : Text`
+- `certificationScope : Text`
+
+The risk certificate may include `riskTier` because the package workflow needs to disclose the risk tier as part of the package-safe output. This is different from compliance, where a separate boolean is intentionally avoided.
+
 ## RFQ Package Direction
 
 The RFQ package should be modeled as a thin on-ledger anchor plus related contracts and metadata, not as one large monolithic contract.
@@ -201,7 +225,7 @@ The RFQ package should be modeled as a thin on-ledger anchor plus related contra
 The full package can be assembled by the application off-ledger from:
 
 - the on-ledger `RFQPackage` anchor;
-- related authority contracts or certificates such as `ComplianceCertificate`;
+- related authority contracts or certificates such as `ComplianceCertificate` and `RiskCertificate`;
 - package-safe metadata;
 - later Phase 2 disclosure or access artifacts.
 
@@ -234,15 +258,15 @@ A future third-party registrar model would need its own proposal/acceptance and 
 4. `ComplianceAttestation` may produce a minimal `ComplianceCertificate` for package use.
 5. Risk Assessor runs mandatory `RiskAssessmentProcess`.
 6. `RiskAssessmentProcess` produces `RiskAttestation` for the Seller. The attestation contains the risk tier used in the package.
-7. Seller derives package-safe `RFQPackageData` from receivable terms, compliance output, and risk output.
-8. Seller creates `RFQPackage`. The package may exist whether `complianceOk` is true or false, but `complianceOk` must equal `sellerEligible && rfqEligible`, and `riskTier` must match the `RiskAttestation`.
+7. `RiskAttestation` may produce a minimal `RiskCertificate` for package use.
+8. Seller derives package-safe `RFQPackageData` from receivable terms, compliance output, and risk output.
+9. Seller creates `RFQPackage`. The package may exist whether `complianceOk` is true or false, but `complianceOk` must equal `sellerEligible && rfqEligible`, and `riskTier` must match the `RiskAttestation`.
 
 ## Open Questions
 
 1. Which template or choice should create `RFQPackage` while verifying compliance and risk attestation accuracy?
 2. Should compliance and risk attestations be consumed or kept active when `RFQPackage` is created?
 3. Should package data include package versioning before Phase 2 package access is implemented?
-4. Does Phase 1 need a separate risk certificate concept similar to `ComplianceCertificate`, or is `RiskAttestation` enough for the first implementation?
 
 ## Undecided Implementation Options
 
