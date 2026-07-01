@@ -6,6 +6,10 @@ node_modules/
 out/
 build/
 
+# Editor
+.vscode/
+**/.vscode/
+
 # Misc
 .DS_Store
 *.pem
