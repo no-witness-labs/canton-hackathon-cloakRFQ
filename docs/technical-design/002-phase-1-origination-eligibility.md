@@ -186,8 +186,9 @@ Candidate certificate fields:
 - `packageId : Text`
 - `receivableRef : Text`
 - `policyVersion : Text`
+- `certificationScope : Text`
 
-The existence of a `ComplianceCertificate` may mean compliance passed, instead of storing another boolean. This is still open.
+Confirmed: do not include `compliancePassed : Bool` on `ComplianceCertificate`. The certificate exists only when the Compliance Party certifies the package/receivable for the stated scope. This avoids downstream code mistakenly relying on a Seller-visible boolean instead of the existence of an authoritative Compliance Party-signed certificate.
 
 The likely creation pattern is a choice on `ComplianceAttestation`, tentatively controlled by the Seller as part of the Seller-driven package workflow. The exact controller remains flexible until the package workflow is finalized.
 
@@ -236,12 +237,11 @@ A future third-party registrar model would need its own proposal/acceptance and 
 
 ## Open Questions
 
-1. Should the existence of `ComplianceCertificate` mean compliance passed, or should it also store an explicit `compliancePassed : Bool`?
-2. Who should control `CreateComplianceCertificate`: Seller, Compliance Party, or both?
-3. Which template or choice should create `RFQPackage` while verifying compliance and risk attestation accuracy?
-4. Should compliance and risk attestations be consumed or kept active when `RFQPackage` is created?
-5. Should package data include package versioning before Phase 2 package access is implemented?
-6. Does Phase 1 need a separate risk certificate concept similar to `ComplianceCertificate`, or is `RiskAttestation` enough for the first implementation?
+1. Who should control `CreateComplianceCertificate`: Seller, Compliance Party, or both?
+2. Which template or choice should create `RFQPackage` while verifying compliance and risk attestation accuracy?
+3. Should compliance and risk attestations be consumed or kept active when `RFQPackage` is created?
+4. Should package data include package versioning before Phase 2 package access is implemented?
+5. Does Phase 1 need a separate risk certificate concept similar to `ComplianceCertificate`, or is `RiskAttestation` enough for the first implementation?
 
 ## Undecided Implementation Options
 
