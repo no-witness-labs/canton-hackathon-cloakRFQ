@@ -8,6 +8,7 @@ module CloakRFQ.Test where
 
 import Daml.Script
 import DA.Assert ((===))
+import DA.Date
 import CloakRFQ.Lib
 import CloakRFQ.Compliance
 import CloakRFQ.Risk
@@ -25,9 +26,11 @@ phase1 = do
   let receivableRef = "INV-4471"
 
   let terms = ReceivableTerms with
-        faceValue = 480000.0
+        payableAmount = 480000.0
         currency = "USD"
-        daysToDue = 45
+        issueDate = date 2026 Jan 1
+        dueDate = date 2026 Feb 15
+        paymentTerms = "Net 45"
 
   -- Seller self-registers a private represented Receivable.
   rcv <- submit seller do
@@ -122,7 +125,7 @@ phase1 = do
 
   Some packageView <- queryContractId seller rfqPackage
   packageView.receivableRef === receivableRef
-  packageView.terms.faceValue === 480000.0
+  packageView.terms.payableAmount === 480000.0
   packageView.complianceCertificateCid === complianceCertificate
   packageView.riskCertificateCid === riskCertificate
 

@@ -75,11 +75,23 @@ This keeps shared domain code reusable while preserving a clear boundary around 
 
 This section names the first likely Daml templates and data types. It is still a design target, not final Daml code.
 
+### `ReceivableTerms` Field Examples
+
+| Field | Meaning | Real-world example |
+|---|---|---|
+| `payableAmount` | Amount due from the Debtor under the invoice. | `480000.0` for a USD 480,000 invoice. |
+| `currency` | Invoice currency code. | `USD`, `EUR`, or `GBP`. |
+| `issueDate` | Date the invoice was issued. | `2026-01-01`. |
+| `dueDate` | Date payment is due from the Debtor. | `2026-02-15`. |
+| `paymentTerms` | Human-readable commercial payment terms. | `Net 45` or `Due 45 days from invoice date`. |
+
+`invoiceId` remains on `Receivable`, not inside `ReceivableTerms`, because the source receivable object already identifies the invoice.
+
 ### Data Types
 
 | Data type | Purpose |
 |---|---|
-| `ReceivableTerms` | MVP commercial core: face value, currency, and days to due. |
+| `ReceivableTerms` | MVP invoice/receivable commercial core: payable amount, currency, issue date, due date, and payment terms. |
 | `IdentityDisclosure` | Seller-disclosed legal identity information for an entity, such as legal name, jurisdiction, and entity type. |
 | `ComplianceDisclosure` | Seller-disclosed information needed by the Compliance Party: Seller identity, Debtor identity, receivable terms, transaction purpose, and disclosure restrictions. |
 | `ComplianceResult` | MVP compliance output with `sellerEligible` and `rfqEligible`. |

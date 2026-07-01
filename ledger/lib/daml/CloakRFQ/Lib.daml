@@ -6,9 +6,11 @@ module CloakRFQ.Lib where
 
 data ReceivableTerms = ReceivableTerms
   with
-    faceValue : Decimal
-    currency : Text
-    daysToDue : Int
+    payableAmount : Decimal  -- Amount due from the Debtor under the invoice.
+    currency : Text          -- Invoice currency code, e.g. USD or EUR.
+    issueDate : Date         -- Date the invoice was issued.
+    dueDate : Date           -- Date payment is due from the Debtor.
+    paymentTerms : Text      -- Human-readable terms, e.g. Net 45.
   deriving (Eq, Show)
 
 data IdentityDisclosure = IdentityDisclosure
@@ -57,9 +59,6 @@ data RFQParameters = RFQParameters
 isPositiveAmount : Decimal -> Bool
 isPositiveAmount amount = amount > 0.0
 
-isNonNegativeDaysToDue : Int -> Bool
-isNonNegativeDaysToDue days = days >= 0
-
 hasValidReceivableTerms : ReceivableTerms -> Bool
 hasValidReceivableTerms terms =
-  isPositiveAmount terms.faceValue && isNonNegativeDaysToDue terms.daysToDue
+  isPositiveAmount terms.payableAmount
