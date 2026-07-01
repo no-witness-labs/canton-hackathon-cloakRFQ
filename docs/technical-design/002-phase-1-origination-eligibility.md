@@ -218,6 +218,8 @@ Candidate certificate fields:
 
 The risk certificate may include `riskTier` because the package workflow needs to disclose the risk tier as part of the package-safe output. This is different from compliance, where a separate boolean is intentionally avoided.
 
+`CreateRiskCertificate` should follow the same Phase 1 mechanics as compliance: Seller-controlled, nonconsuming, and no on-ledger uniqueness enforcement. The Seller controls certificate creation as part of package assembly, while authenticity still comes from the Risk Assessor-signed attestation and resulting certificate. The detailed `RiskAttestation` remains active as the private source record.
+
 ## RFQ Package Direction
 
 The RFQ package should be modeled as a thin on-ledger anchor plus related contracts and metadata, not as one large monolithic contract.
