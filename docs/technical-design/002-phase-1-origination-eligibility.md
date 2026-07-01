@@ -222,7 +222,7 @@ The risk certificate may include `riskTier` because the package workflow needs t
 
 ## RFQ Package Direction
 
-The RFQ package should be modeled as a thin on-ledger anchor plus related contracts and metadata, not as one large monolithic contract.
+The RFQ package should be modeled as a thin on-ledger anchor plus related contracts and metadata, not as one large monolithic contract. Phase 1 should use direct Seller creation of `RFQPackage` with references to `ComplianceCertificate` and `RiskCertificate`, rather than creating the package through another workflow template choice. This keeps package assembly Seller-controlled and avoids adding an extra workflow contract before its visibility and data-disclosure boundaries are clearly needed.
 
 The full package can be assembled by the application off-ledger from:
 
@@ -266,9 +266,8 @@ A future third-party registrar model would need its own proposal/acceptance and 
 
 ## Open Questions
 
-1. Which template or choice should create `RFQPackage` while verifying compliance and risk attestation accuracy?
-2. Should compliance and risk attestations be consumed or kept active when `RFQPackage` is created?
-3. Should package data include package versioning before Phase 2 package access is implemented?
+1. Should compliance and risk attestations be consumed or kept active when `RFQPackage` is created?
+2. Should package data include package versioning before Phase 2 package access is implemented?
 
 ## Undecided Implementation Options
 
