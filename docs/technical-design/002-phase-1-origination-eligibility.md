@@ -48,7 +48,7 @@ Receivable information should be separated for selective disclosure instead of s
 |---|---|
 | Compliance disclosure | Seller-disclosed information needed for compliance evaluation. It is not disclosed through the package by default. |
 | Risk input | Data needed by the Risk Assessor. It is not disclosed through the package by default. |
-| `RFQPackageData` | Package-safe data prepared for later disclosure to Funders in Phase 2. |
+| Package-safe metadata | Seller-prepared package metadata for later disclosure to Funders in Phase 2. |
 
 The exact risk input fields are intentionally deferred until the workflow needs them.
 
@@ -88,7 +88,8 @@ This section names the first likely Daml templates and data types. It is still a
 | `ComplianceResult` | MVP compliance output with `sellerEligible` and `rfqEligible`. |
 | `RiskTier` | Closed MVP risk tier: `LowRisk`, `MediumRisk`, or `HighRisk`. |
 | `RiskResult` | Risk output returned to the Seller, currently the mandatory `riskTier`. |
-| `RFQPackageData` | Package-safe data prepared for Phase 2: `terms`, `complianceOk`, `riskTier`, and `responseDeadline`. |
+| `RFQPackageContent` | Package-safe summary content prepared by the Seller for the thin package anchor. |
+| `RFQParameters` | Package parameters such as the response deadline. |
 
 ### Templates
 
@@ -261,7 +262,7 @@ A future third-party registrar model would need its own proposal/acceptance and 
 5. Risk Assessor runs mandatory `RiskAssessmentProcess`.
 6. `RiskAssessmentProcess` produces `RiskAttestation` for the Seller. The attestation contains the risk tier used in the package.
 7. `RiskAttestation` may produce a minimal `RiskCertificate` for package use.
-8. Seller derives package-safe `RFQPackageData` from receivable terms, compliance output, and risk output.
+8. Seller prepares package-safe `RFQPackageContent` and `RFQParameters` from receivable terms and authority outputs.
 9. Seller creates `RFQPackage`. The package may exist whether `complianceOk` is true or false, but `complianceOk` must equal `sellerEligible && rfqEligible`, and `riskTier` must match the `RiskAttestation`.
 
 ## Open Questions

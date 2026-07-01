@@ -11,6 +11,22 @@ data ReceivableTerms = ReceivableTerms
     daysToDue : Int
   deriving (Eq, Show)
 
+data IdentityDisclosure = IdentityDisclosure
+  with
+    legalName : Text       -- Legal/business name of the disclosed entity.
+    jurisdiction : Text    -- Country or legal jurisdiction relevant to compliance.
+    entityType : Text      -- Legal form, e.g. company, sole proprietor, or government entity.
+  deriving (Eq, Show)
+
+data ComplianceDisclosure = ComplianceDisclosure
+  with
+    sellerIdentity : IdentityDisclosure      -- Seller legal identity disclosed for compliance review.
+    debtorIdentity : IdentityDisclosure      -- Debtor legal identity disclosed for compliance review.
+    receivableTerms : ReceivableTerms        -- Commercial terms of the receivable being checked.
+    transactionPurpose : Text                -- Why the Seller is preparing this RFQ package.
+    disclosureRestrictions : Text            -- Business/legal constraints on later package disclosure.
+  deriving (Eq, Show)
+
 data ComplianceResult = ComplianceResult
   with
     sellerEligible : Bool
@@ -28,20 +44,7 @@ data RiskResult = RiskResult
     riskTier : RiskTier
   deriving (Eq, Show)
 
-data RFQPackageData = RFQPackageData
-  with
-    terms : ReceivableTerms
-    complianceOk : Bool
-    riskTier : RiskTier
-    responseDeadline : Text
-  deriving (Eq, Show)
-
 data RFQPackageContent = RFQPackageContent
-  with
-    summary : Text
-  deriving (Eq, Show)
-
-data RFQDiscoverySummary = RFQDiscoverySummary
   with
     summary : Text
   deriving (Eq, Show)

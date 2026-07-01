@@ -1,15 +1,17 @@
 -- | CloakRFQ Receipts - Daml Script tests.
 --
 -- Phase 1 (#9) proves the design boundary: the Seller creates a stable
--- Receivable, Compliance and Risk run scoped workflow processes, the Seller
--- prepares package/discovery/RFQ state, and no concrete Funder is a Phase 1
+-- Receivable, Compliance and Risk issue scoped attestations/certificates, the
+-- Seller creates a thin RFQ package anchor, and no concrete Funder is a Phase 1
 -- stakeholder.
 module CloakRFQ.Test where
 
 import Daml.Script
 import DA.Assert ((===))
 import CloakRFQ.Lib
-import CloakRFQ.Contracts
+import CloakRFQ.Compliance
+import CloakRFQ.Risk
+import CloakRFQ.RFQPackage
 import CloakRFQ.Receivable
 
 phase1 : Script ()
@@ -18,6 +20,9 @@ phase1 = do
   compliance <- allocateParty "Compliance"
   risk       <- allocateParty "Risk"
   funderA    <- allocateParty "FunderA"
+
+  let packageId = "PKG-INV-4471"
+  let receivableRef = "INV-4471"
 
   let terms = ReceivableTerms with
         faceValue = 480000.0
@@ -29,36 +34,63 @@ phase1 = do
     createCmd Receivable with
       registrar = seller
       owner = seller
-      invoiceId = "INV-4471"
+      invoiceId = receivableRef
       debtorName = "Meridian Retail Group"
       terms
 
-  complianceProcess <- submit seller do
-    createCmd ComplianceProcess with
-      seller
-      complianceParty = compliance
-      receivableRef = "INV-4471"
-      complianceReceivableData = "MVP eligibility evidence"
+  let sellerIdentity = IdentityDisclosure with
+        legalName = "Aster Components LLC"
+        jurisdiction = "US-DE"
+        entityType = "Limited liability company"
+
+  let debtorIdentity = IdentityDisclosure with
+        legalName = "Meridian Retail Group"
+        jurisdiction = "US-NY"
+        entityType = "Corporation"
+
+  let complianceDisclosure = ComplianceDisclosure with
+        sellerIdentity
+        debtorIdentity
+        receivableTerms = terms
+        transactionPurpose = "Receivable sale RFQ for working capital"
+        disclosureRestrictions = "Package disclosure limited to eligible funders in later phases"
 
   let complianceResult = ComplianceResult with
         sellerEligible = True
         rfqEligible = True
 
   complianceAttestation <- submit compliance do
-    exerciseCmd complianceProcess RecordComplianceResult with result = complianceResult
+    createCmd ComplianceAttestation with
+      complianceParty = compliance
+      seller
+      packageId
+      receivableRef
+      complianceDisclosure
+      complianceResult
+
+  complianceCertificate <- submit seller do
+    exerciseCmd complianceAttestation CreateComplianceCertificate with
+      policyVersion = "MVP-COMPLIANCE-v1"
+      certificationScope = "Phase 1 RFQ package eligibility"
 
   riskProcess <- submit seller do
     createCmd RiskAssessmentProcess with
       seller
       riskAssessor = risk
-      receivableRef = "INV-4471"
+      packageId
+      receivableRef
       riskReceivableData = "Receivable risk evidence"
 
   let riskResult = RiskResult with
         riskTier = LowRisk
 
   riskAttestation <- submit risk do
-    exerciseCmd riskProcess RecordRiskAttestation with result = riskResult
+    exerciseCmd riskProcess RecordRiskAttestation with riskResult
+
+  riskCertificate <- submit seller do
+    exerciseCmd riskAttestation CreateRiskCertificate with
+      riskPolicyVersion = "MVP-RISK-v1"
+      certificationScope = "Phase 1 receivable risk tier"
 
   let packageContent = RFQPackageContent with
         summary = "Core pre-quote facts only"
@@ -69,34 +101,40 @@ phase1 = do
   rfqPackage <- submit seller do
     createCmd RFQPackage with
       seller
-      receivableRef = "INV-4471"
+      packageId
+      receivableRef
       terms
       packageContent
       rfqParameters
-
-  discovery <- submit seller do
-    exerciseCmd rfqPackage CreateDiscoveryListing with
-      discoverySummary = RFQDiscoverySummary with
-        summary = "USD receivable, 45 days to due, package access handled in Phase 2"
-
-  rfq <- submit seller do
-    exerciseCmd rfqPackage OpenRFQRequest
+      complianceCertificateCid = complianceCertificate
+      riskCertificateCid = riskCertificate
 
   Some complianceView <- queryContractId seller complianceAttestation
-  complianceView.result.sellerEligible === True
+  complianceView.complianceResult.sellerEligible === True
+
+  Some complianceCertificateView <- queryContractId seller complianceCertificate
+  complianceCertificateView.packageId === packageId
+  complianceCertificateView.receivableRef === receivableRef
 
   Some riskView <- queryContractId seller riskAttestation
-  riskView.result.riskTier === LowRisk
+  riskView.riskResult.riskTier === LowRisk
 
-  Some rfqView <- queryContractId seller rfq
-  rfqView.receivableRef === "INV-4471"
-  rfqView.terms.faceValue === 480000.0
+  Some riskCertificateView <- queryContractId seller riskCertificate
+  riskCertificateView.riskTier === LowRisk
+  riskCertificateView.packageId === packageId
+
+  Some packageView <- queryContractId seller rfqPackage
+  packageView.receivableRef === receivableRef
+  packageView.terms.faceValue === 480000.0
+  packageView.complianceCertificateCid === complianceCertificate
+  packageView.riskCertificateCid === riskCertificate
 
   -- Phase 1 has no concrete Funder stakeholders.
   None <- queryContractId funderA rcv
   None <- queryContractId funderA complianceAttestation
+  None <- queryContractId funderA complianceCertificate
   None <- queryContractId funderA riskAttestation
-  None <- queryContractId funderA discovery
-  None <- queryContractId funderA rfq
+  None <- queryContractId funderA riskCertificate
+  None <- queryContractId funderA rfqPackage
 
   pure ()

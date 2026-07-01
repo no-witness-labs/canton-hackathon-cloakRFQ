@@ -1,0 +1,22 @@
+-- | Phase 1 Seller-created RFQ package anchor.
+module CloakRFQ.RFQPackage where
+
+import CloakRFQ.Lib
+import CloakRFQ.Compliance
+import CloakRFQ.Risk
+
+-- | Thin on-ledger package anchor. The full RFQ package is assembled from
+-- this contract plus linked authority certificates and package metadata.
+template RFQPackage
+  with
+    seller : Party
+    packageId : Text
+    receivableRef : Text
+    terms : ReceivableTerms
+    packageContent : RFQPackageContent
+    rfqParameters : RFQParameters
+    complianceCertificateCid : ContractId ComplianceCertificate
+    riskCertificateCid : ContractId RiskCertificate
+  where
+    signatory seller
+    ensure hasValidReceivableTerms terms
