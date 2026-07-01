@@ -73,19 +73,16 @@ phase1 = do
       policyVersion = "MVP-COMPLIANCE-v1"
       certificationScope = "Phase 1 RFQ package eligibility"
 
-  riskProcess <- submit seller do
-    createCmd RiskAssessmentProcess with
-      seller
-      riskAssessor = risk
-      packageId
-      receivableRef
-      riskReceivableData = "Receivable risk evidence"
-
   let riskResult = RiskResult with
         riskTier = LowRisk
 
   riskAttestation <- submit risk do
-    exerciseCmd riskProcess RecordRiskAttestation with riskResult
+    createCmd RiskAttestation with
+      riskAssessor = risk
+      seller
+      packageId
+      receivableRef
+      riskResult
 
   riskCertificate <- submit seller do
     exerciseCmd riskAttestation CreateRiskCertificate with

@@ -24,10 +24,10 @@ Phase 1 does not know specific Funders yet. Funder requests, invitations, packag
 - There is no ledger-level Coordinator in Phase 1.
 - Compliance is included in Phase 1. Regulation is not part of Phase 1; direct regulator/auditor certificate visibility belongs to later settlement/finality flows.
 - Risk Assessor is a party.
-- Risk assessment is mandatory for Phase 1 package creation.
+- Risk assessment output is mandatory for Phase 1 package creation.
 - Risk Assessor provides a risk tier, but does not decide whether the risk is acceptable. Funders make that decision in Phase 2.
 - Phase 1 prepares package content, but does not issue it to specific Funders.
-- The RFQ package contains selectively disclosed information derived from Seller data, Risk Assessor output, and compliance output.
+- The RFQ package contains package-safe information and references to authority certificates derived from Seller data, Risk Assessor output, and compliance output.
 - The RFQ package is Seller-controlled in Phase 1. Phase 2 will decide whether package access is public, common to eligible Funders, access-scoped, or Funder-specific.
 
 ## Candidate Parties
@@ -36,7 +36,7 @@ Phase 1 does not know specific Funders yet. Funder requests, invitations, packag
 |---|---|
 | Seller | Self-registers the pre-existing Receivable for the MVP, owns the represented Receivable, prepares package data, and controls when the package is ready for later disclosure. |
 | Compliance Party | Checks eligibility, KYC/AML/sanctions/policy status, disclosure rules, RFQ eligibility, and package access rules. |
-| Risk Assessor | Assesses Debtor or Receivable risk and produces a mandatory risk tier for the Seller before package creation. |
+| Risk Assessor | Assesses Debtor or Receivable risk and produces a mandatory `RiskAttestation` for the Seller before package creation. |
 
 Compliance checks are MVP workflow checks or attestations. They do not imply real KYC/AML integration unless that integration is explicitly added later.
 
@@ -47,10 +47,8 @@ Receivable information should be separated for selective disclosure instead of s
 | Data partition | Purpose |
 |---|---|
 | Compliance disclosure | Seller-disclosed information needed for compliance evaluation. It is not disclosed through the package by default. |
-| Risk input | Data needed by the Risk Assessor. It is not disclosed through the package by default. |
 | Package-safe metadata | Seller-prepared package metadata for later disclosure to Funders in Phase 2. |
 
-The exact risk input fields are intentionally deferred until the workflow needs them.
 
 ## Candidate Contracts
 
@@ -61,7 +59,6 @@ These names are implementation candidates, not final Daml names.
 | `Receivable` | NFT-like represented receivable for a pre-existing invoice. For the MVP, the Seller self-registers it and remains the owner. |
 | `ComplianceAttestation` | Compliance Party-signed detailed compliance output for the Seller package workflow. It contains scoped Seller disclosure and a `ComplianceResult`. |
 | `ComplianceCertificate` | Minimal Compliance Party-signed credential derived from a `ComplianceAttestation`. It can be included in or referenced by the RFQ package without exposing the full compliance disclosure. The MVP version is simplified, but the name reflects the intended formal credential semantics. |
-| `RiskAssessmentProcess` | Tracks risk assessment work and produces a `RiskAttestation` for the Seller. |
 | `RiskCertificate` | Minimal Risk Assessor-signed credential derived from a `RiskAttestation`. It can be included in or referenced by the RFQ package without exposing full risk assessment inputs. |
 | `RFQPackage` | Represents package-safe data prepared for later disclosure. It contains an aggregate compliance status and mandatory risk tier, both verified against attestations. It is not issued to a specific Funder in Phase 1. |
 
@@ -98,7 +95,6 @@ This section names the first likely Daml templates and data types. It is still a
 | `Receivable` | Seller self-registration | Represents the pre-existing Receivable as an immutable, NFT-like ledger object keyed by `(registrar, invoiceId)`. |
 | `ComplianceAttestation` | Compliance Party signatory, Seller observer | Records Compliance Party authority over the detailed compliance result and the disclosed information it evaluated. |
 | `ComplianceCertificate` | Compliance Party signatory, observers TBD | Minimal certificate derived from `ComplianceAttestation`; intended to support package authenticity while preserving privacy, with room to become a reusable formal credential later. |
-| `RiskAssessmentProcess` | Seller and Risk Assessor boundary TBD | Runs mandatory risk assessment and produces `RiskAttestation` for the Seller. |
 | `RiskCertificate` | Risk Assessor signatory, observers TBD | Minimal certificate derived from `RiskAttestation`; intended to support package authenticity while preserving privacy, with room to become a reusable formal credential later. |
 | `RFQPackage` | Seller-led | Thin on-ledger package anchor for a Seller-controlled funding workflow. It references or is linked to authority outputs such as compliance and risk certificates; it is not issued to a specific Funder in Phase 1. |
 
@@ -106,11 +102,8 @@ This section names the first likely Daml templates and data types. It is still a
 
 | Template | Candidate choice | Purpose |
 |---|---|---|
-| `Receivable` | `StartRiskAssessment` | Start mandatory risk assessment around the Receivable. |
 | `ComplianceAttestation` | `CreateComplianceCertificate` | Derive a minimal compliance certificate from the detailed Compliance Party-signed attestation. |
-| `RiskAssessmentProcess` | `RecordRiskAttestation` | Record risk output for the Seller. |
 | `RiskAttestation` | `CreateRiskCertificate` | Derive a minimal risk certificate from the detailed Risk Assessor-signed attestation. |
-| TBD | `CreateRFQPackage` | Create package data while verifying `complianceOk` and `riskTier` against the relevant attestations. |
 
 The exact placement of choices remains open. In particular, `Receivable` should stay a stable object, so lifecycle choices may move to wrapper workflow templates during implementation.
 
@@ -136,7 +129,7 @@ Decision: keep `Receivable` as a stable object and use workflow contracts for co
 
 Compliance is part of the Seller-controlled package workflow, but the Seller is not the authority over compliance. The Compliance Party is the authority over the compliance output.
 
-Use `ComplianceAttestation` as the first simple compliance template. Do not keep a standalone `ComplianceProcess` as a separate Seller-started Phase 1 flow. Package creation may trigger or require compliance work, and the compliance model can evolve from the attestation template later if the workflow needs more steps.
+Use `ComplianceAttestation` as the first simple compliance template. Do not keep a standalone `ComplianceProcess` as a separate Seller-started Phase 1 flow. Package creation may trigger or require compliance work, and the compliance model can evolve from the attestation template later if the workflow needs more steps. Mirror this simplification for risk: do not keep a standalone `RiskAssessmentProcess` in Phase 1; the Risk Assessor creates `RiskAttestation` directly.
 
 `ComplianceAttestation` should include:
 
@@ -259,11 +252,10 @@ A future third-party registrar model would need its own proposal/acceptance and 
 2. Seller prepares package workflow state and gathers required authority outputs.
 3. Compliance Party creates `ComplianceAttestation` from scoped `ComplianceDisclosure`.
 4. `ComplianceAttestation` may produce a minimal `ComplianceCertificate` for package use.
-5. Risk Assessor runs mandatory `RiskAssessmentProcess`.
-6. `RiskAssessmentProcess` produces `RiskAttestation` for the Seller. The attestation contains the risk tier used in the package.
-7. `RiskAttestation` may produce a minimal `RiskCertificate` for package use.
-8. Seller prepares package-safe `RFQPackageContent` and `RFQParameters` from receivable terms and authority outputs.
-9. Seller creates `RFQPackage`. The package may exist whether `complianceOk` is true or false, but `complianceOk` must equal `sellerEligible && rfqEligible`, and `riskTier` must match the `RiskAttestation`.
+5. Risk Assessor creates `RiskAttestation` for the Seller. The attestation contains the risk tier used in the package.
+6. `RiskAttestation` may produce a minimal `RiskCertificate` for package use.
+7. Seller prepares package-safe `RFQPackageContent` and `RFQParameters` from receivable terms and authority outputs.
+8. Seller creates `RFQPackage` with references to the `ComplianceCertificate` and `RiskCertificate` used for the package.
 
 ## Open Questions
 
