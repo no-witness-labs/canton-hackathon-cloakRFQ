@@ -226,16 +226,22 @@ The risk certificate may include `riskTier` because the package workflow needs t
 
 `CreateRiskCertificate` should follow the same Phase 1 mechanics as compliance: Seller-controlled, nonconsuming, and no on-ledger uniqueness enforcement. The Seller controls certificate creation as part of package assembly, while authenticity still comes from the Risk Assessor-signed attestation and resulting certificate. The detailed `RiskAttestation` remains active as the private source record.
 
-## RFQ Package Direction
+## RFQ Request Bridge Direction
 
-The RFQ package should be modeled as a thin on-ledger anchor plus related contracts and metadata, not as one large monolithic contract. Phase 1 should use direct Seller creation of `RFQPackage` with references to `ComplianceCertificate` and `RiskCertificate`, rather than creating the package through another workflow template choice. This keeps package assembly Seller-controlled and avoids adding an extra workflow contract before its visibility and data-disclosure boundaries are clearly needed.
+The current Seller-created package anchor is not authoritative enough and should not be treated as the RFQ package itself. The next design direction is to split the concept into two templates:
 
-The full package can be assembled by the application off-ledger from:
+- a Seller-authored draft/builder/disclosure template that gathers package-safe Seller fields and certificate references;
+- a validated `RFQRequest` output created by exercising a Seller-controlled choice on that draft/builder.
 
-- the on-ledger `RFQPackage` anchor;
-- related authority contracts or certificates such as `ComplianceCertificate` and `RiskCertificate`;
-- package-safe metadata;
-- later Phase 2 disclosure or access artifacts.
+The draft/builder remains non-authoritative. The `RFQRequest` becomes the authoritative Phase 1 bridge only because the choice that creates it can fetch and validate the `ComplianceCertificate` and `RiskCertificate` before creating the request.
+
+For Phase 1, `RFQRequest` means ready to open, not already open to the market. Phase 2 decides how it becomes visible to Funders and how package access works.
+
+Minimum Phase 1 `RFQRequest` content should be limited to what is needed to prove readiness and bridge into Phase 2. The Funder-visible field set is not final and must be reworked in Phase 2.
+
+Funder discovery and routing are out of scope for the MVP ledger model. In a production or later-branch design, Funders may arrive through a public platform, private Seller invitation, broker/third-party workflow, or another off-ledger channel. For the local MVP, parties are simulated locally, so per-Funder request instances can be tested without deciding the off-ledger sourcing path.
+
+`RFQRequest` should be per request / per Funder interaction when Phase 2 introduces Funder visibility. The current Phase 1 bridge should leave that path open rather than modeling a public marketplace or discovery registry.
 
 All package pieces must be linked together. For Phase 1, use explicit identifiers such as `packageId` and `receivableRef`. Do not use hashes, ZK, or encryption for this linking.
 
@@ -266,25 +272,28 @@ A future third-party registrar model would need its own proposal/acceptance and 
 4. `ComplianceAttestation` may produce a minimal `ComplianceCertificate` for package use.
 5. Risk Assessor creates `RiskAttestation` for the Seller. The attestation contains the risk tier used in the package.
 6. `RiskAttestation` may produce a minimal `RiskCertificate` for package use.
-7. Seller prepares package-safe `RFQPackageContent` and `RFQParameters` from receivable terms and authority outputs.
-8. Seller creates `RFQPackage` with references to the `ComplianceCertificate` and `RiskCertificate` used for the package.
+7. Seller prepares package-safe draft/builder data from receivable terms and authority outputs.
+8. Seller exercises the draft/builder to create a validated `RFQRequest` bridge after certificate checks pass.
 
 ## Open Questions
 
-1. Should compliance and risk attestations be consumed or kept active when `RFQPackage` is created?
-2. Should package data include package versioning before Phase 2 package access is implemented?
+1. What exact fields must `ComplianceCertificate` and `RiskCertificate` bind to for the `RFQRequest` validation path?
+2. What should the Seller-authored draft/builder template be named?
+3. What minimal fields should Phase 1 `RFQRequest` contain before Phase 2 finalizes Funder visibility?
+4. Should compliance and risk attestations be consumed or kept active when `RFQRequest` is created?
+5. Should request/draft data include versioning before Phase 2 package access is implemented?
 
 ## Undecided Implementation Options
 
-### Contract keys for package uniqueness
+### Contract keys for request or draft uniqueness
 
-`RFQPackage` package data should be immutable after creation. One option is to use a Daml contract key to enforce at most one active package for a given Seller and Receivable reference, for example `(seller, receivableRef)` with `seller` as maintainer.
+The Seller-authored draft/builder and validated `RFQRequest` data should be immutable after creation. One option is to use Daml contract keys later to enforce uniqueness for a chosen identifier, such as `(seller, packageId)` or a future request identifier.
 
 This is not yet a decision. A local spike with SDK `3.5.1` verified that contract keys fail under LF target `2.1` with a compiler error saying keys are supported from `2.3`, and the same keyed template builds under LF target `2.3`. The current package configuration uses LF target `2.3`; keep this target under review against the intended Canton deployment environment as package-key usage is implemented.
 
 Open points:
 
-1. Should Phase 1 enforce one active `RFQPackage` per `(seller, receivableRef)`?
+1. Should Phase 1 enforce one active draft/builder or `RFQRequest` per chosen identifier?
 2. Is LF target `2.3` acceptable for the intended Canton deployment environment?
 3. If package replacement is ever needed, should the model archive the old package and create a new keyed package, or introduce explicit versioning?
 
