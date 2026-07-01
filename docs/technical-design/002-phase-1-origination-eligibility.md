@@ -46,11 +46,11 @@ Receivable information should be separated for selective disclosure instead of s
 
 | Data partition | Purpose |
 |---|---|
-| Compliance input | Data needed for compliance evaluation. It is not disclosed through the package by default. |
+| Compliance disclosure | Seller-disclosed information needed for compliance evaluation. It is not disclosed through the package by default. |
 | Risk input | Data needed by the Risk Assessor. It is not disclosed through the package by default. |
 | `RFQPackageData` | Package-safe data prepared for later disclosure to Funders in Phase 2. |
 
-The exact compliance and risk input fields are intentionally deferred until the workflow needs them.
+The exact risk input fields are intentionally deferred until the workflow needs them.
 
 ## Candidate Contracts
 
@@ -59,7 +59,8 @@ These names are implementation candidates, not final Daml names.
 | Contract | Purpose |
 |---|---|
 | `Receivable` | NFT-like represented receivable for a pre-existing invoice. For the MVP, the Seller self-registers it and remains the owner. |
-| `ComplianceProcess` | Tracks compliance processing for Seller eligibility, RFQ eligibility, disclosure constraints, and package access rules. It does not model regulation in Phase 1. |
+| `ComplianceAttestation` | Compliance Party-signed detailed compliance output for the Seller package workflow. It contains scoped Seller disclosure and a `ComplianceResult`. |
+| `ComplianceReceipt` | Minimal Compliance Party-signed proof derived from a `ComplianceAttestation`. It can be included in or referenced by the RFQ package without exposing the full compliance disclosure. |
 | `RiskAssessmentProcess` | Tracks risk assessment work and produces a `RiskAttestation` for the Seller. |
 | `RFQPackage` | Represents package-safe data prepared for later disclosure. It contains an aggregate compliance status and mandatory risk tier, both verified against attestations. It is not issued to a specific Funder in Phase 1. |
 
@@ -81,6 +82,8 @@ This section names the first likely Daml templates and data types. It is still a
 | Data type | Purpose |
 |---|---|
 | `ReceivableTerms` | MVP commercial core: face value, currency, and days to due. |
+| `IdentityDisclosure` | Seller-disclosed legal identity information for an entity, such as legal name, jurisdiction, and entity type. |
+| `ComplianceDisclosure` | Seller-disclosed information needed by the Compliance Party: Seller identity, Debtor identity, receivable terms, transaction purpose, and disclosure restrictions. |
 | `ComplianceResult` | MVP compliance output with `sellerEligible` and `rfqEligible`. |
 | `RiskTier` | Closed MVP risk tier: `LowRisk`, `MediumRisk`, or `HighRisk`. |
 | `RiskResult` | Risk output returned to the Seller, currently the mandatory `riskTier`. |
@@ -91,17 +94,17 @@ This section names the first likely Daml templates and data types. It is still a
 | Template | Signatories / controllers to decide | Purpose |
 |---|---|---|
 | `Receivable` | Seller self-registration | Represents the pre-existing Receivable as an immutable, NFT-like ledger object keyed by `(registrar, invoiceId)`. |
-| `ComplianceProcess` | Seller and Compliance Party boundary TBD | Runs MVP compliance checks and produces `ComplianceResult`. |
+| `ComplianceAttestation` | Compliance Party signatory, Seller observer | Records Compliance Party authority over the detailed compliance result and the disclosed information it evaluated. |
+| `ComplianceReceipt` | Compliance Party signatory, observers TBD | Minimal receipt derived from `ComplianceAttestation`; intended to support package authenticity while preserving privacy. |
 | `RiskAssessmentProcess` | Seller and Risk Assessor boundary TBD | Runs mandatory risk assessment and produces `RiskAttestation` for the Seller. |
-| `RFQPackage` | Seller-led | Stores package-safe data prepared for Phase 2; not issued to a specific Funder in Phase 1. |
+| `RFQPackage` | Seller-led | Thin on-ledger package anchor for a Seller-controlled funding workflow. It references or is linked to authority outputs such as compliance and risk receipts; it is not issued to a specific Funder in Phase 1. |
 
 ### Choice Sketch
 
 | Template | Candidate choice | Purpose |
 |---|---|---|
-| `Receivable` | `StartCompliance` | Start compliance processing around the Receivable. |
 | `Receivable` | `StartRiskAssessment` | Start mandatory risk assessment around the Receivable. |
-| `ComplianceProcess` | `RecordComplianceResult` | Record eligibility, access, and disclosure outputs. |
+| `ComplianceAttestation` | `CreateComplianceReceipt` | Derive a minimal compliance receipt from the detailed Compliance Party-signed attestation. |
 | `RiskAssessmentProcess` | `RecordRiskAttestation` | Record risk output for the Seller. |
 | TBD | `CreateRFQPackage` | Create package data while verifying `complianceOk` and `riskTier` against the relevant attestations. |
 
@@ -125,6 +128,84 @@ Option B: `Receivable` is a stable object and workflow contracts perform actions
 
 Decision: keep `Receivable` as a stable object and use workflow contracts for compliance, risk assessment, and package preparation. Discovery/listing and Funder requests belong to Phase 2.
 
+## Confirmed Phase 1 Compliance Direction
+
+Compliance is part of the Seller-controlled package workflow, but the Seller is not the authority over compliance. The Compliance Party is the authority over the compliance output.
+
+Use `ComplianceAttestation` as the first simple compliance template. Do not keep a standalone `ComplianceProcess` as a separate Seller-started Phase 1 flow. Package creation may trigger or require compliance work, and the compliance model can evolve from the attestation template later if the workflow needs more steps.
+
+`ComplianceAttestation` should include:
+
+- `complianceParty : Party`
+- `seller : Party`
+- `packageId : Text`
+- `receivableRef : Text`
+- `complianceDisclosure : ComplianceDisclosure`
+- `complianceResult : ComplianceResult`
+
+The `ComplianceAttestation` signatory is the Compliance Party. The Seller observes it.
+
+`ComplianceDisclosure` should use clearly named subtypes and compact field comments in code. The confirmed MVP baseline is:
+
+- `sellerIdentity : IdentityDisclosure`
+- `debtorIdentity : IdentityDisclosure`
+- `receivableTerms : ReceivableTerms`
+- `transactionPurpose : Text`
+- `disclosureRestrictions : Text`
+
+`IdentityDisclosure` should contain:
+
+- `legalName : Text`
+- `jurisdiction : Text`
+- `entityType : Text`
+
+Keep `ComplianceResult` as the current two booleans:
+
+- `sellerEligible : Bool`
+- `rfqEligible : Bool`
+
+## Compliance Receipt Direction
+
+`ComplianceReceipt` should be a separate contract related to `ComplianceAttestation`, not an independent Seller-created claim.
+
+The purpose of `ComplianceReceipt` is to preserve authenticity and privacy:
+
+- authenticity: it is signed by the Compliance Party or visibly derived from a Compliance Party-signed `ComplianceAttestation`;
+- privacy: it does not expose the full `ComplianceDisclosure`.
+
+The receipt should be minimal and linked to the package and receivable with explicit workflow identifiers. Do not introduce hashes, ZK, or encryption in Phase 1.
+
+The Daml authorization reason for deriving the receipt from the attestation is that a contract create requires the authority of the created contract signatories, and consequences of exercising a choice are authorized by the choice actors plus the signatories of the exercised contract. A Seller-authored boolean is therefore not enough; the receipt must be Compliance Party-signed or produced from a Compliance Party-signed contract.
+
+The Canton privacy reason for separating receipt from attestation is that later parties may need to see or use the minimal receipt without seeing the private `ComplianceDisclosure`. If a later non-stakeholder must use the receipt, Phase 2 may need explicit disclosure or another visibility mechanism.
+
+Candidate receipt fields:
+
+- `complianceParty : Party`
+- `seller : Party`
+- `packageId : Text`
+- `receivableRef : Text`
+- `policyVersion : Text`
+
+The existence of a `ComplianceReceipt` may mean compliance passed, instead of storing another boolean. This is still open.
+
+The likely creation pattern is a choice on `ComplianceAttestation`, tentatively controlled by the Seller as part of the Seller-driven package workflow. The exact controller remains flexible until the package workflow is finalized.
+
+## RFQ Package Direction
+
+The RFQ package should be modeled as a thin on-ledger anchor plus related contracts and metadata, not as one large monolithic contract.
+
+The full package can be assembled by the application off-ledger from:
+
+- the on-ledger `RFQPackage` anchor;
+- related authority contracts or receipts such as `ComplianceReceipt`;
+- package-safe metadata;
+- later Phase 2 disclosure or access artifacts.
+
+All package pieces must be linked together. For Phase 1, use explicit identifiers such as `packageId` and `receivableRef`. Do not use hashes, ZK, or encryption for this linking.
+
+`RFQDiscoveryListing` is no longer a Phase 1 template candidate. Move discovery/listing to Phase 2 or later. It also remains open whether discovery/listing should be on-ledger at all.
+
 ## Receivable Registration Decision
 
 The real-world receivable is a prerequisite asset for the MVP. Phase 1 does not create the legal receivable itself; it creates an on-ledger representation used by the RFQ workflow.
@@ -145,17 +226,22 @@ A future third-party registrar model would need its own proposal/acceptance and 
 ## Candidate Step Order
 
 1. Seller self-registers a pre-existing `Receivable` as an immutable, NFT-like ledger object.
-2. Compliance Party runs `ComplianceProcess`.
-3. Risk Assessor runs mandatory `RiskAssessmentProcess`.
-4. `RiskAssessmentProcess` produces `RiskAttestation` for the Seller. The attestation contains the risk tier used in the package.
-5. Seller derives package-safe `RFQPackageData` from receivable terms, compliance output, and risk output.
-6. Seller creates `RFQPackage`. The package may exist whether `complianceOk` is true or false, but `complianceOk` must equal `sellerEligible && rfqEligible`, and `riskTier` must match the `RiskAttestation`.
+2. Seller prepares package workflow state and gathers required authority outputs.
+3. Compliance Party creates `ComplianceAttestation` from scoped `ComplianceDisclosure`.
+4. `ComplianceAttestation` may produce a minimal `ComplianceReceipt` for package use.
+5. Risk Assessor runs mandatory `RiskAssessmentProcess`.
+6. `RiskAssessmentProcess` produces `RiskAttestation` for the Seller. The attestation contains the risk tier used in the package.
+7. Seller derives package-safe `RFQPackageData` from receivable terms, compliance output, and risk output.
+8. Seller creates `RFQPackage`. The package may exist whether `complianceOk` is true or false, but `complianceOk` must equal `sellerEligible && rfqEligible`, and `riskTier` must match the `RiskAttestation`.
 
 ## Open Questions
 
-1. Which template or choice should create `RFQPackage` while verifying compliance and risk attestation accuracy?
-2. Should compliance and risk attestations be consumed or kept active when `RFQPackage` is created?
-3. Should package data include a package version or hash before Phase 2 package access is implemented?
+1. Should the existence of `ComplianceReceipt` mean compliance passed, or should it also store an explicit `compliancePassed : Bool`?
+2. Who should control `CreateComplianceReceipt`: Seller, Compliance Party, or both?
+3. Which template or choice should create `RFQPackage` while verifying compliance and risk attestation accuracy?
+4. Should compliance and risk attestations be consumed or kept active when `RFQPackage` is created?
+5. Should package data include package versioning before Phase 2 package access is implemented?
+6. Does Phase 1 need a separate risk receipt concept similar to `ComplianceReceipt`, or is `RiskAttestation` enough for the first implementation?
 
 ## Undecided Implementation Options
 
@@ -176,9 +262,11 @@ Open points:
 - No Funder-specific package issuance in Phase 1.
 - No Funder package access request in Phase 1.
 - No public/semi-public listing or discovery contract in Phase 1.
+- No decision yet that discovery/listing is on-ledger.
 - No Funder-originated RFQ request in Phase 1.
 - No Private Quote submission in Phase 1.
 - No Seller quote selection in Phase 1.
 - No settlement or fallback in Phase 1.
 - No regulation modeling in Phase 1.
+- No hashes, ZK, or encryption in Phase 1 package linking.
 - No production legal assignment or production payment integration.
