@@ -182,7 +182,7 @@ The purpose of `ComplianceCertificate` is to preserve authenticity and privacy w
 - authenticity: it is signed by the Compliance Party or visibly derived from a Compliance Party-signed `ComplianceAttestation`;
 - privacy: it does not expose the full `ComplianceDisclosure`.
 
-The certificate should be minimal and linked to the package and receivable with explicit workflow identifiers. Do not introduce hashes, ZK, or encryption in Phase 1.
+The certificate should be minimal and linked to the package and receivable with `receivableCid` plus explicit workflow identifiers. Do not introduce hashes, ZK, or encryption in Phase 1.
 
 The Daml authorization reason for deriving the certificate from the attestation is that a contract create requires the authority of the created contract signatories, and consequences of exercising a choice are authorized by the choice actors plus the signatories of the exercised contract. A Seller-authored boolean is therefore not enough; the certificate must be Compliance Party-signed or produced from a Compliance Party-signed contract.
 
@@ -193,6 +193,7 @@ Candidate certificate fields:
 - `complianceParty : Party`
 - `seller : Party`
 - `packageId : Text`
+- `receivableCid : ContractId Receivable`
 - `receivableRef : Text`
 - `policyVersion : Text`
 - `certificationScope : Text`
@@ -217,6 +218,7 @@ Candidate certificate fields:
 - `riskAssessor : Party`
 - `seller : Party`
 - `packageId : Text`
+- `receivableCid : ContractId Receivable`
 - `receivableRef : Text`
 - `riskTier : RiskTier`
 - `riskPolicyVersion : Text`
@@ -235,6 +237,8 @@ The current Seller-created package anchor is not authoritative enough and should
 
 The draft/builder remains non-authoritative. The `RFQRequest` becomes the authoritative Phase 1 bridge only because the choice that creates it can fetch and validate the `ComplianceCertificate` and `RiskCertificate` before creating the request.
 
+The validation choice should also fetch the `Receivable` by `receivableCid` and assert that all referenced certificates and the draft/builder point to the same active receivable contract. This is stronger than relying on text references such as `receivableRef`; `fetch` aborts the transaction if the contract ID is not active or visible to the submitting party.
+
 For Phase 1, `RFQRequest` means ready to open, not already open to the market. Phase 2 decides how it becomes visible to Funders and how package access works.
 
 Minimum Phase 1 `RFQRequest` content should be limited to what is needed to prove readiness and bridge into Phase 2. The Funder-visible field set is not final and must be reworked in Phase 2.
@@ -243,7 +247,7 @@ Funder discovery and routing are out of scope for the MVP ledger model. In a pro
 
 `RFQRequest` should be per request / per Funder interaction when Phase 2 introduces Funder visibility. The current Phase 1 bridge should leave that path open rather than modeling a public marketplace or discovery registry.
 
-All package pieces must be linked together. For Phase 1, use explicit identifiers such as `packageId` and `receivableRef`. Do not use hashes, ZK, or encryption for this linking.
+All package pieces must be linked together. For Phase 1, use `receivableCid : ContractId Receivable` as the primary receivable link, plus explicit identifiers such as `packageId`. Keep `receivableRef` only as human-readable metadata. Do not use hashes, ZK, or encryption for this linking.
 
 `RFQDiscoveryListing` is no longer a Phase 1 template candidate. Move discovery/listing to Phase 2 or later. It also remains open whether discovery/listing should be on-ledger at all.
 
@@ -257,7 +261,7 @@ For the hackathon MVP, use Seller self-registration:
 - `registrar` is the party that records the receivable on-ledger.
 - `owner` is the Seller/current owner of the represented receivable.
 - MVP self-registration requires `registrar == owner`.
-- The uniqueness key is `(registrar, invoiceId)`, maintained by `registrar`.
+- The current implementation uses a uniqueness key `(registrar, invoiceId)`, maintained by `registrar`, but Canton 3.x contract-key support is not a deployment assumption. Do not rely on this key as the long-term uniqueness mechanism.
 - Sensitive fields such as raw Debtor identity may live on `Receivable` because it is not disclosed to Funders in Phase 1.
 - The `Receivable` source object should contain source facts only; eligibility and verification conclusions belong in later workflow attestations.
 - Compliance can later attest whether the Seller and RFQ are eligible, including whether the self-registration assumption is acceptable for the MVP flow.
@@ -277,7 +281,7 @@ A future third-party registrar model would need its own proposal/acceptance and 
 
 ## Open Questions
 
-1. What exact fields must `ComplianceCertificate` and `RiskCertificate` bind to for the `RFQRequest` validation path?
+1. Should `receivableCid`, `seller`, `packageId`, and issuer party be the full Phase 1 certificate binding set, with `receivableRef` kept only as readable metadata?
 2. What should the Seller-authored draft/builder template be named?
 3. What minimal fields should Phase 1 `RFQRequest` contain before Phase 2 finalizes Funder visibility?
 4. Should compliance and risk attestations be consumed or kept active when `RFQRequest` is created?
