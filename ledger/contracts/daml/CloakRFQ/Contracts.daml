@@ -1,5 +1,0 @@
--- | Marker module for the CloakRFQ Phase 1 contracts package.
---
--- Import concrete modules such as CloakRFQ.Compliance, CloakRFQ.Risk, and
--- CloakRFQ.RFQPackage when using the individual templates.
-module CloakRFQ.Contracts where
