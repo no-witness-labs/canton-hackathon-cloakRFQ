@@ -1,11 +1,23 @@
 'use client';
 
 import { Icon, type IconName } from '@/lib/icons';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
+import Link from 'next/link';
+import { subscribeTx, getTxLog, getTxVersion } from '@/lib/ledger';
 import {
   useStore, ROLES, LEGEND, BOUNDARY, DLEVELS, calc, truncParty, usd,
   type Role, type Quote, type ReceivableForm, type AttView,
 } from '@/lib/store';
+
+function TxIndicator() {
+  useSyncExternalStore(subscribeTx, getTxVersion, getTxVersion);
+  const n = getTxLog().length;
+  return (
+    <Link href="/activity" className="chip ghost" style={{ textDecoration: 'none' }} title="Explore ledger transactions">
+      Activity · {n} tx{n === 1 ? '' : 's'}
+    </Link>
+  );
+}
 
 export default function Workspace() {
   const { state, setRole } = useStore();
@@ -38,6 +50,7 @@ export default function Workspace() {
             </div>
           </div>
           <span className="spacer" />
+          <TxIndicator />
           <span className="live"><span className="dot" /> Live RFQ-4471</span>
           <WalletConnector />
         </div>

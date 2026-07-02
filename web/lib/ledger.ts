@@ -83,33 +83,75 @@ export async function listActive(party: string): Promise<Contract[]> {
   return out;
 }
 
-interface TxResult { created: { template: string; contractId: string }[]; }
+// ---- transaction log (a lightweight on-ledger activity feed / explorer) ----
+export interface TxEvent { kind: 'created' | 'archived'; template: string; contractId: string }
+export interface LedgerTx {
+  updateId: string; offset: number; recordTime: string; commandId: string;
+  actAs: string; label: string; events: TxEvent[];
+}
+const txLog: LedgerTx[] = [];
+const txListeners = new Set<() => void>();
+let txVersion = 0;
+export const subscribeTx = (cb: () => void): (() => void) => { txListeners.add(cb); return () => { txListeners.delete(cb); }; };
+export const getTxLog = (): LedgerTx[] => txLog;
+export const getTxVersion = (): number => txVersion;
+export const partyLabel = (id: string): string => (id ? id.split('::')[0] : id) || id;
 
-async function submit(actAs: string, command: unknown, prefix: string): Promise<TxResult> {
+interface TxResult { created: { template: string; contractId: string }[]; tx: LedgerTx }
+
+async function submit(actAs: string, command: unknown, prefix: string, label = 'Transaction'): Promise<TxResult> {
   const res = await api<any>('/v2/commands/submit-and-wait-for-transaction', {
     commands: { commands: [command], commandId: nextCommandId(prefix), actAs: [actAs], userId: cfg.userId },
   });
+  const t = res.transaction ?? {};
+  const events: TxEvent[] = [];
   const created: TxResult['created'] = [];
-  for (const ev of res.transaction?.events ?? []) {
-    if (ev.CreatedEvent) created.push({ template: lastSegment(ev.CreatedEvent.templateId), contractId: ev.CreatedEvent.contractId });
+  for (const ev of t.events ?? []) {
+    if (ev.CreatedEvent) {
+      const template = lastSegment(ev.CreatedEvent.templateId);
+      events.push({ kind: 'created', template, contractId: ev.CreatedEvent.contractId });
+      created.push({ template, contractId: ev.CreatedEvent.contractId });
+    } else if (ev.ArchivedEvent) {
+      events.push({ kind: 'archived', template: lastSegment(ev.ArchivedEvent.templateId), contractId: ev.ArchivedEvent.contractId });
+    }
   }
-  return { created };
+  const tx: LedgerTx = {
+    updateId: String(t.updateId ?? ''), offset: Number(t.offset ?? 0), recordTime: String(t.recordTime ?? ''),
+    commandId: String(t.commandId ?? ''), actAs, label, events,
+  };
+  txLog.unshift(tx);
+  txVersion += 1;
+  txListeners.forEach((cb) => cb());
+  return { created, tx };
 }
 
 const create = (name: string, createArguments: Record<string, unknown>) => ({ CreateCommand: { templateId: tpl(name), createArguments } });
 const exercise = (name: string, contractId: string, choice: string, choiceArgument: Record<string, unknown> = {}) =>
   ({ ExerciseCommand: { templateId: tpl(name), contractId, choice, choiceArgument } });
 
-/** Create `name` as `party`; returns the new contractId. */
-export async function createAs(party: string, name: string, args: Record<string, unknown>): Promise<string> {
-  const r = await submit(party, create(name, args), 'create');
+/** Create `name` as `party`; returns the new contractId. `label` names the tx in the activity feed. */
+export async function createAs(party: string, name: string, args: Record<string, unknown>, label?: string): Promise<string> {
+  const r = await submit(party, create(name, args), 'create', label ?? `Create ${name}`);
   return r.created.find((c) => c.template === name)?.contractId ?? '';
 }
 
 /** Exercise `choice` on a contract as `party`; returns the created contracts. */
-export async function exerciseAs(party: string, name: string, contractId: string, choice: string, arg: Record<string, unknown> = {}): Promise<{ template: string; contractId: string }[]> {
-  const r = await submit(party, exercise(name, contractId, choice, arg), 'exercise');
+export async function exerciseAs(party: string, name: string, contractId: string, choice: string, arg: Record<string, unknown> = {}, label?: string): Promise<{ template: string; contractId: string }[]> {
+  const r = await submit(party, exercise(name, contractId, choice, arg), 'exercise', label ?? `${choice} · ${name}`);
   return r.created;
+}
+
+/** Re-fetch a transaction from the ledger by updateId — proves the entry is authoritative on-chain. */
+export async function fetchUpdateById(updateId: string, party: string): Promise<Record<string, unknown> | null> {
+  try {
+    const r = await api<any>('/v2/updates/update-by-id', {
+      updateId,
+      updateFormat: { includeTransactions: { eventFormat: { filtersByParty: { [party]: { cumulative: [{ identifierFilter: { WildcardFilter: { value: {} } } }] } }, verbose: false }, transactionShape: 'TRANSACTION_SHAPE_ACS_DELTA' } },
+    });
+    return r?.update?.Transaction?.value ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ============================================================================
