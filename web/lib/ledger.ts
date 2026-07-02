@@ -154,6 +154,50 @@ export async function fetchUpdateById(updateId: string, party: string): Promise<
   }
 }
 
+// dig the transaction object (updateId + events) out of a nested /v2/updates item
+function digTx(o: unknown): Record<string, unknown> | null {
+  if (o && typeof o === 'object') {
+    const r = o as Record<string, unknown>;
+    if (r.updateId && r.events) return r;
+    for (const k of Object.keys(r)) { const f = digTx(r[k]); if (f) return f; }
+  }
+  return null;
+}
+function labelForEvents(events: TxEvent[]): string {
+  const c = events.filter((e) => e.kind === 'created').map((e) => e.template);
+  const a = events.filter((e) => e.kind === 'archived').map((e) => e.template);
+  if (a.includes('SelectedQuote') && c.includes('ScopedComplianceReceipt')) return 'Settle';
+  if (a.includes('PrivateQuote') && c.includes('SelectedQuote')) return 'Accept · select quote';
+  if (c.length && !a.length) return 'Create ' + c.join(', ');
+  if (a.length) return `${a.join(', ')} archived` + (c.length ? ' · +' + c.join(', ') : '');
+  return 'Transaction';
+}
+
+/** Full, persistent transaction history for `party` from the ledger's update stream
+ *  (survives reloads — unlike the in-session tx log). Most-recent first. */
+export async function fetchHistory(party: string): Promise<LedgerTx[]> {
+  if (!party) return [];
+  const end = await fetch('/v2/state/ledger-end').then((r) => r.json());
+  const arr = await api<unknown[]>('/v2/updates/flats', {
+    beginExclusive: 0, endInclusive: end.offset,
+    filter: { filtersByParty: { [party]: { cumulative: [{ identifierFilter: { WildcardFilter: { value: { includeCreatedEventBlob: false } } } }] } } },
+    verbose: false,
+  });
+  const out: LedgerTx[] = [];
+  for (const item of arr) {
+    const tx = digTx(item);
+    if (!tx) continue;
+    const events: TxEvent[] = [];
+    for (const e of (tx.events as Record<string, { templateId: unknown; contractId: string }>[]) ?? []) {
+      const ev = e as Record<string, { templateId: unknown; contractId: string }>;
+      if (ev.CreatedEvent) events.push({ kind: 'created', template: lastSegment(ev.CreatedEvent.templateId), contractId: ev.CreatedEvent.contractId });
+      else if (ev.ArchivedEvent) events.push({ kind: 'archived', template: lastSegment(ev.ArchivedEvent.templateId), contractId: ev.ArchivedEvent.contractId });
+    }
+    out.push({ updateId: String(tx.updateId), offset: Number(tx.offset), recordTime: String(tx.recordTime ?? ''), commandId: String(tx.commandId ?? ''), actAs: '', label: labelForEvents(events), events });
+  }
+  return out.sort((x, y) => y.offset - x.offset);
+}
+
 // ============================================================================
 // DEMO SCENARIO — edit these values to change what gets seeded on load.
 // (Funders can also submit their own quotes live via the Workspace composer.)

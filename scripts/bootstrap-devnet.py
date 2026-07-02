@@ -63,21 +63,35 @@ def api(tok, method, path, data=None, ctype="application/json"):
 def main():
     if not os.path.exists(DAR):
         sys.exit(f"DAR not found: {DAR}\n  build it first: (cd ledger && dpm build)")
+    # Optional run tag → fresh parties for a clean re-test (DevNet is persistent and
+    # can't be wiped). e.g. `python3 scripts/bootstrap-devnet.py run2`
+    tag = (sys.argv[1] if len(sys.argv) > 1 else os.environ.get("CLOAKRFQ_PARTY_SUFFIX", "")).strip()
+    sfx = f"-{tag}" if tag else ""
+    if tag:
+        print(f"run tag: {tag} → parties suffixed with {sfx}")
     tok = token()
     print("✓ token acquired")
 
     code, _ = api(tok, "POST", "/v2/packages", open(DAR, "rb").read(), "application/octet-stream")
     print(f"{'✓' if code == 200 else '✗'} DAR upload (HTTP {code})")
 
-    parties = {}
-    for role, hint in ROLES.items():
-        code, resp = api(tok, "POST", "/v2/parties", json.dumps({"partyIdHint": hint}).encode())
-        pid = (resp.get("partyDetails") or {}).get("party")
-        if not pid:  # already exists → deterministic id from an existing allocation
-            _, existing = api(tok, "GET", "/v2/parties")
-            pid = next((p["party"] for p in existing.get("partyDetails", []) if p["party"].startswith(hint + "::")), None)
-        parties[role] = pid
-        print(f"  {role:12} {pid}")
+    parties, pending, ns = {}, [], None
+    for role, base in ROLES.items():
+        hint = base + sfx
+        _, resp = api(tok, "POST", "/v2/parties", json.dumps({"partyIdHint": hint}).encode())
+        pid = (resp.get("partyDetails") or {}).get("party")  # None if it already exists
+        if pid and "::" in pid:
+            ns = pid.split("::", 1)[1]
+        parties[role], _ = pid, pending.append((role, hint, pid))
+    if any(p is None for _, _, p in pending):
+        if ns is None:  # every party already existed → take the participant namespace from any local party
+            _, plist = api(tok, "GET", "/v2/parties")
+            ns = next((p["party"].split("::", 1)[1] for p in plist.get("partyDetails", []) if p.get("isLocal") and "::" in p["party"]), None)
+        for role, hint, pid in pending:
+            if pid is None and ns:
+                parties[role] = f"{hint}::{ns}"
+    for role in ROLES:
+        print(f"  {role:12} {parties[role]}")
 
     rights = [{"kind": {"CanActAs": {"value": {"party": p}}}} for p in parties.values() if p]
     code, _ = api(tok, "POST", f"/v2/users/{USER_ID}/rights", json.dumps({"userId": USER_ID, "rights": rights}).encode())
