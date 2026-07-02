@@ -9,6 +9,7 @@ module CloakRFQ.Test where
 import Daml.Script
 import DA.Assert ((===))
 import DA.Date
+import DA.Time
 import CloakRFQ.Lib
 import CloakRFQ.Compliance
 import CloakRFQ.Risk
@@ -98,20 +99,17 @@ phase1 = do
       riskPolicyVersion = "MVP-RISK-v1"
       certificationScope = "Phase 1 receivable risk tier"
 
-  let packageContent = RFQPackageContent with
-        summary = "Core pre-quote facts only"
-
-  let rfqParameters = RFQParameters with
-        responseDeadline = "2026-07-01T12:00:00Z"
+  let packageData = RFQPackageData with
+        receivableTerms = terms
+        riskTier = riskResult.riskTier
+        responseDeadline = time (date 2026 Jul 1) 12 0 0
 
   rfqPackage <- submit seller do
     createCmd RFQPackage with
       seller
       packageId
       receivableCid = rcv
-      terms
-      packageContent
-      rfqParameters
+      packageData
       complianceCertificateCid = complianceCertificate
       riskCertificateCid = riskCertificate
 
@@ -131,7 +129,8 @@ phase1 = do
 
   Some packageView <- queryContractId seller rfqPackage
   packageView.receivableCid === rcv
-  packageView.terms.payableAmount === 480000.0
+  packageView.packageData.receivableTerms.payableAmount === 480000.0
+  packageView.packageData.riskTier === LowRisk
   packageView.complianceCertificateCid === complianceCertificate
   packageView.riskCertificateCid === riskCertificate
 

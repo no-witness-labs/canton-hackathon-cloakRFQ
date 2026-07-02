@@ -60,7 +60,7 @@ These names are implementation candidates, not final Daml names.
 | `ComplianceAttestation` | Compliance Party-signed detailed compliance output for the Seller package workflow. It contains scoped Seller disclosure and a `ComplianceResult`. |
 | `ComplianceCertificate` | Minimal Compliance Party-signed credential derived from a `ComplianceAttestation`. It can be included in or referenced by the RFQ package without exposing the full compliance disclosure. The MVP version is simplified, but the name reflects the intended formal credential semantics. |
 | `RiskCertificate` | Minimal Risk Assessor-signed credential derived from a `RiskAttestation`. It can be included in or referenced by the RFQ package without exposing full risk assessment inputs. |
-| `RFQPackage` | Represents package-safe data prepared for later disclosure. It contains an aggregate compliance status and mandatory risk tier, both verified against attestations. It is not issued to a specific Funder in Phase 1. |
+| `RFQPackage` | Current implementation placeholder for package-safe data prepared for later disclosure. It carries `RFQPackageData` and certificate references while the design moves toward `RFQRequestAssembly` and per-Funder `RFQRequest`. |
 
 ## Package Boundary
 
@@ -98,7 +98,7 @@ This section names the first likely Daml templates and data types. It is still a
 | `ComplianceResult` | MVP compliance output with `sellerEligible` and `rfqEligible`. |
 | `RiskTier` | Closed MVP risk tier: `LowRisk`, `MediumRisk`, or `HighRisk`. |
 | `RiskResult` | Risk output returned to the Seller, currently the mandatory `riskTier`. |
-| `RFQPackageData` | Package-safe Funder-interested disclosure: receivable terms, risk tier, and shared response deadline. |
+| `RFQPackageData` | Confirmed Phase 1 package-safe Funder-interested disclosure: receivable terms, risk tier, and shared response deadline. |
 
 ### Templates
 
@@ -287,10 +287,9 @@ A future third-party registrar model would need its own proposal/acceptance and 
 ## Open Questions
 
 1. Should `receivableCid`, `seller`, `packageId`, and issuer party be the full Phase 1 certificate binding set?
-2. Should `RFQPackageData` contain only `receivableTerms`, `riskTier`, and `responseDeadline` for the Phase 1 MVP?
-3. Should `RFQRequestAssembly.OpenRFQRequest` be nonconsuming and create one per-Funder `RFQRequest`?
-4. Should compliance and risk attestations be consumed or kept active when `RFQRequest` is created?
-5. Should request/assembly data include versioning before Phase 2 package access is implemented?
+2. Should `RFQRequestAssembly.OpenRFQRequest` be nonconsuming and create one per-Funder `RFQRequest`?
+3. Should compliance and risk attestations be consumed or kept active when `RFQRequest` is created?
+4. Should request/assembly data include versioning before Phase 2 package access is implemented?
 
 ## Undecided Implementation Options
 

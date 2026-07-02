@@ -54,14 +54,11 @@ data RiskResult = RiskResult
     riskTier : RiskTier
   deriving (Eq, Show)
 
-data RFQPackageContent = RFQPackageContent
+data RFQPackageData = RFQPackageData
   with
-    summary : Text
-  deriving (Eq, Show)
-
-data RFQParameters = RFQParameters
-  with
-    responseDeadline : Text
+    receivableTerms : ReceivableTerms  -- Receivable terms disclosed as part of the package.
+    riskTier : RiskTier                -- Risk tier certified by the Risk Assessor for this package.
+    responseDeadline : Time            -- Shared quote response deadline for this RFQ event.
   deriving (Eq, Show)
 
 isPositiveAmount : Decimal -> Bool

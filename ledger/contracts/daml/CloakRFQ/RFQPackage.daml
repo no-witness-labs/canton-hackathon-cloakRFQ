@@ -13,11 +13,9 @@ template RFQPackage
     seller : Party
     packageId : Text
     receivableCid : ContractId Receivable
-    terms : ReceivableTerms
-    packageContent : RFQPackageContent
-    rfqParameters : RFQParameters
+    packageData : RFQPackageData
     complianceCertificateCid : ContractId ComplianceCertificate
     riskCertificateCid : ContractId RiskCertificate
   where
     signatory seller
-    ensure hasValidReceivableTerms terms
+    ensure hasValidReceivableTerms packageData.receivableTerms
