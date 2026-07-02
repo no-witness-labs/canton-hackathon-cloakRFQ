@@ -15,9 +15,10 @@ Phase 1 ends when:
 - the Receivable is represented on ledger;
 - applicable compliance assumptions and statuses are represented;
 - mandatory risk assessment output is represented;
-- RFQ package data is prepared for later disclosure.
+- RFQ package data is prepared for later disclosure;
+- optional per-Funder `RFQRequest` bridge contracts can be opened for locally simulated target Funders.
 
-Phase 1 does not know specific Funders yet. Funder requests, invitations, package access decisions, listing/discovery behavior, and Private Quotes belong to Phase 2.
+Discovery, invitation sourcing, package access policy, and Private Quotes belong to Phase 2. Phase 1 may create per-Funder bridge requests only after the Seller has already identified target Funders off-ledger or in the local simulation.
 
 ## Working Assumptions
 
@@ -26,9 +27,9 @@ Phase 1 does not know specific Funders yet. Funder requests, invitations, packag
 - Risk Assessor is a party.
 - Risk assessment output is mandatory for Phase 1 package creation.
 - Risk Assessor provides a risk tier, but does not decide whether the risk is acceptable. Funders make that decision in Phase 2.
-- Phase 1 prepares package content, but does not issue it to specific Funders.
-- The RFQ package contains package-safe information and references to authority certificates derived from Seller data, Risk Assessor output, and compliance output.
-- The RFQ package is Seller-controlled in Phase 1. Phase 2 will decide whether package access is public, common to eligible Funders, access-scoped, or Funder-specific.
+- Phase 1 prepares package content and may disclose it through per-Funder `RFQRequest` bridge contracts for locally simulated or off-ledger identified Funders.
+- The RFQ package data contains package-safe information and references to authority certificates derived from Seller data, Risk Assessor output, and compliance output.
+- Discovery and access sourcing are outside Phase 1. Phase 2 will decide whether future package access is public, common to eligible Funders, access-scoped, or Funder-specific.
 
 ## Candidate Parties
 
@@ -47,7 +48,7 @@ Receivable information should be separated for selective disclosure instead of s
 | Data partition | Purpose |
 |---|---|
 | Compliance disclosure | Seller-disclosed information needed for compliance evaluation. It is not disclosed through the package by default. |
-| Package-safe metadata | Seller-prepared package metadata for later disclosure to Funders in Phase 2. |
+| Package-safe metadata | Seller-prepared package metadata for disclosure through `RFQPackageData` on per-Funder `RFQRequest`s. |
 
 
 ## Candidate Contracts
@@ -60,8 +61,8 @@ These names are implementation candidates, not final Daml names.
 | `ComplianceAttestation` | Compliance Party-signed detailed compliance output for the Seller package workflow. It contains scoped Seller disclosure and a `ComplianceResult`. |
 | `ComplianceCertificate` | Minimal Compliance Party-signed credential derived from a `ComplianceAttestation`. It can be included in or referenced by the RFQ package without exposing the full compliance disclosure. The MVP version is simplified, but the name reflects the intended formal credential semantics. |
 | `RiskCertificate` | Minimal Risk Assessor-signed credential derived from a `RiskAttestation`. It can be included in or referenced by the RFQ package without exposing full risk assessment inputs. |
-| `RFQRequestAssembly` | Seller-private workflow state for package-safe data and certificate references. It creates validated per-Funder `RFQRequest` contracts through a nonconsuming choice. |
-| `RFQRequest` | Per-Funder validated RFQ bridge. It discloses `RFQPackageData` to one Funder and keeps other Funders hidden. |
+| `RFQRequestAssembly` | Seller-private workflow state for package-safe data and certificate references. It creates per-Funder `RFQRequest` contracts through a nonconsuming validation choice. |
+| `RFQRequest` | Per-Funder RFQ bridge created by the validated workflow path. It discloses `RFQPackageData` to one Funder and keeps other Funders hidden. |
 
 ## Package Boundary
 
@@ -110,7 +111,7 @@ This section names the first likely Daml templates and data types. It is still a
 | `ComplianceCertificate` | Compliance Party signatory, observers TBD | Minimal certificate derived from `ComplianceAttestation`; intended to support package authenticity while preserving privacy, with room to become a reusable formal credential later. |
 | `RiskCertificate` | Risk Assessor signatory, observers TBD | Minimal certificate derived from `RiskAttestation`; intended to support package authenticity while preserving privacy, with room to become a reusable formal credential later. |
 | `RFQRequestAssembly` | Seller signatory | Seller-private assembly workflow that stores `RFQPackageData` plus certificate references and validates them before creating per-Funder `RFQRequest`s. |
-| `RFQRequest` | Seller signatory, Funder observer | Minimal validated bridge from Phase 1 to Phase 2. It is per Funder request and means ready to open, not public/open market discovery. |
+| `RFQRequest` | Seller signatory, Funder observer | Minimal bridge from Phase 1 to Phase 2 when created through `OpenRFQRequest`. It is per Funder request and means ready to open, not public/open market discovery. |
 
 ### Choice Sketch
 
@@ -137,7 +138,7 @@ Option B: `Receivable` is a stable object and workflow contracts perform actions
 - Easier to keep selective disclosure boundaries explicit.
 - More contracts to implement.
 
-Decision: keep `Receivable` as a stable object and use workflow contracts for compliance, risk assessment, and package preparation. Discovery/listing and Funder requests belong to Phase 2.
+Decision: keep `Receivable` as a stable object and use workflow contracts for compliance, risk assessment, and package preparation. Discovery/listing and Funder-originated access requests belong to Phase 2.
 
 ## Confirmed Phase 1 Compliance Direction
 
@@ -233,9 +234,11 @@ The risk certificate may include `riskTier` because the package workflow needs t
 The Seller-created package anchor is replaced with two templates:
 
 - `RFQRequestAssembly`, a Seller-private workflow that holds `RFQPackageData` and technical certificate references;
-- `RFQRequest`, a per-Funder validated output created by exercising a Seller-controlled choice on `RFQRequestAssembly`.
+- `RFQRequest`, a per-Funder output created by exercising a Seller-controlled validation choice on `RFQRequestAssembly`.
 
-`RFQRequestAssembly` remains Seller-private workflow state. The `RFQRequest` becomes the authoritative Phase 1 bridge only because the choice that creates it can fetch and validate the `ComplianceCertificate` and `RiskCertificate` before creating the request.
+`RFQRequestAssembly` remains Seller-private workflow state. `OpenRFQRequest` fetches and validates the `ComplianceCertificate` and `RiskCertificate` before creating an `RFQRequest`.
+
+Important limitation: because `RFQRequest` is currently Seller-signatory, its template constructor is not itself authority-proof against direct Seller creation. The validated workflow path is implemented and tested, but a future hardening step should either make the final request authority-signed, add a certificate-driven creation path, or narrow the claim made by `RFQRequest` so verifiers do not treat a Seller-only request as independent proof of compliance/risk validation.
 
 The validation choice should also fetch the `Receivable` by `receivableCid` and assert that all referenced certificates and the assembly point to the same active receivable contract. This is stronger than relying on copied text references; `fetch` aborts the transaction if the contract ID is not active or visible to the submitting party.
 
@@ -278,7 +281,7 @@ A future third-party registrar model would need its own proposal/acceptance and 
 5. Risk Assessor creates `RiskAttestation` for the Seller. The attestation contains the risk tier used in the package.
 6. `RiskAttestation` may produce a minimal `RiskCertificate` for package use.
 7. Seller creates `RFQRequestAssembly` with `RFQPackageData` and certificate references.
-8. Seller exercises `RFQRequestAssembly.OpenRFQRequest` for each target Funder to create a validated per-Funder `RFQRequest` after certificate checks pass.
+8. Seller exercises `RFQRequestAssembly.OpenRFQRequest` for each target Funder to create a per-Funder `RFQRequest` after certificate checks pass.
 
 
 ## Ideas To Consider Later
@@ -293,9 +296,9 @@ A future third-party registrar model would need its own proposal/acceptance and 
 
 ## Undecided Implementation Options
 
-### Contract keys for request or draft uniqueness
+### Contract keys for request or assembly uniqueness
 
-The Seller-authored assembly and validated `RFQRequest` data should be immutable after creation. One option is to use Daml contract keys later to enforce uniqueness for a chosen identifier, such as `(seller, packageId)` or a future request identifier.
+The Seller-authored assembly and `RFQRequest` data should be immutable after creation. One option is to use Daml contract keys later to enforce uniqueness for a chosen identifier, such as `(seller, packageId)` or a future request identifier.
 
 This is not yet a decision. A local spike with SDK `3.5.1` verified that contract keys fail under LF target `2.1` with a compiler error saying keys are supported from `2.3`, and the same keyed template builds under LF target `2.3`. The current package configuration uses LF target `2.3`; keep this target under review against the intended Canton deployment environment as package-key usage is implemented.
 
@@ -307,11 +310,9 @@ Open points:
 
 ## Non-Goals
 
-- No Funder-specific package issuance in Phase 1.
-- No Funder package access request in Phase 1.
+- No Funder-originated package access request in Phase 1.
 - No public/semi-public listing or discovery contract in Phase 1.
 - No decision yet that discovery/listing is on-ledger.
-- No Funder-originated RFQ request in Phase 1.
 - No Private Quote submission in Phase 1.
 - No Seller quote selection in Phase 1.
 - No settlement or fallback in Phase 1.
