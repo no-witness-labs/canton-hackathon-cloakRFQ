@@ -13,6 +13,14 @@ data ReceivableTerms = ReceivableTerms
     paymentTerms : Text      -- Human-readable terms, e.g. Net 45.
   deriving (Eq, Show)
 
+data ReceivableMetadata = ReceivableMetadata
+  with
+    invoiceId : Text                         -- Seller invoice number, e.g. INV-4471.
+    buyerReference : Optional Text           -- Optional buyer/AP routing reference.
+    purchaseOrderReference : Optional Text   -- Optional buyer-issued purchase order reference.
+    sourceSystemReference : Optional Text    -- Optional ERP/platform source reference.
+  deriving (Eq, Show)
+
 data IdentityDisclosure = IdentityDisclosure
   with
     legalName : Text       -- Legal/business name of the disclosed entity.

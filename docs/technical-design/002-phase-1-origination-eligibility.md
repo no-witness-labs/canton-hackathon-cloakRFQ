@@ -85,13 +85,14 @@ This section names the first likely Daml templates and data types. It is still a
 | `dueDate` | Date payment is due from the Debtor. | `2026-02-15`. |
 | `paymentTerms` | Human-readable commercial payment terms. | `Net 45` or `Due 45 days from invoice date`. |
 
-`invoiceId` remains on `Receivable`, not inside `ReceivableTerms`, because the source receivable object already identifies the invoice.
+`invoiceId` lives in required `ReceivableMetadata`, not inside `ReceivableTerms`, because it is readable invoice metadata rather than commercial payment terms.
 
 ### Data Types
 
 | Data type | Purpose |
 |---|---|
 | `ReceivableTerms` | MVP invoice/receivable commercial core: payable amount, currency, issue date, due date, and payment terms. |
+| `ReceivableMetadata` | Required readable invoice metadata, with required `invoiceId` and optional buyer, purchase-order, and source-system references. |
 | `IdentityDisclosure` | Seller-disclosed legal identity information for an entity, such as legal name, jurisdiction, and entity type. |
 | `ComplianceDisclosure` | Seller-disclosed information needed by the Compliance Party: Seller identity, Debtor identity, receivable terms, transaction purpose, and disclosure restrictions. |
 | `ComplianceResult` | MVP compliance output with `sellerEligible` and `rfqEligible`. |
@@ -104,7 +105,7 @@ This section names the first likely Daml templates and data types. It is still a
 
 | Template | Signatories / controllers to decide | Purpose |
 |---|---|---|
-| `Receivable` | Seller self-registration | Represents the pre-existing Receivable as an immutable, NFT-like ledger object keyed by `(registrar, invoiceId)`. |
+| `Receivable` | Seller self-registration | Represents the pre-existing Receivable as an immutable, NFT-like ledger object. |
 | `ComplianceAttestation` | Compliance Party signatory, Seller observer | Records Compliance Party authority over the detailed compliance result and the disclosed information it evaluated. |
 | `ComplianceCertificate` | Compliance Party signatory, observers TBD | Minimal certificate derived from `ComplianceAttestation`; intended to support package authenticity while preserving privacy, with room to become a reusable formal credential later. |
 | `RiskCertificate` | Risk Assessor signatory, observers TBD | Minimal certificate derived from `RiskAttestation`; intended to support package authenticity while preserving privacy, with room to become a reusable formal credential later. |
@@ -148,7 +149,7 @@ Use `ComplianceAttestation` as the first simple compliance template. Do not keep
 - `complianceParty : Party`
 - `seller : Party`
 - `packageId : Text`
-- `receivableRef : Text`
+- `receivableCid : ContractId Receivable`
 - `complianceDisclosure : ComplianceDisclosure`
 - `complianceResult : ComplianceResult`
 
@@ -194,7 +195,6 @@ Candidate certificate fields:
 - `seller : Party`
 - `packageId : Text`
 - `receivableCid : ContractId Receivable`
-- `receivableRef : Text`
 - `policyVersion : Text`
 - `certificationScope : Text`
 
@@ -219,7 +219,6 @@ Candidate certificate fields:
 - `seller : Party`
 - `packageId : Text`
 - `receivableCid : ContractId Receivable`
-- `receivableRef : Text`
 - `riskTier : RiskTier`
 - `riskPolicyVersion : Text`
 - `certificationScope : Text`
@@ -237,7 +236,7 @@ The current Seller-created package anchor is not authoritative enough and should
 
 The draft/builder remains non-authoritative. The `RFQRequest` becomes the authoritative Phase 1 bridge only because the choice that creates it can fetch and validate the `ComplianceCertificate` and `RiskCertificate` before creating the request.
 
-The validation choice should also fetch the `Receivable` by `receivableCid` and assert that all referenced certificates and the draft/builder point to the same active receivable contract. This is stronger than relying on text references such as `receivableRef`; `fetch` aborts the transaction if the contract ID is not active or visible to the submitting party.
+The validation choice should also fetch the `Receivable` by `receivableCid` and assert that all referenced certificates and the draft/builder point to the same active receivable contract. This is stronger than relying on copied text references; `fetch` aborts the transaction if the contract ID is not active or visible to the submitting party.
 
 For Phase 1, `RFQRequest` means ready to open, not already open to the market. Phase 2 decides how it becomes visible to Funders and how package access works.
 
@@ -247,7 +246,7 @@ Funder discovery and routing are out of scope for the MVP ledger model. In a pro
 
 `RFQRequest` should be per request / per Funder interaction when Phase 2 introduces Funder visibility. The current Phase 1 bridge should leave that path open rather than modeling a public marketplace or discovery registry.
 
-All package pieces must be linked together. For Phase 1, use `receivableCid : ContractId Receivable` as the primary receivable link, plus explicit identifiers such as `packageId`. Keep `receivableRef` only as human-readable metadata. Do not use hashes, ZK, or encryption for this linking.
+All package pieces must be linked together. For Phase 1, use `receivableCid : ContractId Receivable` as the primary receivable link, plus explicit identifiers such as `packageId`. Use `Receivable.metadata.invoiceId` as the readable invoice reference when needed. Do not use hashes, ZK, or encryption for this linking.
 
 `RFQDiscoveryListing` is no longer a Phase 1 template candidate. Move discovery/listing to Phase 2 or later. It also remains open whether discovery/listing should be on-ledger at all.
 
@@ -261,7 +260,8 @@ For the hackathon MVP, use Seller self-registration:
 - `registrar` is the party that records the receivable on-ledger.
 - `owner` is the Seller/current owner of the represented receivable.
 - MVP self-registration requires `registrar == owner`.
-- The current implementation uses a uniqueness key `(registrar, invoiceId)`, maintained by `registrar`, but Canton 3.x contract-key support is not a deployment assumption. Do not rely on this key as the long-term uniqueness mechanism.
+- `ReceivableMetadata.invoiceId` is the readable invoice reference. It is not the security or workflow identity.
+- The implementation should not rely on contract keys as the long-term uniqueness mechanism for Canton 3.x deployment assumptions.
 - Sensitive fields such as raw Debtor identity may live on `Receivable` because it is not disclosed to Funders in Phase 1.
 - The `Receivable` source object should contain source facts only; eligibility and verification conclusions belong in later workflow attestations.
 - Compliance can later attest whether the Seller and RFQ are eligible, including whether the self-registration assumption is acceptable for the MVP flow.
@@ -281,7 +281,7 @@ A future third-party registrar model would need its own proposal/acceptance and 
 
 ## Open Questions
 
-1. Should `receivableCid`, `seller`, `packageId`, and issuer party be the full Phase 1 certificate binding set, with `receivableRef` kept only as readable metadata?
+1. Should `receivableCid`, `seller`, `packageId`, and issuer party be the full Phase 1 certificate binding set?
 2. What should the Seller-authored draft/builder template be named?
 3. What minimal fields should Phase 1 `RFQRequest` contain before Phase 2 finalizes Funder visibility?
 4. Should compliance and risk attestations be consumed or kept active when `RFQRequest` is created?

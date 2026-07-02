@@ -2,6 +2,7 @@
 module CloakRFQ.Risk where
 
 import CloakRFQ.Lib
+import CloakRFQ.Receivable
 
 -- | Detailed Risk Assessor output for the Seller package workflow.
 template RiskAttestation
@@ -9,7 +10,7 @@ template RiskAttestation
     riskAssessor : Party
     seller : Party
     packageId : Text
-    receivableRef : Text
+    receivableCid : ContractId Receivable
     riskResult : RiskResult
   where
     signatory riskAssessor
@@ -25,7 +26,7 @@ template RiskAttestation
           riskAssessor
           seller
           packageId
-          receivableRef
+          receivableCid
           riskTier = riskResult.riskTier
           riskPolicyVersion
           certificationScope
@@ -36,7 +37,7 @@ template RiskCertificate
     riskAssessor : Party
     seller : Party
     packageId : Text
-    receivableRef : Text
+    receivableCid : ContractId Receivable
     riskTier : RiskTier
     riskPolicyVersion : Text
     certificationScope : Text

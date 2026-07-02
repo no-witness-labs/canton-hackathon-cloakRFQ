@@ -23,7 +23,7 @@ phase1 = do
   funderA    <- allocateParty "FunderA"
 
   let packageId = "PKG-INV-4471"
-  let receivableRef = "INV-4471"
+  let invoiceId = "INV-4471"
 
   let terms = ReceivableTerms with
         payableAmount = 480000.0
@@ -32,12 +32,18 @@ phase1 = do
         dueDate = date 2026 Feb 15
         paymentTerms = "Net 45"
 
+  let metadata = ReceivableMetadata with
+        invoiceId
+        buyerReference = Some "AP-DEPT-42"
+        purchaseOrderReference = Some "PO-98776"
+        sourceSystemReference = Some "NETSUITE-AR-10031"
+
   -- Seller self-registers a private represented Receivable.
   rcv <- submit seller do
     createCmd Receivable with
       registrar = seller
       owner = seller
-      invoiceId = receivableRef
+      metadata
       debtorName = "Meridian Retail Group"
       terms
 
@@ -67,7 +73,7 @@ phase1 = do
       complianceParty = compliance
       seller
       packageId
-      receivableRef
+      receivableCid = rcv
       complianceDisclosure
       complianceResult
 
@@ -84,7 +90,7 @@ phase1 = do
       riskAssessor = risk
       seller
       packageId
-      receivableRef
+      receivableCid = rcv
       riskResult
 
   riskCertificate <- submit seller do
@@ -102,7 +108,7 @@ phase1 = do
     createCmd RFQPackage with
       seller
       packageId
-      receivableRef
+      receivableCid = rcv
       terms
       packageContent
       rfqParameters
@@ -114,7 +120,7 @@ phase1 = do
 
   Some complianceCertificateView <- queryContractId seller complianceCertificate
   complianceCertificateView.packageId === packageId
-  complianceCertificateView.receivableRef === receivableRef
+  complianceCertificateView.receivableCid === rcv
 
   Some riskView <- queryContractId seller riskAttestation
   riskView.riskResult.riskTier === LowRisk
@@ -124,7 +130,7 @@ phase1 = do
   riskCertificateView.packageId === packageId
 
   Some packageView <- queryContractId seller rfqPackage
-  packageView.receivableRef === receivableRef
+  packageView.receivableCid === rcv
   packageView.terms.payableAmount === 480000.0
   packageView.complianceCertificateCid === complianceCertificate
   packageView.riskCertificateCid === riskCertificate

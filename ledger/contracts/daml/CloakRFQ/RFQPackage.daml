@@ -4,6 +4,7 @@ module CloakRFQ.RFQPackage where
 import CloakRFQ.Lib
 import CloakRFQ.Compliance
 import CloakRFQ.Risk
+import CloakRFQ.Receivable
 
 -- | Thin on-ledger package anchor. The full RFQ package is assembled from
 -- this contract plus linked authority certificates and package metadata.
@@ -11,7 +12,7 @@ template RFQPackage
   with
     seller : Party
     packageId : Text
-    receivableRef : Text
+    receivableCid : ContractId Receivable
     terms : ReceivableTerms
     packageContent : RFQPackageContent
     rfqParameters : RFQParameters
