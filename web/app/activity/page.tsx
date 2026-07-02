@@ -41,7 +41,8 @@ export default function ActivityPage() {
 
   const copy = useCallback((s: string) => { navigator.clipboard?.writeText(s); setCopied(s); setTimeout(() => setCopied(null), 1200); }, []);
   const verify = useCallback(async (updateId: string, actAs: string) => {
-    const tx = await fetchUpdateById(updateId, actAs);
+    const party = actAs || getParties().seller;  // hydrated rows have no actAs → query as the Seller (a stakeholder)
+    const tx = await fetchUpdateById(updateId, party);
     setVerified((v) => ({ ...v, [updateId]: tx ? { offset: Number(tx.offset ?? 0), recordTime: String(tx.recordTime ?? '') } : 'fail' }));
   }, []);
 
