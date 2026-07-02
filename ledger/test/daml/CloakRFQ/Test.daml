@@ -2,8 +2,8 @@
 --
 -- Phase 1 (#9) proves the design boundary: the Seller creates a stable
 -- Receivable, Compliance and Risk issue scoped attestations/certificates, the
--- Seller creates a thin RFQ package anchor, and no concrete Funder is a Phase 1
--- stakeholder.
+-- Seller creates a private RFQ request assembly, then opens one validated
+-- request per Funder while keeping Funders hidden from each other.
 module CloakRFQ.Test where
 
 import Daml.Script
@@ -22,6 +22,7 @@ phase1 = do
   compliance <- allocateParty "Compliance"
   risk       <- allocateParty "Risk"
   funderA    <- allocateParty "FunderA"
+  funderB    <- allocateParty "FunderB"
 
   let packageId = "PKG-INV-4471"
   let invoiceId = "INV-4471"
@@ -104,14 +105,22 @@ phase1 = do
         riskTier = riskResult.riskTier
         responseDeadline = time (date 2026 Jul 1) 12 0 0
 
-  rfqPackage <- submit seller do
-    createCmd RFQPackage with
+  rfqAssembly <- submit seller do
+    createCmd RFQRequestAssembly with
       seller
       packageId
       receivableCid = rcv
       packageData
       complianceCertificateCid = complianceCertificate
       riskCertificateCid = riskCertificate
+
+  requestA <- submit seller do
+    exerciseCmd rfqAssembly OpenRFQRequest with
+      funder = funderA
+
+  requestB <- submit seller do
+    exerciseCmd rfqAssembly OpenRFQRequest with
+      funder = funderB
 
   Some complianceView <- queryContractId seller complianceAttestation
   complianceView.complianceResult.sellerEligible === True
@@ -127,19 +136,32 @@ phase1 = do
   riskCertificateView.riskTier === LowRisk
   riskCertificateView.packageId === packageId
 
-  Some packageView <- queryContractId seller rfqPackage
-  packageView.receivableCid === rcv
-  packageView.packageData.receivableTerms.payableAmount === 480000.0
-  packageView.packageData.riskTier === LowRisk
-  packageView.complianceCertificateCid === complianceCertificate
-  packageView.riskCertificateCid === riskCertificate
+  Some assemblyView <- queryContractId seller rfqAssembly
+  assemblyView.receivableCid === rcv
+  assemblyView.packageData.receivableTerms.payableAmount === 480000.0
+  assemblyView.packageData.riskTier === LowRisk
+  assemblyView.complianceCertificateCid === complianceCertificate
+  assemblyView.riskCertificateCid === riskCertificate
 
-  -- Phase 1 has no concrete Funder stakeholders.
+  Some requestAView <- queryContractId funderA requestA
+  requestAView.funder === funderA
+  requestAView.packageData.riskTier === LowRisk
+
+  Some requestBView <- queryContractId funderB requestB
+  requestBView.funder === funderB
+  requestBView.packageData.riskTier === LowRisk
+
+  -- Funders see only their own per-Funder request, not the private assembly
+  -- or another Funder request.
   None <- queryContractId funderA rcv
   None <- queryContractId funderA complianceAttestation
   None <- queryContractId funderA complianceCertificate
   None <- queryContractId funderA riskAttestation
   None <- queryContractId funderA riskCertificate
-  None <- queryContractId funderA rfqPackage
+  None <- queryContractId funderA rfqAssembly
+  None <- queryContractId funderA requestB
+
+  None <- queryContractId funderB rfqAssembly
+  None <- queryContractId funderB requestA
 
   pure ()

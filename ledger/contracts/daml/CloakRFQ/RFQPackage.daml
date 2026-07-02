@@ -1,4 +1,4 @@
--- | Phase 1 Seller-created RFQ package anchor.
+-- | Phase 1 RFQ request assembly and per-Funder request templates.
 module CloakRFQ.RFQPackage where
 
 import CloakRFQ.Lib
@@ -6,9 +6,8 @@ import CloakRFQ.Compliance
 import CloakRFQ.Risk
 import CloakRFQ.Receivable
 
--- | Thin on-ledger package anchor. The full RFQ package is assembled from
--- this contract plus linked authority certificates and package metadata.
-template RFQPackage
+-- | Seller-private workflow state used to assemble a validated RFQ request.
+template RFQRequestAssembly
   with
     seller : Party
     packageId : Text
@@ -18,4 +17,47 @@ template RFQPackage
     riskCertificateCid : ContractId RiskCertificate
   where
     signatory seller
+    ensure hasValidReceivableTerms packageData.receivableTerms
+
+    nonconsuming choice OpenRFQRequest : ContractId RFQRequest
+      with
+        funder : Party
+      controller seller
+      do
+        receivable <- fetch receivableCid
+        complianceCertificate <- fetch complianceCertificateCid
+        riskCertificate <- fetch riskCertificateCid
+
+        assertMsg "Receivable owner mismatch" (receivable.owner == seller)
+        assertMsg "Compliance certificate seller mismatch" (complianceCertificate.seller == seller)
+        assertMsg "Compliance certificate package mismatch" (complianceCertificate.packageId == packageId)
+        assertMsg "Compliance certificate receivable mismatch" (complianceCertificate.receivableCid == receivableCid)
+        assertMsg "Risk certificate seller mismatch" (riskCertificate.seller == seller)
+        assertMsg "Risk certificate package mismatch" (riskCertificate.packageId == packageId)
+        assertMsg "Risk certificate receivable mismatch" (riskCertificate.receivableCid == receivableCid)
+        assertMsg "Risk certificate tier mismatch" (riskCertificate.riskTier == packageData.riskTier)
+
+        create RFQRequest with
+          seller
+          funder
+          packageId
+          receivableCid
+          packageData
+          complianceCertificateCid
+          riskCertificateCid
+
+-- | Validated per-Funder RFQ request. Funder-interested business data lives
+-- in packageData; the remaining fields are technical linkage.
+template RFQRequest
+  with
+    seller : Party
+    funder : Party
+    packageId : Text
+    receivableCid : ContractId Receivable
+    packageData : RFQPackageData
+    complianceCertificateCid : ContractId ComplianceCertificate
+    riskCertificateCid : ContractId RiskCertificate
+  where
+    signatory seller
+    observer funder
     ensure hasValidReceivableTerms packageData.receivableTerms

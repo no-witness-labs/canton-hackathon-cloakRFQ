@@ -60,7 +60,8 @@ These names are implementation candidates, not final Daml names.
 | `ComplianceAttestation` | Compliance Party-signed detailed compliance output for the Seller package workflow. It contains scoped Seller disclosure and a `ComplianceResult`. |
 | `ComplianceCertificate` | Minimal Compliance Party-signed credential derived from a `ComplianceAttestation`. It can be included in or referenced by the RFQ package without exposing the full compliance disclosure. The MVP version is simplified, but the name reflects the intended formal credential semantics. |
 | `RiskCertificate` | Minimal Risk Assessor-signed credential derived from a `RiskAttestation`. It can be included in or referenced by the RFQ package without exposing full risk assessment inputs. |
-| `RFQPackage` | Current implementation placeholder for package-safe data prepared for later disclosure. It carries `RFQPackageData` and certificate references while the design moves toward `RFQRequestAssembly` and per-Funder `RFQRequest`. |
+| `RFQRequestAssembly` | Seller-private workflow state for package-safe data and certificate references. It creates validated per-Funder `RFQRequest` contracts through a nonconsuming choice. |
+| `RFQRequest` | Per-Funder validated RFQ bridge. It discloses `RFQPackageData` to one Funder and keeps other Funders hidden. |
 
 ## Package Boundary
 
@@ -229,14 +230,14 @@ The risk certificate may include `riskTier` because the package workflow needs t
 
 ## RFQ Request Bridge Direction
 
-Replace the current Seller-created package anchor with two templates:
+The Seller-created package anchor is replaced with two templates:
 
 - `RFQRequestAssembly`, a Seller-private workflow that holds `RFQPackageData` and technical certificate references;
 - `RFQRequest`, a per-Funder validated output created by exercising a Seller-controlled choice on `RFQRequestAssembly`.
 
 `RFQRequestAssembly` remains Seller-private workflow state. The `RFQRequest` becomes the authoritative Phase 1 bridge only because the choice that creates it can fetch and validate the `ComplianceCertificate` and `RiskCertificate` before creating the request.
 
-The validation choice should also fetch the `Receivable` by `receivableCid` and assert that all referenced certificates and the draft/builder point to the same active receivable contract. This is stronger than relying on copied text references; `fetch` aborts the transaction if the contract ID is not active or visible to the submitting party.
+The validation choice should also fetch the `Receivable` by `receivableCid` and assert that all referenced certificates and the assembly point to the same active receivable contract. This is stronger than relying on copied text references; `fetch` aborts the transaction if the contract ID is not active or visible to the submitting party.
 
 For Phase 1, `RFQRequest` means ready to open, not already open to the market. Phase 2 decides how it becomes visible to Funders and how package access works.
 
@@ -287,21 +288,20 @@ A future third-party registrar model would need its own proposal/acceptance and 
 ## Open Questions
 
 1. Should `receivableCid`, `seller`, `packageId`, and issuer party be the full Phase 1 certificate binding set?
-2. Should `RFQRequestAssembly.OpenRFQRequest` be nonconsuming and create one per-Funder `RFQRequest`?
-3. Should compliance and risk attestations be consumed or kept active when `RFQRequest` is created?
-4. Should request/assembly data include versioning before Phase 2 package access is implemented?
+2. Should compliance and risk attestations be consumed or kept active when `RFQRequest` is created?
+3. Should request/assembly data include versioning before Phase 2 package access is implemented?
 
 ## Undecided Implementation Options
 
 ### Contract keys for request or draft uniqueness
 
-The Seller-authored draft/builder and validated `RFQRequest` data should be immutable after creation. One option is to use Daml contract keys later to enforce uniqueness for a chosen identifier, such as `(seller, packageId)` or a future request identifier.
+The Seller-authored assembly and validated `RFQRequest` data should be immutable after creation. One option is to use Daml contract keys later to enforce uniqueness for a chosen identifier, such as `(seller, packageId)` or a future request identifier.
 
 This is not yet a decision. A local spike with SDK `3.5.1` verified that contract keys fail under LF target `2.1` with a compiler error saying keys are supported from `2.3`, and the same keyed template builds under LF target `2.3`. The current package configuration uses LF target `2.3`; keep this target under review against the intended Canton deployment environment as package-key usage is implemented.
 
 Open points:
 
-1. Should Phase 1 enforce one active draft/builder or `RFQRequest` per chosen identifier?
+1. Should Phase 1 enforce one active assembly or `RFQRequest` per chosen identifier?
 2. Is LF target `2.3` acceptable for the intended Canton deployment environment?
 3. If package replacement is ever needed, should the model archive the old package and create a new keyed package, or introduce explicit versioning?
 
