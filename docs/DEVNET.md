@@ -16,7 +16,7 @@ difference is auth + a remote participant.
   - Ledger API: `https://ledger-api.validator.devnet.sandbox.fivenorth.io`
   - OIDC token URL: `https://auth.sandbox.fivenorth.io/application/o/token/`
   - `client_id`: `validator-devnet-m2m`
-  - `client_secret`: **ask the team lead** (shared secret — not in the repo)
+  - `client_secret`: provided with the Seaport access details (shared secret — kept out of the repo)
 
 ---
 
