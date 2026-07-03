@@ -7,7 +7,8 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import {
-  loadConfig, getParties, subscribeTx, getTxLog, getTxVersion, fetchUpdateById, partyLabel,
+  loadConfig, getParties, subscribeTx, getTxLog, getTxVersion, fetchUpdateById, fetchHistory, partyLabel,
+  type LedgerTx,
 } from '@/lib/ledger';
 
 const short = (s: string, head = 10, tail = 6) => (s.length > head + tail + 1 ? `${s.slice(0, head)}…${s.slice(-tail)}` : s);
@@ -17,15 +18,31 @@ export default function ActivityPage() {
   const [ready, setReady] = useState<boolean | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [verified, setVerified] = useState<Record<string, { offset: number; recordTime: string } | 'fail'>>({});
+  const [history, setHistory] = useState<LedgerTx[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useSyncExternalStore(subscribeTx, getTxVersion, getTxVersion);
-  const txs = getTxLog();
 
-  useEffect(() => { loadConfig().then(setReady); }, []);
+  const load = useCallback(async () => {
+    const ok = await loadConfig();
+    setReady(ok);
+    if (!ok) return;
+    setLoading(true);
+    try { setHistory(await fetchHistory(getParties().seller)); } finally { setLoading(false); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  // Merge the persistent ledger history with the live in-session log (dedup by
+  // updateId; the session entry wins because it carries the acting party).
+  const byId = new Map<string, LedgerTx>();
+  for (const t of history) byId.set(t.updateId, t);
+  for (const t of getTxLog()) byId.set(t.updateId, { ...(byId.get(t.updateId) ?? t), ...t });
+  const txs = [...byId.values()].sort((a, b) => b.offset - a.offset);
 
   const copy = useCallback((s: string) => { navigator.clipboard?.writeText(s); setCopied(s); setTimeout(() => setCopied(null), 1200); }, []);
   const verify = useCallback(async (updateId: string, actAs: string) => {
-    const tx = await fetchUpdateById(updateId, actAs);
+    const party = actAs || getParties().seller;  // hydrated rows have no actAs → query as the Seller (a stakeholder)
+    const tx = await fetchUpdateById(updateId, party);
     setVerified((v) => ({ ...v, [updateId]: tx ? { offset: Number(tx.offset ?? 0), recordTime: String(tx.recordTime ?? '') } : 'fail' }));
   }, []);
 
@@ -33,20 +50,23 @@ export default function ActivityPage() {
     <main style={{ maxWidth: 940, margin: '0 auto', padding: 'clamp(18px,3vw,30px)' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
         <h1 className="disp" style={{ fontSize: 20, fontWeight: 700 }}>Ledger activity</h1>
-        <span className="t-mut mono" style={{ fontSize: 12 }}>{txs.length} transaction{txs.length === 1 ? '' : 's'} · Canton JSON API</span>
+        <span className="t-mut mono" style={{ fontSize: 12 }}>{loading ? 'loading…' : `${txs.length} transaction${txs.length === 1 ? '' : 's'}`} · Canton JSON API</span>
+        <span className="spacer" style={{ flex: 1 }} />
+        <button className="btn dark sm" disabled={loading} onClick={load}>{loading ? 'Loading…' : 'Refresh'}</button>
       </div>
       <p className="t-mut" style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 16 }}>
-        Every action in the app submits a real Daml transaction. Each row is the ledger&apos;s own receipt —
-        its <b>updateId</b>, offset, record time, and the contracts it created/archived.
+        Every action submits a real Daml transaction. This is the <b>persistent</b> history read from the
+        ledger&apos;s update stream — each row is the ledger&apos;s own receipt (its <b>updateId</b>, offset,
+        record time, and the contracts it created/archived), and survives reloads.
       </p>
 
       {ready === false && (
         <div className="banner red">Sandbox not reachable — start it and reload.</div>
       )}
-      {ready !== false && txs.length === 0 && (
+      {ready !== false && !loading && txs.length === 0 && (
         <section className="panel" style={{ padding: '20px 18px' }}>
-          <p className="t-ink3" style={{ fontSize: 13, lineHeight: 1.6 }}>No transactions in this session yet.</p>
-          <p className="t-mut" style={{ fontSize: 12, marginTop: 6 }}>Interact in the app — issue an attestation, create a Receivable, submit a quote — and each transaction appears here. (The feed is per session; a reload clears it, but the contracts stay on the ledger — see <b>/ledger</b>.)</p>
+          <p className="t-ink3" style={{ fontSize: 13, lineHeight: 1.6 }}>No transactions yet for this party.</p>
+          <p className="t-mut" style={{ fontSize: 12, marginTop: 6 }}>Interact in the app — issue an attestation, create a Receivable, submit a quote — then Refresh. Everything is recorded permanently on the ledger.</p>
         </section>
       )}
 
@@ -57,7 +77,7 @@ export default function ActivityPage() {
             <section key={tx.updateId + tx.offset} className="panel" style={{ padding: '13px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <span className="chip accent">{tx.label}</span>
-                <span className="chip ghost">as {partyLabel(tx.actAs)}</span>
+                {tx.actAs && <span className="chip ghost">as {partyLabel(tx.actAs)}</span>}
                 <span className="spacer" style={{ flex: 1 }} />
                 <span className="mono t-mut" style={{ fontSize: 11 }}>offset {tx.offset} · {clock(tx.recordTime)}</span>
               </div>
