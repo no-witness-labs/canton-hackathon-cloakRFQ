@@ -1,5 +1,5 @@
 -- | Phase 1 RFQ request assembly and per-Funder request templates.
-module CloakRFQ.RFQPackage where
+module CloakRFQ.RFQRequest where
 
 import CloakRFQ.Lib
 import CloakRFQ.Compliance
@@ -55,8 +55,9 @@ template RFQRequestAssembly
           complianceCertificateCid
           riskCertificateCid
 
--- | Validated per-Funder RFQ request. Funder-interested business data lives
--- in packageData; the remaining fields are technical linkage.
+-- | Per-Funder RFQ request created by the validated assembly path.
+-- Funder-interested business data lives in packageData; the remaining fields
+-- are technical linkage.
 template RFQRequest
   with
     seller : Party

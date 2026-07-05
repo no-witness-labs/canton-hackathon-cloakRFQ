@@ -13,7 +13,7 @@ import DA.Time
 import CloakRFQ.Lib
 import CloakRFQ.Compliance
 import CloakRFQ.Risk
-import CloakRFQ.RFQPackage
+import CloakRFQ.RFQRequest
 import CloakRFQ.Receivable
 
 phase1 : Script ()
