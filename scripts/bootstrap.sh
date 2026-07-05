@@ -13,7 +13,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASE="${1:-http://127.0.0.1:6864}"
-DAR="$ROOT/ledger/.daml/dist/cloakrfq-ledger-0.1.0.dar"
+DAR="$ROOT/ledger/contracts/.daml/dist/cloakrfq-contracts-0.1.0.dar"
 CONFIG="$ROOT/web/public/ledger-config.json"
 USER_ID="cloakrfq"
 
@@ -21,7 +21,7 @@ USER_ID="cloakrfq"
 # non-stakeholder party sees nothing.
 ROLES=(Seller FunderA FunderB FunderC Compliance Risk Coordinator Auditor Outsider)
 
-[ -f "$DAR" ] || { echo "DAR not found at $DAR — run 'dpm build' from ledger/ first." >&2; exit 1; }
+[ -f "$DAR" ] || { echo "DAR not found at $DAR — run 'dpm build --all' from ledger/ first." >&2; exit 1; }
 
 echo "→ Uploading DAR to $BASE"
 code=000
@@ -66,7 +66,7 @@ mkdir -p "$(dirname "$CONFIG")"
 cat > "$CONFIG" <<JSON
 {
   "jsonApiUrl": "$BASE",
-  "packageRef": "#cloakrfq-ledger",
+  "packageRef": "#cloakrfq-contracts",
   "userId": "$USER_ID",
   "parties": {
     "seller": "${PARTY[Seller]}",

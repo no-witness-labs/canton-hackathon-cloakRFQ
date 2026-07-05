@@ -1,0 +1,26 @@
+-- | Phase 1 per-Funder RFQ request template.
+module CloakRFQ.RFQRequest where
+
+import CloakRFQ.Lib
+import CloakRFQ.Compliance
+import CloakRFQ.Risk
+import CloakRFQ.Receivable
+
+-- | Per-Funder Seller-authored RFQ request. Funder-interested business data
+-- lives in packageData; the remaining fields link to authority certificates
+-- that verifiers must compare against the request fields.
+template RFQRequest
+  with
+    seller : Party
+    funder : Party
+    complianceParty : Party
+    riskAssessor : Party
+    packageId : Text
+    receivableCid : ContractId Receivable
+    packageData : RFQPackageData
+    complianceCertificateCid : ContractId ComplianceCertificate
+    riskCertificateCid : ContractId RiskCertificate
+  where
+    signatory seller
+    observer funder
+    ensure hasValidReceivableTerms packageData.receivableTerms

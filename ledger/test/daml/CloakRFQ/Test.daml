@@ -1,106 +1,225 @@
--- | CloakRFQ Receipts — Daml Script tests.
+-- | CloakRFQ Receipts - Daml Script tests.
 --
--- Phase 1 (#9) happy path + the first party-visibility proof (#22): a Funder can
--- see the Blind RFQ it was invited to, but NOT the Seller's Receivable (which
--- carries the raw Debtor identity). That visibility split is enforced by Canton
--- via signatory/observer, not by the UI.
+-- Phase 1 (#9) proves the design boundary: the Seller creates a stable
+-- Receivable, Compliance and Risk issue scoped attestations/certificates, the
+-- Seller creates one RFQ request per Funder while keeping Funders hidden
+-- from each other.
 module CloakRFQ.Test where
 
 import Daml.Script
 import DA.Assert ((===))
-import CloakRFQ
+import DA.Date
+import DA.Time
+import CloakRFQ.Lib
+import CloakRFQ.Compliance
+import CloakRFQ.Risk
+import CloakRFQ.RFQRequest
+import CloakRFQ.Receivable
+
+requestMatchesCertificates : RFQRequest -> ComplianceCertificate -> RiskCertificate -> Bool
+requestMatchesCertificates request complianceCertificate riskCertificate =
+  request.seller == complianceCertificate.seller
+    && request.seller == riskCertificate.seller
+    && request.complianceParty == complianceCertificate.complianceParty
+    && request.riskAssessor == riskCertificate.riskAssessor
+    && request.packageId == complianceCertificate.packageId
+    && request.packageId == riskCertificate.packageId
+    && request.receivableCid == complianceCertificate.receivableCid
+    && request.receivableCid == riskCertificate.receivableCid
+    && request.packageData.receivableTerms == complianceCertificate.certifiedReceivableTerms
+    && request.packageData.receivableTerms == riskCertificate.certifiedReceivableTerms
+    && request.packageData.riskTier == riskCertificate.certifiedRiskTier
 
 phase1 : Script ()
 phase1 = do
-  seller      <- allocateParty "Seller"
-  compliance  <- allocateParty "Compliance"
-  risk        <- allocateParty "Risk"
-  coordinator <- allocateParty "Coordinator"
-  funderA     <- allocateParty "FunderA"
-  funderB     <- allocateParty "FunderB"
+  seller     <- allocateParty "Seller"
+  compliance <- allocateParty "Compliance"
+  risk       <- allocateParty "Risk"
+  funderA    <- allocateParty "FunderA"
+  funderB    <- allocateParty "FunderB"
 
-  -- Compliance + Risk issue scoped attestations (Seller observes them).
-  _ <- submit compliance do
-    createCmd ComplianceAttestation with
-      complianceParty = compliance, seller
-      subject = "Seller eligibility", result = "Eligible"
-  _ <- submit risk do
-    createCmd RiskAttestation with
-      riskAssessor = risk, seller
-      subject = "Debtor Risk", result = "BBB+ · Low"
+  let packageId = "PKG-INV-4471"
+  let invoiceId = "INV-4471"
 
-  -- Seller creates a Receivable (private to the Seller — raw Debtor identity).
+  let terms = ReceivableTerms with
+        payableAmount = 480000.0
+        currency = "USD"
+        issueDate = date 2026 Jan 1
+        dueDate = date 2026 Feb 15
+        paymentTerms = "Net 45"
+
+  let metadata = ReceivableMetadata with
+        invoiceId
+        buyerReference = Some "AP-DEPT-42"
+        purchaseOrderReference = Some "PO-98776"
+        sourceSystemReference = Some "NETSUITE-AR-10031"
+
+  -- Seller self-registers a private represented Receivable.
   rcv <- submit seller do
     createCmd Receivable with
-      seller
-      ref = "RCV-9F2A"
-      invoiceId = "INV-4471"
-      faceValue = 480000.0
-      currency = "USD"
-      daysToDue = 45
+      registrar = seller
+      owner = seller
+      metadata
       debtorName = "Meridian Retail Group"
-      recoursePreference = Negotiable
-      settlementPreference = "T+2"
-      validityVerified = True
+      terms
 
-  -- Seller opens the Blind RFQ to two Funders (no raw Debtor identity in it).
-  rfq <- submit seller do
-    exerciseCmd rcv OpenRFQ with
-      coordinator
-      funders = [funderA, funderB]
-      debtorRisk = "BBB+ · Low"
-      receivableValidity = "Verified"
+  let sellerIdentity = IdentityDisclosure with
+        legalName = "Aster Components LLC"
+        jurisdiction = "US-DE"
+        entityType = "Limited liability company"
 
-  -- Funder A can see the RFQ it was invited to...
-  Some rfqView <- queryContractId funderA rfq
-  rfqView.receivableRef === "RCV-9F2A"
+  let debtorIdentity = IdentityDisclosure with
+        legalName = "Meridian Retail Group"
+        jurisdiction = "US-NY"
+        entityType = "Corporation"
 
-  -- ...but NOT the Seller's Receivable (it is not a stakeholder there).
+  let complianceDisclosure = ComplianceDisclosure with
+        sellerIdentity
+        debtorIdentity
+        receivableTerms = terms
+        transactionPurpose = "Receivable sale RFQ for working capital"
+        disclosureRestrictions = "Package disclosure limited to eligible funders in later phases"
+
+  let complianceResult = ComplianceResult with
+        sellerEligible = True
+        rfqEligible = True
+
+  complianceAttestation <- submit compliance do
+    createCmd ComplianceAttestation with
+      complianceParty = compliance
+      seller
+      packageId
+      receivableCid = rcv
+      complianceDisclosure
+      complianceResult
+
+  complianceCertificate <- submit seller do
+    exerciseCmd complianceAttestation CreateComplianceCertificate with
+      policyVersion = "MVP-COMPLIANCE-v1"
+      certificationScope = "Phase 1 RFQ package eligibility"
+
+  let riskDisclosure = RiskDisclosure with
+        receivableTerms = terms
+
+  let riskResult = RiskResult with
+        riskTier = LowRisk
+
+  riskAttestation <- submit risk do
+    createCmd RiskAttestation with
+      riskAssessor = risk
+      seller
+      packageId
+      receivableCid = rcv
+      riskDisclosure
+      riskResult
+
+  riskCertificate <- submit seller do
+    exerciseCmd riskAttestation CreateRiskCertificate with
+      riskPolicyVersion = "MVP-RISK-v1"
+      certificationScope = "Phase 1 receivable risk tier"
+
+  let packageData = RFQPackageData with
+        receivableTerms = terms
+        riskTier = riskResult.riskTier
+        responseDeadline = time (date 2026 Jul 1) 12 0 0
+
+  requestA <- submit seller do
+    createCmd RFQRequest with
+      seller
+      funder = funderA
+      complianceParty = compliance
+      riskAssessor = risk
+      packageId
+      receivableCid = rcv
+      packageData
+      complianceCertificateCid = complianceCertificate
+      riskCertificateCid = riskCertificate
+
+  requestB <- submit seller do
+    createCmd RFQRequest with
+      seller
+      funder = funderB
+      complianceParty = compliance
+      riskAssessor = risk
+      packageId
+      receivableCid = rcv
+      packageData
+      complianceCertificateCid = complianceCertificate
+      riskCertificateCid = riskCertificate
+
+  Some complianceView <- queryContractId seller complianceAttestation
+  complianceView.complianceResult.sellerEligible === True
+
+  Some complianceCertificateView <- queryContractId seller complianceCertificate
+  complianceCertificateView.packageId === packageId
+  complianceCertificateView.receivableCid === rcv
+  complianceCertificateView.certifiedReceivableTerms === terms
+
+  Some riskView <- queryContractId seller riskAttestation
+  riskView.riskResult.riskTier === LowRisk
+
+  Some riskCertificateView <- queryContractId seller riskCertificate
+  riskCertificateView.certifiedRiskTier === LowRisk
+  riskCertificateView.certifiedReceivableTerms === terms
+  riskCertificateView.packageId === packageId
+
+  Some requestAView <- queryContractId funderA requestA
+  requestAView.funder === funderA
+  requestAView.complianceParty === compliance
+  requestAView.riskAssessor === risk
+  requestAView.packageData.receivableTerms === terms
+  requestAView.packageData.riskTier === LowRisk
+  requestAView.complianceCertificateCid === complianceCertificate
+  requestAView.riskCertificateCid === riskCertificate
+  requestAView.packageData.receivableTerms === complianceCertificateView.certifiedReceivableTerms
+  requestAView.packageData.receivableTerms === riskCertificateView.certifiedReceivableTerms
+  requestAView.packageData.riskTier === riskCertificateView.certifiedRiskTier
+  requestMatchesCertificates requestAView complianceCertificateView riskCertificateView === True
+
+  let tamperedPackageData = RFQPackageData with
+        receivableTerms = terms
+        riskTier = HighRisk
+        responseDeadline = packageData.responseDeadline
+
+  let tamperedRequest = RFQRequest with
+        seller
+        funder = funderA
+        complianceParty = compliance
+        riskAssessor = risk
+        packageId
+        receivableCid = rcv
+        packageData = tamperedPackageData
+        complianceCertificateCid = complianceCertificate
+        riskCertificateCid = riskCertificate
+
+  requestMatchesCertificates tamperedRequest complianceCertificateView riskCertificateView === False
+
+  let invalidTerms = ReceivableTerms with
+        payableAmount = 0.0
+        currency = "USD"
+        issueDate = date 2026 Jan 1
+        dueDate = date 2026 Feb 15
+        paymentTerms = "Net 45"
+
+  hasValidReceivableTerms invalidTerms === False
+
+  Some requestBView <- queryContractId funderB requestB
+  requestBView.funder === funderB
+  requestBView.complianceParty === compliance
+  requestBView.riskAssessor === risk
+  requestBView.packageData.receivableTerms === terms
+  requestBView.packageData.riskTier === LowRisk
+  requestMatchesCertificates requestBView complianceCertificateView riskCertificateView === True
+
+  -- Funders see only their own per-Funder request, not another Funder request.
   None <- queryContractId funderA rcv
+  None <- queryContractId funderA complianceAttestation
+  None <- queryContractId funderA complianceCertificate
+  None <- queryContractId funderA riskAttestation
+  None <- queryContractId funderA riskCertificate
+  None <- queryContractId funderA requestB
+
+  None <- queryContractId funderB requestA
 
   pure ()
 
--- | Phase 2 (#10): Funders submit Private Quotes; the Seller selects the Best
--- Compliant Quote. Proves the headline privacy: competing Funders cannot see
--- each other's quotes, and the SelectedQuote is scoped to Seller + winner only.
-phase2 : Script ()
-phase2 = do
-  seller  <- allocateParty "Seller"
-  funderA <- allocateParty "FunderA"
-  funderB <- allocateParty "FunderB"
-  let rfqRef = "RCV-9F2A"
-
-  -- Funder A quotes higher but demands High disclosure; Funder B is lower with
-  -- Minimal disclosure ("disclosure is part of the price").
-  qA <- submit funderA do
-    createCmd PrivateQuote with
-      funder = funderA, seller, rfqRef, funderLabel = "VC-7"
-      netPurchasePrice = 468000.0, advanceRatePct = 90
-      recourse = Recourse, settlement = "T+1"
-      requiredDisclosure = High, debtorNotification = "Required"
-      quoteExpiry = "18m", proofOfFundsPassed = True, complianceEligible = True
-  qB <- submit funderB do
-    createCmd PrivateQuote with
-      funder = funderB, seller, rfqRef, funderLabel = "LC-3"
-      netPurchasePrice = 465200.0, advanceRatePct = 85
-      recourse = NonRecourse, settlement = "T+2"
-      requiredDisclosure = Minimal, debtorNotification = "Not required"
-      quoteExpiry = "22m", proofOfFundsPassed = True, complianceEligible = True
-
-  -- Privacy: A's quote is visible to A and the Seller, but NOT to Funder B.
-  Some _ <- queryContractId funderA qA
-  Some _ <- queryContractId seller qA
-  None   <- queryContractId funderB qA
-
-  -- Seller selects the Best Compliant Quote (LC-3: lower price, minimal disclosure).
-  sel <- submit seller do exerciseCmd qB Accept
-
-  -- The SelectedQuote is scoped to Seller + winner (Funder B); Funder A can't see it.
-  Some _ <- queryContractId seller sel
-  Some _ <- queryContractId funderB sel
-  None   <- queryContractId funderA sel
-
-  -- Funder A's unselected quote stays active — the Seller-controlled fallback pool.
-  Some _ <- queryContractId seller qA
-
-  pure ()
