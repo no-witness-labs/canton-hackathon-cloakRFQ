@@ -64,14 +64,12 @@ There is no ledger-level Coordinator in the current Phase 1 MVP implementation.
 - Apply compliance policy assumptions to Seller eligibility, RFQ eligibility, disclosure constraints, and package readiness.
 - Optionally issue Debtor or Receivable `RiskAttestation`s before package issuance.
 - Prepare package-safe `RFQPackageData`.
-- Create Seller-private `RFQRequestAssembly`.
-- Optionally open per-Funder `RFQRequest` bridge contracts for off-ledger identified or locally simulated Funders.
+- Create per-Funder `RFQRequest` bridge contracts for off-ledger identified or locally simulated Funders.
 
 ### Outputs
 
 - `Receivable`
-- `RFQRequestAssembly`
-- optional per-Funder `RFQRequest` bridge contracts
+- per-Funder `RFQRequest` bridge contracts
 - `ComplianceAttestation`s and `ComplianceCertificate`s
 - optional `RiskAttestation`s and `RiskCertificate`s
 - `RFQPackageData`
@@ -184,8 +182,8 @@ Regulator receipt visibility is usually post-finality. If a selected regulation 
 
 ```text
 Phase 1: RFQ Origination & Eligibility
-  Receivable + attestations/certificates + RFQPackageData + RFQRequestAssembly
-  -> optional per-Funder RFQRequest bridges
+  Receivable + attestations/certificates + RFQPackageData
+  -> per-Funder RFQRequest bridges
 
 Phase 2: Private Quoting & Selection
   Entitled Funders receive scoped packages and submit Private Quotes

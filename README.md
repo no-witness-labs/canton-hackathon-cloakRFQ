@@ -55,7 +55,7 @@ npm run dev   # http://localhost:3000
 
 Phase 1 ledger design and initial Daml implementation are in progress as of 2026-07-02.
 
-Implemented ledger scope currently covers represented Receivable registration, Compliance/Risk attestations and certificates, `RFQPackageData`, `RFQRequestAssembly`, and per-Funder `RFQRequest` bridge contracts.
+Implemented ledger scope currently covers represented Receivable registration, Compliance/Risk attestations and certificates, `RFQPackageData` and per-Funder `RFQRequest` bridge contracts.
 
 Not complete as production implementation. Later RFQ discovery, package access policy, private quoting, quote-selection protocol details, settlement, receipts, and exact Proof-of-Funds mechanism remain open.
 
