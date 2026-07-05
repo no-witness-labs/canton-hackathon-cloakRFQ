@@ -16,6 +16,20 @@ import CloakRFQ.Risk
 import CloakRFQ.RFQRequest
 import CloakRFQ.Receivable
 
+requestMatchesCertificates : RFQRequest -> ComplianceCertificate -> RiskCertificate -> Bool
+requestMatchesCertificates request complianceCertificate riskCertificate =
+  request.seller == complianceCertificate.seller
+    && request.seller == riskCertificate.seller
+    && request.complianceParty == complianceCertificate.complianceParty
+    && request.riskAssessor == riskCertificate.riskAssessor
+    && request.packageId == complianceCertificate.packageId
+    && request.packageId == riskCertificate.packageId
+    && request.receivableCid == complianceCertificate.receivableCid
+    && request.receivableCid == riskCertificate.receivableCid
+    && request.packageData.receivableTerms == complianceCertificate.certifiedReceivableTerms
+    && request.packageData.receivableTerms == riskCertificate.certifiedReceivableTerms
+    && request.packageData.riskTier == riskCertificate.certifiedRiskTier
+
 phase1 : Script ()
 phase1 = do
   seller     <- allocateParty "Seller"
@@ -160,6 +174,34 @@ phase1 = do
   requestAView.packageData.receivableTerms === complianceCertificateView.certifiedReceivableTerms
   requestAView.packageData.receivableTerms === riskCertificateView.certifiedReceivableTerms
   requestAView.packageData.riskTier === riskCertificateView.certifiedRiskTier
+  requestMatchesCertificates requestAView complianceCertificateView riskCertificateView === True
+
+  let tamperedPackageData = RFQPackageData with
+        receivableTerms = terms
+        riskTier = HighRisk
+        responseDeadline = packageData.responseDeadline
+
+  let tamperedRequest = RFQRequest with
+        seller
+        funder = funderA
+        complianceParty = compliance
+        riskAssessor = risk
+        packageId
+        receivableCid = rcv
+        packageData = tamperedPackageData
+        complianceCertificateCid = complianceCertificate
+        riskCertificateCid = riskCertificate
+
+  requestMatchesCertificates tamperedRequest complianceCertificateView riskCertificateView === False
+
+  let invalidTerms = ReceivableTerms with
+        payableAmount = 0.0
+        currency = "USD"
+        issueDate = date 2026 Jan 1
+        dueDate = date 2026 Feb 15
+        paymentTerms = "Net 45"
+
+  hasValidReceivableTerms invalidTerms === False
 
   Some requestBView <- queryContractId funderB requestB
   requestBView.funder === funderB
@@ -167,6 +209,7 @@ phase1 = do
   requestBView.riskAssessor === risk
   requestBView.packageData.receivableTerms === terms
   requestBView.packageData.riskTier === LowRisk
+  requestMatchesCertificates requestBView complianceCertificateView riskCertificateView === True
 
   -- Funders see only their own per-Funder request, not another Funder request.
   None <- queryContractId funderA rcv
