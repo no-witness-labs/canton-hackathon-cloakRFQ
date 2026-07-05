@@ -10,3 +10,6 @@ next-env.d.ts
 
 # typescript build info
 *.tsbuildinfo
+
+# generated per-environment ledger config (bootstrap.sh / bootstrap-devnet.py)
+/public/ledger-config.json

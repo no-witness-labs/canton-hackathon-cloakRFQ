@@ -222,3 +222,4 @@ phase1 = do
   None <- queryContractId funderB requestA
 
   pure ()
+
