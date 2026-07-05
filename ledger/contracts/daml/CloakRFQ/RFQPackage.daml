@@ -10,6 +10,8 @@ import CloakRFQ.Receivable
 template RFQRequestAssembly
   with
     seller : Party
+    complianceParty : Party
+    riskAssessor : Party
     packageId : Text
     receivableCid : ContractId Receivable
     packageData : RFQPackageData
@@ -29,17 +31,24 @@ template RFQRequestAssembly
         riskCertificate <- fetch riskCertificateCid
 
         assertMsg "Receivable owner mismatch" (receivable.owner == seller)
+        assertMsg "Receivable terms mismatch" (receivable.terms == packageData.receivableTerms)
+        assertMsg "Compliance certificate party mismatch" (complianceCertificate.complianceParty == complianceParty)
         assertMsg "Compliance certificate seller mismatch" (complianceCertificate.seller == seller)
         assertMsg "Compliance certificate package mismatch" (complianceCertificate.packageId == packageId)
         assertMsg "Compliance certificate receivable mismatch" (complianceCertificate.receivableCid == receivableCid)
+        assertMsg "Compliance certificate terms mismatch" (complianceCertificate.certifiedReceivableTerms == packageData.receivableTerms)
+        assertMsg "Risk certificate party mismatch" (riskCertificate.riskAssessor == riskAssessor)
         assertMsg "Risk certificate seller mismatch" (riskCertificate.seller == seller)
         assertMsg "Risk certificate package mismatch" (riskCertificate.packageId == packageId)
         assertMsg "Risk certificate receivable mismatch" (riskCertificate.receivableCid == receivableCid)
-        assertMsg "Risk certificate tier mismatch" (riskCertificate.riskTier == packageData.riskTier)
+        assertMsg "Risk certificate terms mismatch" (riskCertificate.certifiedReceivableTerms == packageData.receivableTerms)
+        assertMsg "Risk certificate tier mismatch" (riskCertificate.certifiedRiskTier == packageData.riskTier)
 
         create RFQRequest with
           seller
           funder
+          complianceParty
+          riskAssessor
           packageId
           receivableCid
           packageData
@@ -52,6 +61,8 @@ template RFQRequest
   with
     seller : Party
     funder : Party
+    complianceParty : Party
+    riskAssessor : Party
     packageId : Text
     receivableCid : ContractId Receivable
     packageData : RFQPackageData

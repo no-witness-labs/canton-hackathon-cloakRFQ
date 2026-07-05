@@ -84,6 +84,9 @@ phase1 = do
       policyVersion = "MVP-COMPLIANCE-v1"
       certificationScope = "Phase 1 RFQ package eligibility"
 
+  let riskDisclosure = RiskDisclosure with
+        receivableTerms = terms
+
   let riskResult = RiskResult with
         riskTier = LowRisk
 
@@ -93,6 +96,7 @@ phase1 = do
       seller
       packageId
       receivableCid = rcv
+      riskDisclosure
       riskResult
 
   riskCertificate <- submit seller do
@@ -108,6 +112,8 @@ phase1 = do
   rfqAssembly <- submit seller do
     createCmd RFQRequestAssembly with
       seller
+      complianceParty = compliance
+      riskAssessor = risk
       packageId
       receivableCid = rcv
       packageData
@@ -128,16 +134,20 @@ phase1 = do
   Some complianceCertificateView <- queryContractId seller complianceCertificate
   complianceCertificateView.packageId === packageId
   complianceCertificateView.receivableCid === rcv
+  complianceCertificateView.certifiedReceivableTerms === terms
 
   Some riskView <- queryContractId seller riskAttestation
   riskView.riskResult.riskTier === LowRisk
 
   Some riskCertificateView <- queryContractId seller riskCertificate
-  riskCertificateView.riskTier === LowRisk
+  riskCertificateView.certifiedRiskTier === LowRisk
+  riskCertificateView.certifiedReceivableTerms === terms
   riskCertificateView.packageId === packageId
 
   Some assemblyView <- queryContractId seller rfqAssembly
   assemblyView.receivableCid === rcv
+  assemblyView.complianceParty === compliance
+  assemblyView.riskAssessor === risk
   assemblyView.packageData.receivableTerms.payableAmount === 480000.0
   assemblyView.packageData.riskTier === LowRisk
   assemblyView.complianceCertificateCid === complianceCertificate
@@ -145,10 +155,16 @@ phase1 = do
 
   Some requestAView <- queryContractId funderA requestA
   requestAView.funder === funderA
+  requestAView.complianceParty === compliance
+  requestAView.riskAssessor === risk
+  requestAView.packageData.receivableTerms === terms
   requestAView.packageData.riskTier === LowRisk
 
   Some requestBView <- queryContractId funderB requestB
   requestBView.funder === funderB
+  requestBView.complianceParty === compliance
+  requestBView.riskAssessor === risk
+  requestBView.packageData.receivableTerms === terms
   requestBView.packageData.riskTier === LowRisk
 
   -- Funders see only their own per-Funder request, not the private assembly

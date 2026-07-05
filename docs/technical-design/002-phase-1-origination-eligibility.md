@@ -99,6 +99,7 @@ This section names the first likely Daml templates and data types. It is still a
 | `ComplianceDisclosure` | Seller-disclosed information needed by the Compliance Party: Seller identity, Debtor identity, receivable terms, transaction purpose, and disclosure restrictions. |
 | `ComplianceResult` | MVP compliance output with `sellerEligible` and `rfqEligible`. |
 | `RiskTier` | Closed MVP risk tier: `LowRisk`, `MediumRisk`, or `HighRisk`. |
+| `RiskDisclosure` | Minimal Funder-visible input disclosed to the Risk Assessor for risk tiering, currently receivable terms. |
 | `RiskResult` | Risk output returned to the Seller, currently the mandatory `riskTier`. |
 | `RFQPackageData` | Confirmed Phase 1 package-safe Funder-interested disclosure: receivable terms, risk tier, and shared response deadline. |
 
@@ -185,11 +186,11 @@ The purpose of `ComplianceCertificate` is to preserve authenticity and privacy w
 - authenticity: it is signed by the Compliance Party or visibly derived from a Compliance Party-signed `ComplianceAttestation`;
 - privacy: it does not expose the full `ComplianceDisclosure`.
 
-The certificate should be minimal and linked to the package and receivable with `receivableCid` plus explicit workflow identifiers. Do not introduce hashes, ZK, or encryption in Phase 1.
+The certificate should be minimal but may include the Funder-disclosed overlap that Compliance evaluated, so Funders can compare request package data against Compliance Party-signed facts. It remains linked to the package and receivable with `receivableCid` plus explicit workflow identifiers. Do not introduce hashes, ZK, or encryption in Phase 1.
 
 The Daml authorization reason for deriving the certificate from the attestation is that a contract create requires the authority of the created contract signatories, and consequences of exercising a choice are authorized by the choice actors plus the signatories of the exercised contract. A Seller-authored boolean is therefore not enough; the certificate must be Compliance Party-signed or produced from a Compliance Party-signed contract.
 
-The Canton privacy reason for separating certificate from attestation is that later parties may need to see or use the minimal certificate without seeing the private `ComplianceDisclosure`. If a later non-stakeholder must use the certificate, Phase 2 may need explicit disclosure or another visibility mechanism.
+The Canton privacy reason for separating certificate from attestation is that later parties may need to see or use the certificate without seeing the private Compliance-only parts of `ComplianceDisclosure`. In the MVP, the certificate can disclose `certifiedReceivableTerms` because those terms are already part of Funder-visible `RFQPackageData`; it must not disclose Seller identity, Debtor identity, transaction purpose, or disclosure restrictions by default. If a later non-stakeholder must use the certificate, Phase 2 may need explicit disclosure or another visibility mechanism.
 
 Candidate certificate fields:
 
@@ -197,23 +198,24 @@ Candidate certificate fields:
 - `seller : Party`
 - `packageId : Text`
 - `receivableCid : ContractId Receivable`
+- `certifiedReceivableTerms : ReceivableTerms`
 - `policyVersion : Text`
 - `certificationScope : Text`
 
 Confirmed: do not include `compliancePassed : Bool` on `ComplianceCertificate`. The certificate exists only when the Compliance Party certifies the package/receivable for the stated scope. This avoids downstream code mistakenly relying on a Seller-visible boolean instead of the existence of an authoritative Compliance Party-signed certificate.
 
-`CreateComplianceCertificate` should be a Seller-controlled, nonconsuming choice on `ComplianceAttestation`. The Seller controls certificate creation as part of package assembly, while authenticity still comes from the Compliance Party-signed attestation and resulting certificate. The attestation remains active as the detailed private source record.
+`CreateComplianceCertificate` should be a Seller-controlled, nonconsuming choice on `ComplianceAttestation`. The Seller controls certificate creation as part of package assembly, while authenticity still comes from the Compliance Party-signed attestation and resulting certificate. The certificate copies `certifiedReceivableTerms` from `complianceDisclosure.receivableTerms`. The attestation remains active as the detailed private source record.
 
 Do not enforce `ComplianceCertificate` uniqueness on-ledger in Phase 1. Duplicate certificates for the same package are redundant, but not a core security failure because each certificate must still be Compliance Party-authorized. Add contract-key uniqueness later only if duplicate certificates create real workflow or verifier ambiguity.
 
 ## Risk Certificate Direction
 
-`RiskCertificate` should mirror the compliance attestation/certificate split. `RiskAttestation` remains the detailed Risk Assessor-signed risk output, while `RiskCertificate` is a minimal package-facing credential derived from it.
+`RiskCertificate` should mirror the compliance attestation/certificate split. `RiskAttestation` remains the detailed Risk Assessor-signed risk output, while `RiskCertificate` is a package-facing credential derived from it. To make the Funder-visible risk tier verifiable against the input used for tiering, `RiskAttestation` includes a minimal `RiskDisclosure` containing the Funder-visible receivable terms.
 
-The purpose of `RiskCertificate` is to preserve authenticity and privacy:
+The purpose of `RiskCertificate` is to preserve authenticity and scoped disclosure:
 
 - authenticity: it is signed by the Risk Assessor or visibly derived from a Risk Assessor-signed `RiskAttestation`;
-- privacy: it does not expose full risk assessment inputs.
+- scoped disclosure: it exposes only the Funder-visible input/output needed to verify the risk tier, not full risk assessment inputs.
 
 Candidate certificate fields:
 
@@ -221,13 +223,14 @@ Candidate certificate fields:
 - `seller : Party`
 - `packageId : Text`
 - `receivableCid : ContractId Receivable`
-- `riskTier : RiskTier`
+- `certifiedReceivableTerms : ReceivableTerms`
+- `certifiedRiskTier : RiskTier`
 - `riskPolicyVersion : Text`
 - `certificationScope : Text`
 
-The risk certificate may include `riskTier` because the package workflow needs to disclose the risk tier as part of the package-safe output. This is different from compliance, where a separate boolean is intentionally avoided.
+The risk certificate includes `certifiedRiskTier` because the package workflow discloses the risk tier as part of the package-safe output. It also includes `certifiedReceivableTerms`, sourced from `RiskDisclosure`, so the Funder can verify that the disclosed terms match the terms used for risk tiering. This is different from compliance, where a separate boolean is intentionally avoided.
 
-`CreateRiskCertificate` should follow the same Phase 1 mechanics as compliance: Seller-controlled, nonconsuming, and no on-ledger uniqueness enforcement. The Seller controls certificate creation as part of package assembly, while authenticity still comes from the Risk Assessor-signed attestation and resulting certificate. The detailed `RiskAttestation` remains active as the private source record.
+`CreateRiskCertificate` should follow the same Phase 1 mechanics as compliance: Seller-controlled, nonconsuming, and no on-ledger uniqueness enforcement. The Seller controls certificate creation as part of package assembly, while authenticity still comes from the Risk Assessor-signed attestation and resulting certificate. The certificate copies `certifiedReceivableTerms` from `riskDisclosure.receivableTerms` and `certifiedRiskTier` from `riskResult.riskTier`. The detailed `RiskAttestation` remains active as the private source record.
 
 ## RFQ Request Bridge Direction
 
@@ -236,11 +239,11 @@ The Seller-created package anchor is replaced with two templates:
 - `RFQRequestAssembly`, a Seller-private workflow that holds `RFQPackageData` and technical certificate references;
 - `RFQRequest`, a per-Funder output created by exercising a Seller-controlled validation choice on `RFQRequestAssembly`.
 
-`RFQRequestAssembly` remains Seller-private workflow state. `OpenRFQRequest` fetches and validates the `ComplianceCertificate` and `RiskCertificate` before creating an `RFQRequest`.
+`RFQRequestAssembly` remains Seller-private workflow state. `OpenRFQRequest` fetches and validates the `ComplianceCertificate` and `RiskCertificate` before creating an `RFQRequest`. The validation compares Funder-visible `RFQPackageData` against the certified Funder-visible fields on the certificates.
 
-Important limitation: because `RFQRequest` is currently Seller-signatory, its template constructor is not itself authority-proof against direct Seller creation. The validated workflow path is implemented and tested, but a future hardening step should either make the final request authority-signed, add a certificate-driven creation path, or narrow the claim made by `RFQRequest` so verifiers do not treat a Seller-only request as independent proof of compliance/risk validation.
+Important limitation: because `RFQRequest` is currently Seller-signatory, its template constructor is not itself authority-proof against direct Seller creation. The MVP mitigation is to make authority-signed certificates carry the Funder-disclosed certified facts, and to require Funders or later Phase 2 workflow to compare `RFQRequest.packageData` against those certificate fields. A future hardening step may still make the final request authority-signed or certificate-created.
 
-The validation choice should also fetch the `Receivable` by `receivableCid` and assert that all referenced certificates and the assembly point to the same active receivable contract. This is stronger than relying on copied text references; `fetch` aborts the transaction if the contract ID is not active or visible to the submitting party.
+The validation choice should also fetch the `Receivable` by `receivableCid` and assert that all referenced certificates and the assembly point to the same active receivable contract, that `receivable.terms == packageData.receivableTerms`, that certificate issuer parties match the expected `complianceParty` and `riskAssessor`, and that certificate certified fields match `packageData`. This is stronger than relying on copied text references; `fetch` aborts the transaction if the contract ID is not active or visible to the submitting party.
 
 For Phase 1, `RFQRequest` means ready to open, not already open to the market. Phase 2 decides how it becomes visible to Funders and how package access works.
 

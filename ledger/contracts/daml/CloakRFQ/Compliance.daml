@@ -31,17 +31,19 @@ template ComplianceAttestation
           seller
           packageId
           receivableCid
+          certifiedReceivableTerms = complianceDisclosure.receivableTerms
           policyVersion
           certificationScope
 
--- | Minimal Compliance Party credential for package use.
--- Its existence means the package/receivable is certified for the stated scope.
+-- | Compliance Party credential for package use. It exposes only the
+-- Funder-visible terms Compliance reviewed, not the full disclosure.
 template ComplianceCertificate
   with
     complianceParty : Party
     seller : Party
     packageId : Text
     receivableCid : ContractId Receivable
+    certifiedReceivableTerms : ReceivableTerms
     policyVersion : Text
     certificationScope : Text
   where

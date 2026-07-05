@@ -11,6 +11,7 @@ template RiskAttestation
     seller : Party
     packageId : Text
     receivableCid : ContractId Receivable
+    riskDisclosure : RiskDisclosure
     riskResult : RiskResult
   where
     signatory riskAssessor
@@ -27,18 +28,21 @@ template RiskAttestation
           seller
           packageId
           receivableCid
-          riskTier = riskResult.riskTier
+          certifiedReceivableTerms = riskDisclosure.receivableTerms
+          certifiedRiskTier = riskResult.riskTier
           riskPolicyVersion
           certificationScope
 
--- | Minimal Risk Assessor credential for package use.
+-- | Risk Assessor credential for package use. It exposes the Funder-visible
+-- terms used for tiering and the resulting certified tier.
 template RiskCertificate
   with
     riskAssessor : Party
     seller : Party
     packageId : Text
     receivableCid : ContractId Receivable
-    riskTier : RiskTier
+    certifiedReceivableTerms : ReceivableTerms
+    certifiedRiskTier : RiskTier
     riskPolicyVersion : Text
     certificationScope : Text
   where
