@@ -34,8 +34,8 @@ Regulation is always relevant to eligibility, disclosure, package access, settle
 
 The preferred MVP mode is **rule-publisher mode**:
 
-- applicable regulation is represented as Phase 1 template/state;
-- Compliance Party applies the selected rules to the Seller, RFQ, Disclosure Boundary, and package access;
+- regulation-specific ledger state is not part of the current Phase 1 MVP implementation;
+- Compliance Party applies the selected policy assumptions to the Seller, RFQ, Disclosure Boundary, and package access;
 - Regulator is not automatically an active party on every RFQ;
 - Regulator usually receives a Scoped Compliance Receipt after RFQ Finality.
 
@@ -53,32 +53,26 @@ Starts when the Seller prepares a Receivable for RFQ. Ends when the Blind RFQ is
 - Compliance Party
 - optional Risk Assessor
 - optional Regulator, only when the selected regulatory mode requires direct involvement
-- Coordinator
+
+There is no ledger-level Coordinator in the current Phase 1 MVP implementation.
 
 ### Actions
 
 - Create or reference `Receivable`.
-- Select or reference applicable `Regulation` / regulatory rule state.
-- Define RFQ parameters and `DisclosureBoundary`.
+- Define RFQ parameters and package disclosure assumptions.
 - Issue required `ComplianceAttestation`s.
-- Apply regulatory and compliance rules to Seller eligibility, RFQ eligibility, disclosure constraints, and package access.
+- Apply compliance policy assumptions to Seller eligibility, RFQ eligibility, disclosure constraints, and package readiness.
 - Optionally issue Debtor or Receivable `RiskAttestation`s before package issuance.
-- Prepare Core Pre-Quote Facts and optional Supplemental RFQ Information.
-- Prepare Funder-specific `RFQDisclosurePackage` content that reflects compliance, risk, and regulatory constraints.
-- Create `RFQDiscoveryListing` with partial public discovery information.
-- Configure routing, deadlines, invitations, and access request handling.
-- Open `RFQRequest` / Blind RFQ.
+- Prepare package-safe `RFQPackageData`.
+- Create per-Funder `RFQRequest` bridge contracts for off-ledger identified or locally simulated Funders.
 
 ### Outputs
 
 - `Receivable`
-- `Regulation` / selected regulatory rule state
-- `RFQRequest`
-- `RFQDiscoveryListing`
-- prepared `RFQDisclosurePackage` content
-- `ComplianceAttestation`s
-- optional `RiskAttestation`s
-- `DisclosureBoundary`
+- per-Funder `RFQRequest` bridge contracts
+- `ComplianceAttestation`s and `ComplianceCertificate`s
+- optional `RiskAttestation`s and `RiskCertificate`s
+- `RFQPackageData`
 
 ## Phase 2 — Private Quoting & Selection
 
@@ -170,9 +164,9 @@ Regulator receipt visibility is usually post-finality. If a selected regulation 
 
 | Concern | Rule |
 |---|---|
-| Discovery | Some partial RFQ information must be publicly or semi-publicly discoverable; the full RFQ Disclosure Package must not be public. |
-| Regulation | Regulation is Phase 1 state or template input; Regulator party involvement is mode-dependent. |
-| Compliance | Compliance applies selected regulatory rules to Seller eligibility, RFQ eligibility, disclosure constraints, and package access. |
+| Discovery | Discovery/listing is Phase 2 or later. The full RFQ Disclosure Package must not be public. |
+| Regulation | Regulation-specific ledger state is out of the current Phase 1 MVP; Regulator party involvement remains mode-dependent for later phases. |
+| Compliance | Compliance applies selected policy assumptions to Seller eligibility, RFQ eligibility, disclosure constraints, and package access. |
 | Risk | Risk Assessor acts before package issuance and produces Debtor or Receivable Risk Attestations; Funders price risk themselves. |
 | Regulator risk visibility | Regulator usually needs risk outcomes, references, threshold status, or risk tier when required, not raw underwriting data or raw debtor credit files by default. |
 | Proof of Funds | Gates quote eligibility only; does not imply locked, reserved, escrowed, single-use, or guaranteed funds. |
@@ -188,8 +182,8 @@ Regulator receipt visibility is usually post-finality. If a selected regulation 
 
 ```text
 Phase 1: RFQ Origination & Eligibility
-  Receivable + attestations + disclosure boundary + partial discovery listing
-  -> RFQRequest opens
+  Receivable + attestations/certificates + RFQPackageData
+  -> per-Funder RFQRequest bridges
 
 Phase 2: Private Quoting & Selection
   Entitled Funders receive scoped packages and submit Private Quotes

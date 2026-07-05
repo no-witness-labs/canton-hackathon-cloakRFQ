@@ -1,4 +1,6 @@
-# cloakrfq contains the deployable templates; cloakrfq-test contains Daml Script tests.
+# cloakrfq-lib contains shared pure library code; cloakrfq-contracts contains
+# deployable templates; cloakrfq-test contains Daml Script tests.
 packages:
-  - .
+  - ./lib
+  - ./contracts
   - ./test

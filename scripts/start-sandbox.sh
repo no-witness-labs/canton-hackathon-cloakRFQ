@@ -9,17 +9,25 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LEDGER="$ROOT/ledger"
 cd "$LEDGER"
 
-JAVA_HOME="${CLOAKRFQ_JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home}"
+if [ -n "${CLOAKRFQ_JAVA_HOME:-}" ]; then
+  JAVA_HOME="$CLOAKRFQ_JAVA_HOME"
+elif [ -x "$HOME/.local/jvm/openjdk-17/usr/lib/jvm/java-17-openjdk-amd64/bin/java" ]; then
+  JAVA_HOME="$HOME/.local/jvm/openjdk-17/usr/lib/jvm/java-17-openjdk-amd64"
+elif [ -x "/usr/lib/jvm/java-17-openjdk-amd64/bin/java" ]; then
+  JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+else
+  JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+fi
 [ -x "$JAVA_HOME/bin/java" ] || {
   echo "OpenJDK 17 not found at $JAVA_HOME" >&2
-  echo "Install with: brew install openjdk@17   (or set CLOAKRFQ_JAVA_HOME)" >&2
+  echo "Install OpenJDK 17 or set CLOAKRFQ_JAVA_HOME" >&2
   exit 1
 }
 export JAVA_HOME
 export PATH="$JAVA_HOME/bin:$HOME/.dpm/bin:$PATH"
 
 echo "→ Java: $(java -version 2>&1 | head -1)"
-[ -f .daml/dist/cloakrfq-ledger-0.1.0.dar ] || { echo "→ Building DAR"; dpm build; }
+[ -f contracts/.daml/dist/cloakrfq-contracts-0.1.0.dar ] || { echo "→ Building DAR"; dpm build --all; }
 
 echo "→ Starting Canton sandbox (logs: ledger/log/canton.log)"
 rm -f log/canton.log

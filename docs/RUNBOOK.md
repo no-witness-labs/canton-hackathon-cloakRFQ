@@ -39,11 +39,11 @@ Stop it with `./scripts/stop-sandbox.sh`.
 
 ## 3. What start-sandbox.sh does
 
-1. Pins `JAVA_HOME` to OpenJDK 17 and builds the DAR if missing (`dpm build` in `ledger/`).
+1. Pins `JAVA_HOME` to OpenJDK 17 and builds the DAR if missing (`dpm build --all` in `ledger/`).
 2. Launches `dpm sandbox` (single-process Canton) in the background.
 3. Waits for `HTTP JSON API Server started`, then for `/readyz` = 200.
 4. Runs `scripts/bootstrap.sh`, which is idempotent:
-   - uploads `ledger/.daml/dist/cloakrfq-ledger-0.1.0.dar`,
+   - uploads `ledger/contracts/.daml/dist/cloakrfq-contracts-0.1.0.dar`,
    - allocates one party per role — Seller, Funder A/B/C, Compliance, Risk,
      Coordinator, Auditor, Outsider (reuses existing),
    - writes `web/public/ledger-config.json` (gitignored; the UI fetches it at runtime).
@@ -57,8 +57,9 @@ To re-bootstrap against an already-running sandbox: `./scripts/bootstrap.sh`.
 ## 4. Verifying the build (CI-style)
 
 ```bash
-export PATH="$HOME/.dpm/bin:$PATH"
-cd ledger && dpm build            # builds cloakrfq-ledger + cloakrfq-test (multi-package)
+export JAVA_HOME="$HOME/.local/jvm/openjdk-17/usr/lib/jvm/java-17-openjdk-amd64"
+export PATH="$JAVA_HOME/bin:$HOME/.dpm/bin:$PATH"
+cd ledger && dpm build --all            # builds cloakrfq-lib + cloakrfq-contracts + cloakrfq-test (multi-package)
 cd ledger/test && dpm test        # Daml Script tests
 ```
 
@@ -66,7 +67,9 @@ cd ledger/test && dpm test        # Daml Script tests
 
 | Folder | Role |
 | --- | --- |
-| `ledger/` | on-ledger Daml package (templates, choices, Daml Script tests) |
+| `ledger/lib/` | shared Daml library package (`cloakrfq-lib`) |
+| `ledger/contracts/` | deployable Daml contract package (`cloakrfq-contracts`) |
+| `ledger/test/` | Daml Script tests (`cloakrfq-test`) |
 | `backend/` | off-ledger ledger client / integration glue (placeholder until #21) |
 | `web/` | Next.js UI (mock today; #21 wires it to the live ledger) |
 | `scripts/` | dev orchestration (sandbox + bootstrap) |
@@ -75,7 +78,7 @@ cd ledger/test && dpm test        # Daml Script tests
 
 ### `JCE cannot authenticate the provider BC`
 Canton is on the wrong JDK (e.g. Oracle JDK 20). Use OpenJDK 17/21:
-`brew install openjdk@17`, or set `CLOAKRFQ_JAVA_HOME`, then re-run `./scripts/start-sandbox.sh`.
+Install OpenJDK 17, use the local `~/.local/jvm/openjdk-17` install, or set `CLOAKRFQ_JAVA_HOME`, then re-run `./scripts/start-sandbox.sh`.
 
 ### DAR upload returns HTTP 400 on startup
 The JSON API logged "started" before the participant was fully ready. The start

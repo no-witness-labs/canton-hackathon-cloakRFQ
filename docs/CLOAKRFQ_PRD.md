@@ -120,7 +120,7 @@ The MVP is successful if:
 - Treat Canton privacy as stakeholder- and participant-based role-scoped selective disclosure, not full anonymity or secrecy from a party's own infrastructure operator.
 - Keep the MVP focused on one complete happy path and one Selected Quote failure/fallback branch.
 - Track 1 positioning is Private DeFi & Capital Markets, with private credit / invoice financing as the use case.
-- Open implementation details remain: exact Daml template and choice design, exact Proof-of-Funds mechanism, quote-selection protocol details, Debtor identity disclosure rules, post-settlement Funder exit model, post-MVP penalties/reputation/Quote Bond design, and any future production payment integration.
+- Open implementation details remain: later-phase Daml template and choice design beyond the initial Phase 1 ledger model, exact Proof-of-Funds mechanism, quote-selection protocol details, Debtor identity disclosure rules, post-settlement Funder exit model, post-MVP penalties/reputation/Quote Bond design, and any future production payment integration.
 
 ## Testing Decisions
 

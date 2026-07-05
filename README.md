@@ -6,8 +6,9 @@ holds both the planning documentation and the first implementation.
 ## Layout
 
 ```
-docs/   Planning documentation — product brief, PRD, ADRs, technical design, roadmap.
-web/    Next.js 14 (App Router + TypeScript) UI prototype of the MVP. See web/README.md.
+docs/    Planning documentation — product brief, PRD, ADRs, technical design, roadmap.
+ledger/  Daml multi-package Phase 1 ledger model and script tests.
+web/     Next.js 14 (App Router + TypeScript) UI prototype of the MVP. See web/README.md.
 ```
 
 ## Web app
@@ -52,11 +53,11 @@ npm run dev   # http://localhost:3000
 
 ## Status
 
-Complete for current discovery/grilling phase as of 2026-06-20.
+Phase 1 ledger design and initial Daml implementation are in progress as of 2026-07-02.
 
-Implementation-oriented technical design has started under `docs/technical-design/`.
+Implemented ledger scope currently covers represented Receivable registration, Compliance/Risk attestations and certificates, `RFQPackageData` and per-Funder `RFQRequest` bridge contracts.
 
-Not complete as production implementation. Exact Daml templates/choices, quote-selection protocol details, and exact Proof-of-Funds mechanism remain open.
+Not complete as production implementation. Later RFQ discovery, package access policy, private quoting, quote-selection protocol details, settlement, receipts, and exact Proof-of-Funds mechanism remain open.
 
 Settlement product decision is resolved as On-Ledger Demo Settlement. Compliance Receipt product decision is resolved as Scoped Compliance Receipt.
 
