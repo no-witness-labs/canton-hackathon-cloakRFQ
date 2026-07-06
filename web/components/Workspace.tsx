@@ -295,7 +295,7 @@ function ReceivableForm({ onCreate }: { onCreate: (r: ReceivableForm) => void })
     <section className="panel">
       <div className="panel-h"><h2 className="lg">Register Receivable</h2><span className="spacer" /><span className="chip ghost">Seller-only · registrar = owner</span></div>
       <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
+        <div className="form-grid">
           <Field label="Invoice ID"><input style={fieldInput} value={f.invoiceId} onChange={(e) => set({ invoiceId: e.target.value })} /></Field>
           <Field label="Payment terms"><input style={fieldInput} value={f.paymentTerms} onChange={(e) => set({ paymentTerms: e.target.value })} /></Field>
           <Field label="Payable amount"><input style={fieldInput} type="number" value={f.payableAmount} onChange={(e) => set({ payableAmount: Number(e.target.value) })} /></Field>
@@ -304,7 +304,7 @@ function ReceivableForm({ onCreate }: { onCreate: (r: ReceivableForm) => void })
           <Field label="Due date"><input style={fieldInput} type="date" value={f.dueDate} onChange={(e) => set({ dueDate: e.target.value })} /></Field>
         </div>
         <Field label="Debtor — raw identity, stays with you"><input style={fieldInput} value={f.debtorName} onChange={(e) => set({ debtorName: e.target.value })} /></Field>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 11 }}>
+        <div className="form-grid-3">
           <Field label="Buyer ref"><input style={fieldInput} value={f.buyerReference} onChange={(e) => set({ buyerReference: e.target.value })} /></Field>
           <Field label="PO ref"><input style={fieldInput} value={f.purchaseOrderReference} onChange={(e) => set({ purchaseOrderReference: e.target.value })} /></Field>
           <Field label="Source system"><input style={fieldInput} value={f.sourceSystemReference} onChange={(e) => set({ sourceSystemReference: e.target.value })} /></Field>
