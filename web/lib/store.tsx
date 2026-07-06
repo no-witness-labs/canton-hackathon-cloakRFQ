@@ -69,7 +69,6 @@ const WALLET_PARTIES: Record<string, WalletParty> = {
   auditor: { name: 'Regulator Node', badge: 'Auditor / Regulator', id: 'Auditor::1220aud17e55c3b0', node: 'participant-regulator-1' },
 };
 export const FUNDER_PARTY_NAMES: Record<string, string> = { A: 'Vanta Credit', B: 'Lumen Capital', C: 'Harbour Funding' };
-const FUNDER_PARTY_IDS: Record<string, string> = { A: 'VantaCredit::1220vc7a0d13c4', B: 'LumenCapital::1220lc3f88a172', C: 'HarbourFund::1220hf90b2de55' };
 export function truncParty(id: string): string {
   const i = id.indexOf('::');
   if (i < 0) return id;
@@ -344,14 +343,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     })();
   }, [refreshData, patch, toast]);
 
+  // The connection is simulated, but the Party ID shown is the REAL on-ledger party
+  // this role acts as (getParties()), so it matches the Explorer link and /ledger.
   const walletParty = useCallback((role: Role): WalletParty | null => {
+    const P = getParties();
+    if (role === 'outsider') return null;   // demo treats the Outsider as a non-party observer
     if (role === 'funder') {
       const k = state.funderTab;
-      return { name: FUNDER_PARTY_NAMES[k] ?? ('Funder ' + k), badge: 'Funder ' + k, id: FUNDER_PARTY_IDS[k] ?? '', node: 'participant-funder-pool' };
+      return { name: FUNDER_PARTY_NAMES[k] ?? ('Funder ' + k), badge: 'Funder ' + k, id: P[funderRole(k)] ?? '', node: 'participant-funder-pool' };
     }
-    if (role === 'outsider') return null;
-    return WALLET_PARTIES[role] ?? null;
-  }, [state.funderTab]);
+    const base = WALLET_PARTIES[role];
+    if (!base) return null;
+    return { ...base, id: P[role as 'seller' | 'compliance' | 'risk' | 'coordinator' | 'auditor'] ?? base.id };
+  }, [state.funderTab, state.ready]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleWalletMenu = useCallback(() => setState((s) => ({ ...s, walletMenuOpen: !s.walletMenuOpen })), []);
   const closeWalletMenu = useCallback(() => patch({ walletMenuOpen: false }), [patch]);
