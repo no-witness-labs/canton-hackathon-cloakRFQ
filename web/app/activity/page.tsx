@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  loadConfig, getParties, subscribeTx, getTxLog, getTxVersion, fetchUpdateById, fetchHistory, partyLabel,
+  loadConfig, getParties, subscribeTx, getTxLog, getTxVersion, fetchUpdateById, fetchHistory, partyLabel, explorerTxUrl,
   type LedgerTx,
 } from '@/lib/ledger';
 
@@ -88,6 +88,7 @@ export default function ActivityPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {txs.map((tx) => {
           const v = verified[tx.updateId];
+          const ex = explorerTxUrl(tx.updateId);
           return (
             <section key={tx.updateId + tx.offset} id={'tx-' + tx.updateId} className="panel"
               style={{ padding: '13px 16px', ...(focus === tx.updateId ? { border: '1px solid var(--accent)', boxShadow: '0 0 0 1px var(--accent)' } : {}) }}>
@@ -116,8 +117,14 @@ export default function ActivityPage() {
                 ))}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 11 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 11, flexWrap: 'wrap' }}>
                 <button className="btn dark sm" onClick={() => verify(tx.updateId, tx.actAs)}>Verify on ledger</button>
+                {ex && (
+                  <a className="btn dark sm" href={ex} target="_blank" rel="noopener noreferrer"
+                    style={{ textDecoration: 'none' }} title="Open this transaction on the 5N Lighthouse explorer (Canton DevNet)">
+                    Explore on Lighthouse ↗
+                  </a>
+                )}
                 {v === 'fail' && <span className="mono t-red" style={{ fontSize: 11 }}>not found</span>}
                 {v && v !== 'fail' && <span className="mono t-accent" style={{ fontSize: 11 }}>✓ confirmed on-ledger · offset {v.offset} · {clock(v.recordTime)}</span>}
               </div>

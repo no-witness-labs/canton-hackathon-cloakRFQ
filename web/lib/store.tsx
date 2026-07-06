@@ -21,7 +21,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { PartyRole } from './types';
 import {
-  loadConfig, getParties, listActive, createAs, exerciseAs, getTxLog, explorerUrlForParty, type Contract,
+  loadConfig, getParties, listActive, createAs, exerciseAs, getTxLog, type Contract,
   SCENARIO, type Phase1Scenario, type RiskTier,
   complianceAttestationArgs, riskAttestationArgs, rfqRequestArgs,
 } from './ledger';
@@ -133,7 +133,6 @@ interface StoreCtx {
   state: State;
   invitedFunders: string[];
   requestFor: (key: string) => RFQRequestView | undefined;
-  explorerUrl: string | null;   // 5N Lighthouse view for the acting party (DevNet only)
   setRole: (id: Role) => void;
   setFunderTab: (k: string) => void;
   createReceivable: (r: ReceivableForm) => void;
@@ -238,15 +237,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const invitedFunders = useMemo(() => state.requests.map((r) => r.funderKey), [state.requests]);
   const requestFor = useCallback((key: string) => state.requests.find((r) => r.funderKey === key), [state.requests]);
-
-  // External explorer link for whichever party the current role acts as.
-  const explorerUrl = useMemo(() => {
-    const P = getParties();
-    const id = state.role === 'funder'
-      ? P[funderRole(state.funderTab)]
-      : P[state.role as 'seller' | 'compliance' | 'risk' | 'coordinator' | 'auditor' | 'outsider'];
-    return explorerUrlForParty(id ?? '');
-  }, [state.role, state.funderTab, state.ready]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Phase 1 origination actions ----
   const createReceivable = useCallback((r: ReceivableForm) => {
@@ -366,10 +356,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const disconnectWallet = useCallback(() => { patch({ walletState: 'disconnected', walletMenuOpen: false }); toast('Wallet disconnected', '#9aa1ad'); }, [patch, toast]);
 
   const value = useMemo<StoreCtx>(() => ({
-    state, invitedFunders, requestFor, explorerUrl,
+    state, invitedFunders, requestFor,
     setRole, setFunderTab, createReceivable, issueCompliance, issueRisk, openRFQ, onReset,
     walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet,
-  }), [state, invitedFunders, requestFor, explorerUrl, setRole, setFunderTab, createReceivable, issueCompliance, issueRisk, openRFQ, onReset, walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet]);
+  }), [state, invitedFunders, requestFor, setRole, setFunderTab, createReceivable, issueCompliance, issueRisk, openRFQ, onReset, walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

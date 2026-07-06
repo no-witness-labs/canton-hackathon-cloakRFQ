@@ -73,18 +73,14 @@ export async function loadConfig(): Promise<boolean> {
 
 export const getParties = (): Record<Role, string> => cfg.parties;
 
-// 5N Lighthouse indexes the DevNet participant. Off DevNet (e.g. a local sandbox)
-// there is no public explorer, so these return null and callers fall back in-app.
-const LIGHTHOUSE = 'https://lighthouse.devnet.cantonloop.com';
-const onDevnet = () => /devnet|fivenorth|cantonloop/i.test(cfg.jsonApiUrl) || sessionMode;
-
-/** External explorer URL for a party's ledger view. */
-export function explorerUrlForParty(party: string): string | null {
-  return party && onDevnet() ? `${LIGHTHOUSE}/party/${encodeURIComponent(party)}` : null;
-}
-/** External explorer URL for a single transaction, by ledger updateId. */
+/** External explorer URL for a single transaction by ledger updateId (5N Lighthouse
+ *  indexes the DevNet participant — it shows the synchronizer record: parties,
+ *  traffic and verdict, not private contract contents). Null off DevNet (e.g. a
+ *  local sandbox), where callers fall back to the in-app Activity view. */
 export function explorerTxUrl(updateId: string): string | null {
-  return updateId && onDevnet() ? `${LIGHTHOUSE}/transactions/${encodeURIComponent(updateId)}` : null;
+  if (!updateId) return null;
+  const onDevnet = /devnet|fivenorth|cantonloop/i.test(cfg.jsonApiUrl) || sessionMode;
+  return onDevnet ? `https://lighthouse.devnet.cantonloop.com/transactions/${encodeURIComponent(updateId)}` : null;
 }
 
 // Phase 1 templates live in per-module namespaces inside cloakrfq-contracts.
