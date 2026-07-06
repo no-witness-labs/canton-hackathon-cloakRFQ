@@ -3,7 +3,17 @@
 import { Icon, type IconName } from '@/lib/icons';
 import { useState, useEffect, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { subscribeTx, getTxLog, getTxVersion } from '@/lib/ledger';
+import { subscribeTx, getTxLog, getTxVersion, isSessionMode, newSession } from '@/lib/ledger';
+
+function NewDealButton() {
+  if (!isSessionMode()) return null;
+  return (
+    <button className="chip ghost" style={{ cursor: 'pointer' }} title="Start a fresh, isolated deal (new parties)"
+      onClick={() => { newSession(); window.location.href = '/'; }}>
+      ↻ New deal
+    </button>
+  );
+}
 import {
   useStore, ROLES, LEGEND, BOUNDARY, DLEVELS, calc, truncParty, usd,
   type Role, type Quote, type ReceivableForm, type AttView,
@@ -26,7 +36,10 @@ export default function Workspace() {
 
   if (state.ready === null) return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-      <div className="mono t-ink3">Connecting to the Canton ledger…</div>
+      <div style={{ textAlign: 'center' }}>
+        <div className="mono t-ink3">Setting up your Canton ledger session…</div>
+        <div className="mono t-mut" style={{ fontSize: 11, marginTop: 8 }}>first load provisions your own private parties (~20s on DevNet)</div>
+      </div>
     </div>
   );
   if (state.ready === false) return (
@@ -50,6 +63,7 @@ export default function Workspace() {
             </div>
           </div>
           <span className="spacer" />
+          <NewDealButton />
           <TxIndicator />
           <span className="live"><span className="dot" /> Live RFQ-4471</span>
           <WalletConnector />

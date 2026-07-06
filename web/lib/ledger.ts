@@ -26,14 +26,46 @@ const EMPTY_PARTIES: Record<Role, string> = {
 
 let cfg: LedgerConfig = { jsonApiUrl: '', packageRef: '#cloakrfq-ledger', userId: 'cloakrfq', parties: EMPTY_PARTIES };
 
-/** Load runtime config written by scripts/bootstrap.sh. False if not bootstrapped. */
+/** Stable per-browser session id (for self-service per-visitor parties on the deploy). */
+function sessionId(): string {
+  try {
+    const k = 'cloakrfq-sid';
+    let s = localStorage.getItem(k);
+    if (!s) {
+      s = ((typeof crypto !== 'undefined' && crypto.randomUUID?.()) || String(Math.random())).replace(/[^a-z0-9]/gi, '').slice(0, 16);
+      localStorage.setItem(k, s);
+    }
+    return s;
+  } catch { return ''; }
+}
+/** Start a brand-new isolated deal (new party set) on the next load. */
+export function newSession(): void { try { localStorage.removeItem('cloakrfq-sid'); } catch { /* ignore */ } }
+
+const applyConfig = (loaded: Record<string, unknown>): boolean => {
+  cfg = { ...cfg, ...loaded, parties: { ...EMPTY_PARTIES, ...((loaded.parties as Record<Role, string>) ?? {}) } };
+  return Boolean(cfg.parties.seller);
+};
+
+let sessionMode = false;
+/** True when this deploy provisioned per-visitor parties (so "New deal" makes sense). */
+export const isSessionMode = (): boolean => sessionMode;
+
+/** Load runtime config. Prefers a self-service session (/api/session) when the deploy
+ *  has provisioning enabled; otherwise falls back to the static /ledger-config.json
+ *  written by scripts/bootstrap.sh (local sandbox). False if neither is available. */
 export async function loadConfig(): Promise<boolean> {
   try {
+    const sid = sessionId();
+    if (sid) {
+      const s = await fetch(`/api/session?sid=${sid}`, { cache: 'no-store' });
+      if (s.ok) {
+        const j = await s.json();
+        if (j?.parties?.seller) { sessionMode = true; return applyConfig(j); }   // provisioning enabled → per-session parties
+      }
+    }
     const res = await fetch('/ledger-config.json', { cache: 'no-store' });
     if (!res.ok) return false;
-    const loaded = await res.json();
-    cfg = { ...cfg, ...loaded, parties: { ...EMPTY_PARTIES, ...(loaded.parties ?? {}) } };
-    return Boolean(cfg.parties.seller);
+    return applyConfig(await res.json());
   } catch {
     return false;
   }
