@@ -44,7 +44,7 @@ npm run dev   # http://localhost:3000
 - `docs/adr/0003-functionality-preserving-privacy.md` — preserve real-world RFQ functionality before optimizing privacy.
 - `docs/adr/0004-optional-debtor-notification.md` — make Debtor Notification optional and disclosure-controlled.
 - `docs/adr/0005-require-funding-capacity-evidence-during-bidding.md` — require funding-capacity evidence during bidding; refined by ADR 0006.
-- `docs/adr/0006-proof-of-funds-as-bid-eligibility-evidence.md` — require Proof of Funds as bid eligibility evidence, not a Funding Lock.
+- `docs/adr/0006-proof-of-funds-as-bid-eligibility-evidence.md` — original Proof-of-Funds boundary, refined by ADR 0012.
 - `docs/adr/0007-controlled-funder-identity-disclosure.md` — control Funder identity disclosure timing.
 - `docs/adr/0008-seller-controlled-fallback-queue.md` — use a Seller-Controlled Fallback Queue.
 - `docs/adr/0009-binding-quotes-with-expiry.md` — use Binding Quotes with Quote Expiry for the MVP.
@@ -55,9 +55,9 @@ npm run dev   # http://localhost:3000
 
 Phase 1 ledger design and initial Daml implementation are in progress as of 2026-07-02.
 
-Implemented ledger scope currently covers represented Receivable registration, Compliance/Risk attestations and certificates, `RFQPackageData` and per-Funder `RFQRequest` bridge contracts.
+Implemented ledger scope currently covers represented Receivable registration, Compliance/Risk attestations and certificates, `RFQPackageData`, per-Funder `RFQRequest` bridge contracts, and allocation-backed `PrivateQuote` submission.
 
-Not complete as production implementation. Later RFQ discovery, package access policy, private quoting, quote-selection protocol details, settlement, receipts, and exact Proof-of-Funds mechanism remain open.
+Not complete as production implementation. Later RFQ discovery, package access policy, quote-selection protocol details, settlement, receipts, and production payment/custody integration remain open.
 
 Settlement product decision is resolved as On-Ledger Demo Settlement. Compliance Receipt product decision is resolved as Scoped Compliance Receipt.
 

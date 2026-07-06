@@ -16,14 +16,14 @@ It contains:
 - the root agent instructions (`AGENTS.md`) and detailed agent workflow (`docs/AGENT_WORKFLOW.md`);
 - the MVP implementation handoff spec (`docs/CLOAKRFQ_MVP_BUILD_SPEC.md`);
 - the high-level and Phase 1 technical design notes under `docs/technical-design/`;
-- the accepted ADRs created so far (`docs/adr/0001` through `docs/adr/0011`);
+- the accepted ADRs created so far (`docs/adr/0001` through `docs/adr/0012`);
 - the Phase 1 Daml ledger packages under `ledger/`;
 - a README describing the repository.
 
 This repository is not complete as production implementation. The following implementation and design details are intentionally still open:
 
 - hardening whether `RFQRequest` itself should become authority-signed or certificate-created rather than Seller-signatory only;
-- exact Proof-of-Funds mechanism;
+- production-grade payment/custody integration beyond CIP-56 allocation-backed quote evidence;
 - quote-selection protocol details;
 - exact API endpoints and frontend screen layouts;
 - Debtor identity disclosure rules;
@@ -59,3 +59,4 @@ This repository is not complete as production implementation. The following impl
 | `docs/adr/0009-binding-quotes-with-expiry.md`                       | Binding Quotes with Quote Expiry.                     |
 | `docs/adr/0010-on-ledger-demo-settlement.md`                        | On-Ledger Demo Settlement.                            |
 | `docs/adr/0011-scoped-compliance-receipts.md`                       | Scoped Compliance Receipts.                           |
+| `docs/adr/0012-cip56-committed-allocations-for-private-quotes.md`    | CIP-56 committed allocation evidence for Private Quotes. |

@@ -12,7 +12,7 @@ CloakRFQ Receipts needs an MVP implementation plan that preserves real-world RFQ
 
 Build CloakRFQ Receipts as a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton.
 
-The MVP demonstrates one complete happy path and one Selected Quote failure/fallback branch. A Seller creates a Receivable, opens a Blind RFQ, receives Eligible Quotes through a Seller Quote View, selects the Best Compliant Quote, and completes On-Ledger Demo Settlement using a Demo Settlement Asset. Funders submit Private Quotes with Proof-of-Funds status and do not see each other's quotes. Compliance and optional Risk parties provide scoped attestations. If the Selected Quote fails before RFQ Finality, the Seller may promote a still-valid Eligible Quote from a Seller-Controlled Fallback Queue. If required, an Auditor or Regulator receives a Scoped Compliance Receipt rather than the full RFQ workflow.
+The MVP demonstrates one complete happy path and one Selected Quote failure/fallback branch. A Seller creates a Receivable, opens a Blind RFQ, receives Eligible Quotes through a Seller Quote View, selects the Best Compliant Quote, and completes On-Ledger Demo Settlement using a Demo Settlement Asset. Funders submit Private Quotes backed by funding evidence, concretely a committed CIP-56 allocation in Phase 2 and do not see each other's quotes. Compliance and optional Risk parties provide scoped attestations. If the Selected Quote fails before RFQ Finality, the Seller may promote a still-valid Eligible Quote from a Seller-Controlled Fallback Queue. If required, an Auditor or Regulator receives a Scoped Compliance Receipt rather than the full RFQ workflow.
 
 The MVP is positioned for Track 1: Private DeFi & Capital Markets, with invoice financing / Receivable Sales as the use case. It must not overclaim production payment finality, production custody, production legal assignment, Debtor enforceability, ZK proofs, cryptographic blind auction behavior, Funding Locks, escrow, stablecoin settlement, Canton Coin/Amulet integration, or real bank settlement.
 
@@ -25,7 +25,7 @@ CloakRFQ uses Canton because private invoice-financing RFQs need more than token
 The MVP is successful if:
 
 - Seller can create a Receivable and open a Blind RFQ.
-- At least two Funders can submit Private Quotes with Proof-of-Funds status.
+- At least two Funders can submit Private Quotes backed by funding evidence.
 - Competing Funders cannot see each other's Private Quotes.
 - Coordinator does not see Private Quote contents by default.
 - Seller can compare Eligible Quotes through Seller Quote View.
@@ -49,7 +49,7 @@ The MVP is successful if:
 10. As a Seller, I want Private Quotes to pass a Proof-of-Funds Gate, so that I do not compare quotes with no funding-capacity evidence.
 11. As a Seller, I want Proof of Funds to be bid eligibility evidence only, so that the product does not overclaim that funds are locked, reserved, escrowed, or guaranteed.
 12. As a Seller, I want a Seller Quote View, so that I can compare Eligible Quotes without receiving raw Proof-of-Funds evidence or Funder balances by default.
-13. As a Seller, I want the Seller Quote View to show Net Purchase Price, settlement timing, recourse model, fees, reserves or holdbacks, Required Disclosure, Debtor Notification requirement, Compliance status, and Proof-of-Funds status, so that I can select the Best Compliant Quote.
+13. As a Seller, I want the Seller Quote View to show Net Purchase Price, settlement timing, recourse model, fees, reserves or holdbacks, Required Disclosure, Debtor Notification requirement, Compliance status, and funding evidence status, so that I can select the Best Compliant Quote.
 14. As a Seller, I want Funder identity hidden by default in the Seller Quote View, so that unnecessary Funder identity disclosure is avoided.
 15. As a Seller, I want Funder identity disclosed only when required by selection, compliance, settlement, audit, regulation, or RFQ terms, so that disclosure has a defined purpose.
 16. As a Seller, I want to select the Best Compliant Quote based on Selection Criteria, so that I am not forced to select the highest headline price.
@@ -67,8 +67,8 @@ The MVP is successful if:
 28. As a Funder, I want to receive only the RFQ Disclosure Package I am entitled to see, so that I can evaluate the Receivable without seeing unnecessary Seller or Debtor data.
 29. As a Funder, I want to submit a Private Quote, so that my commercial terms are not visible to competing Funders.
 30. As a Funder, I want my Private Quote hidden from the Coordinator by default, so that workflow routing does not imply quote visibility.
-31. As a Funder, I want to include Net Purchase Price, settlement timing, recourse, fees, reserve or holdback, Required Disclosure, Debtor Notification requirement, Quote Expiry, and Proof-of-Funds status in my Private Quote, so that the Seller can evaluate my offer as a complete commercial package.
-32. As a Funder, I want to provide Proof-of-Funds status or attestation without exposing raw balances or funding sources to the Seller by default, so that funding evidence remains scoped.
+31. As a Funder, I want to include Net Purchase Price, settlement timing, recourse, fees, reserve or holdback, Required Disclosure, Debtor Notification requirement, Quote Expiry, and funding evidence status in my Private Quote, so that the Seller can evaluate my offer as a complete commercial package.
+32. As a Funder, I want to provide funding evidence status or attestation without exposing raw balances or funding sources to the Seller by default, so that funding evidence remains scoped.
 33. As a Funder, I want to see my own quote outcome, so that I know whether my quote was selected, unselected, expired, or used as fallback.
 34. As a Funder, I want competing Funders to be unable to see my Private Quote, so that my pricing strategy and terms remain confidential.
 35. As a Funder, I want Unselected Quote and Unselected Funder privacy treated as privacy ambitions where stronger mechanisms are feasible, so that the MVP does not overclaim unavailable privacy properties.
@@ -80,7 +80,7 @@ The MVP is successful if:
 41. As a Compliance Party, I want compliance status to flow into Seller Quote View, so that the Seller can choose from Eligible Quotes.
 42. As a Risk Assessor, I want to issue scoped Risk Attestations, so that Funders can price Debtor Risk or Receivable Risk without full raw data disclosure by default.
 43. As a Risk Assessor, I want my role separate from Compliance, Audit, Coordination, Seller, and Funder roles, so that risk evaluation remains scoped.
-44. As the system, I want to support Proof-of-Funds status or attestation as an implementation option, so that bid eligibility can be checked without committing the MVP to a specific verifier model.
+44. As the system, I want to support funding evidence status or attestation as an implementation option, so that bid eligibility can be checked without committing the MVP to a specific verifier model.
 45. As an Auditor, I want to receive a Scoped Compliance Receipt, so that I can verify required workflow outcomes without seeing the full RFQ.
 46. As a Regulator, I want to receive compliance-relevant statuses, references, attestations, timestamps, and final settlement outcome, so that regulatory disclosure can be selective and purpose-bound.
 47. As an Auditor or Regulator, I want the Scoped Compliance Receipt to include RFQ/workflow reference, opaque Receivable reference, Seller eligibility status, Winning Funder eligibility status, Risk Attestation reference if used, Proof-of-Funds Gate status for the Winning Quote, quote-selection statement, settlement status, Debtor Notification mode, fallback status if fallback occurred, and RFQ Finality timestamp, so that I can inspect the relevant compliance trail.
@@ -120,15 +120,15 @@ The MVP is successful if:
 - Treat Canton privacy as stakeholder- and participant-based role-scoped selective disclosure, not full anonymity or secrecy from a party's own infrastructure operator.
 - Keep the MVP focused on one complete happy path and one Selected Quote failure/fallback branch.
 - Track 1 positioning is Private DeFi & Capital Markets, with private credit / invoice financing as the use case.
-- Open implementation details remain: later-phase Daml template and choice design beyond the initial Phase 1 ledger model, exact Proof-of-Funds mechanism, quote-selection protocol details, Debtor identity disclosure rules, post-settlement Funder exit model, post-MVP penalties/reputation/Quote Bond design, and any future production payment integration.
+- Open implementation details remain: later-phase Daml template and choice design beyond the initial Phase 1 ledger model, production-grade funding evidence mechanism beyond committed CIP-56 allocation, quote-selection protocol details, Debtor identity disclosure rules, post-settlement Funder exit model, post-MVP penalties/reputation/Quote Bond design, and any future production payment integration.
 
 ## Testing Decisions
 
 - The primary testing seam should be the full Daml/Canton workflow lifecycle, tested at the highest practical level: happy path plus failure/fallback branch across role-specific party views.
 - Good tests should assert externally observable workflow behavior and party visibility, not internal helper implementation details.
-- Happy path coverage should verify Receivable creation, Blind RFQ opening, optional Risk Attestation, Compliance Attestation, RFQ Disclosure Package delivery, Private Quote submission, Proof-of-Funds status, Seller Quote View, Best Compliant Quote selection, Settlement Window entry, On-Ledger Demo Settlement, and Scoped Compliance Receipt creation.
+- Happy path coverage should verify Receivable creation, Blind RFQ opening, optional Risk Attestation, Compliance Attestation, RFQ Disclosure Package delivery, Private Quote submission, funding evidence status, Seller Quote View, Best Compliant Quote selection, Settlement Window entry, On-Ledger Demo Settlement, and Scoped Compliance Receipt creation.
 - Failure/fallback coverage should verify Selected Quote failure before RFQ Finality, scoped Commitment Failure recording, Seller-Controlled Fallback Queue promotion, fallback settlement attempt, and fallback status in the Scoped Compliance Receipt without exposing the full Quote Book by default.
-- Role-view tests should verify that competing Funders do not see each other's Private Quotes, Coordinators do not read Private Quote contents by default, Sellers see Seller Quote View and Proof-of-Funds status/attestation rather than raw proof data or balances, and Auditors/Regulators see Scoped Compliance Receipts rather than full RFQ data.
+- Role-view tests should verify that competing Funders do not see each other's Private Quotes, Coordinators do not read Private Quote contents by default, Sellers see Seller Quote View and funding evidence status/attestation rather than raw proof data or balances, and Auditors/Regulators see Scoped Compliance Receipts rather than full RFQ data.
 - Negative tests should verify that expired quotes cannot be selected or promoted, ineligible quotes do not enter Seller Quote View as Eligible Quotes, fallback cannot be used after RFQ Finality, and fallback is not automatically ordered by highest headline price.
 - Claim-boundary tests or demo assertions should ensure the UI/docs do not present Demo Settlement Asset as real money, stablecoin, Canton Coin/Amulet, bank settlement, production custody, or production legal assignment.
 - Since implementation does not yet exist, there is no code-level prior art in the repository. The documented prior art is the MVP Build Spec, Project Brief, glossary, and ADRs.
@@ -150,7 +150,7 @@ The MVP is successful if:
 - Real KYC/AML integration.
 - Real invoice verification.
 - Production underwriting.
-- Funding Locks, escrowed funds, locked funding reserves, settlement guarantees, or Quote Bonds in the MVP. This does not exclude modeling reserve or holdback as a quote term.
+- Production payment finality, production custody, settlement guarantees, escrow, or Quote Bonds in the MVP. Phase 2 may use committed CIP-56 allocations as scoped quote funding evidence, but must not overstate them as bank settlement or production custody.
 - Monetary penalties in the MVP.
 - Secondary market exit or post-settlement Funder exit.
 - Agentic commerce features.

@@ -10,11 +10,66 @@ import Daml.Script
 import DA.Assert ((===))
 import DA.Date
 import DA.Time
+import DA.Map qualified as Map
+import Splice.Api.Token.AllocationV2 qualified as Token
+import Splice.Api.Token.HoldingV2 qualified as Holding
+import Splice.Api.Token.MetadataV1
 import CloakRFQ.Lib
 import CloakRFQ.Compliance
 import CloakRFQ.Risk
 import CloakRFQ.RFQRequest
 import CloakRFQ.Receivable
+
+
+template MockFundingAllocation
+  with
+    funder : Party
+    seller : Party
+    tokenAdmin : Party
+    rfqRequestCid : ContractId RFQRequest
+    amount : Decimal
+    instrumentId : Text
+    settlementDeadline : Time
+    createdAt : Time
+  where
+    signatory funder
+
+    interface instance Token.Allocation for MockFundingAllocation where
+      view = Token.AllocationView with
+        originalAllocationCid = None
+        settlement = Token.SettlementInfo with
+          executors = [seller]
+          id = "cloakrfq-phase2-test"
+          cid = Some (coerceContractId rfqRequestCid)
+          meta = emptyMetadata
+        allocation = Token.AllocationSpecification with
+          admin = tokenAdmin
+          authorizer = Holding.Account with owner = Some funder; provider = None; id = ""
+          transferLegSides =
+            [ Token.TransferLegSide with
+                transferLegId = "quote-payment"
+                side = Token.SenderSide
+                otherside = Holding.Account with owner = Some seller; provider = None; id = ""
+                amount
+                instrumentId
+                meta = emptyMetadata
+            ]
+          settlementDeadline = Some settlementDeadline
+          nextIterationFunding = None
+          committed = True
+          meta = emptyMetadata
+        holdingCids = []
+        createdAt
+        numIterations = 0
+        expiresAt = Some settlementDeadline
+        availableActions = Map.empty
+        meta = emptyMetadata
+      allocation_settleImpl _ _ = abort "mock allocation cannot settle"
+      allocation_cancelImpl _ _ = abort "mock allocation cannot cancel"
+      allocation_withdrawImpl _ _ = abort "mock allocation cannot withdraw"
+      allocation_settleExtraObservers _ = []
+      allocation_cancelExtraObservers _ = []
+      allocation_withdrawExtraObservers _ = []
 
 requestMatchesCertificates : RFQRequest -> ComplianceCertificate -> RiskCertificate -> Bool
 requestMatchesCertificates request complianceCertificate riskCertificate =
@@ -37,6 +92,7 @@ phase1 = do
   risk       <- allocateParty "Risk"
   funderA    <- allocateParty "FunderA"
   funderB    <- allocateParty "FunderB"
+  tokenAdmin <- allocateParty "USDTokenAdmin"
 
   let packageId = "PKG-INV-4471"
   let invoiceId = "INV-4471"
@@ -121,7 +177,9 @@ phase1 = do
   let packageData = RFQPackageData with
         receivableTerms = terms
         riskTier = riskResult.riskTier
-        responseDeadline = time (date 2026 Jul 1) 12 0 0
+        responseDeadline = time (date 2030 Jul 1) 12 0 0
+        paymentInstrumentAdmin = tokenAdmin
+        paymentInstrumentId = "USD"
 
   requestA <- submit seller do
     createCmd RFQRequest with
@@ -180,6 +238,8 @@ phase1 = do
         receivableTerms = terms
         riskTier = HighRisk
         responseDeadline = packageData.responseDeadline
+        paymentInstrumentAdmin = packageData.paymentInstrumentAdmin
+        paymentInstrumentId = packageData.paymentInstrumentId
 
   let tamperedRequest = RFQRequest with
         seller
@@ -220,6 +280,61 @@ phase1 = do
   None <- queryContractId funderA requestB
 
   None <- queryContractId funderB requestA
+
+  let quoteExpiresAt = time (date 2030 Jun 30) 12 0 0
+  underfundedAllocation <- submit funderB do
+    createCmd MockFundingAllocation with
+      funder = funderB
+      seller
+      tokenAdmin
+      rfqRequestCid = requestB
+      amount = 400000.0
+      instrumentId = "USD"
+      settlementDeadline = quoteExpiresAt
+      createdAt = time (date 2030 Jun 1) 12 0 0
+
+  submitMustFail funderB do
+    exerciseCmd requestB SubmitPrivateQuote with
+      quoteTerms = QuoteTerms with
+        netPurchasePrice = 465000.0
+        settlementTiming = "T+2"
+        recourseModel = NonRecourse
+        requiredDisclosure = MinimalDisclosure
+        debtorNotificationRequired = False
+        quoteExpiresAt
+      fundingAllocationCid = toInterfaceContractId @Token.Allocation underfundedAllocation
+
+  fundingAllocation <- submit funderA do
+    createCmd MockFundingAllocation with
+      funder = funderA
+      seller
+      tokenAdmin
+      rfqRequestCid = requestA
+      amount = 470000.0
+      instrumentId = "USD"
+      settlementDeadline = quoteExpiresAt
+      createdAt = time (date 2030 Jun 1) 12 0 0
+
+  privateQuote <- submit funderA do
+    exerciseCmd requestA SubmitPrivateQuote with
+      quoteTerms = QuoteTerms with
+        netPurchasePrice = 465000.0
+        settlementTiming = "T+2"
+        recourseModel = NonRecourse
+        requiredDisclosure = MinimalDisclosure
+        debtorNotificationRequired = False
+        quoteExpiresAt
+      fundingAllocationCid = toInterfaceContractId @Token.Allocation fundingAllocation
+
+  Some privateQuoteView <- queryContractId seller privateQuote
+  privateQuoteView.seller === seller
+  privateQuoteView.funder === funderA
+  privateQuoteView.rfqRequestCid === requestA
+  privateQuoteView.packageId === packageId
+  privateQuoteView.receivableCid === rcv
+  privateQuoteView.quoteTerms.netPurchasePrice === 465000.0
+
+  None <- queryContractId funderA requestA
 
   pure ()
 

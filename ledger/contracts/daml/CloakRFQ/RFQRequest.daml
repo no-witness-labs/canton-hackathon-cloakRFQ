@@ -5,10 +5,26 @@ import CloakRFQ.Lib
 import CloakRFQ.Compliance
 import CloakRFQ.Risk
 import CloakRFQ.Receivable
+import Splice.Api.Token.AllocationV2 qualified as Token
 
 -- | Per-Funder Seller-authored RFQ request. Funder-interested business data
 -- lives in packageData; the remaining fields link to authority certificates
 -- that verifiers must compare against the request fields.
+allocationDeadlineCoversQuote : Optional Time -> Time -> Bool
+allocationDeadlineCoversQuote deadline quoteExpiresAt =
+  case deadline of
+    Some deadlineAt -> deadlineAt >= quoteExpiresAt
+    None -> False
+
+matchesPaymentLeg : Party -> Text -> Decimal -> Token.TransferLegSide -> Bool
+matchesPaymentLeg seller paymentInstrumentId amount leg =
+  case leg.side of
+    Token.SenderSide ->
+      leg.otherside.owner == Some seller
+        && leg.instrumentId == paymentInstrumentId
+        && leg.amount >= amount
+    Token.ReceiverSide -> False
+
 template RFQRequest
   with
     seller : Party
@@ -24,3 +40,55 @@ template RFQRequest
     signatory seller
     observer funder
     ensure hasValidReceivableTerms packageData.receivableTerms
+
+    choice SubmitPrivateQuote : ContractId PrivateQuote
+      with
+        quoteTerms : QuoteTerms
+        fundingAllocationCid : ContractId Token.Allocation
+      controller funder
+      do
+        now <- getTime
+        assertMsg "quote terms must be valid" (hasValidQuoteTerms quoteTerms)
+        assertMsg "quote response deadline passed" (now <= packageData.responseDeadline)
+        assertMsg "quote already expired" (now <= quoteTerms.quoteExpiresAt)
+
+        allocation <- fetch @Token.Allocation fundingAllocationCid
+        let allocationView = view @Token.Allocation allocation
+        let allocationSpec = allocationView.allocation
+        assertMsg "allocation must be committed" allocationSpec.committed
+        assertMsg "allocation deadline must cover quote expiry"
+          (allocationDeadlineCoversQuote allocationSpec.settlementDeadline quoteTerms.quoteExpiresAt)
+        assertMsg "allocation must reference this RFQ request"
+          (allocationView.settlement.cid == Some (coerceContractId self))
+        assertMsg "allocation authorizer must be the Funder"
+          (allocationSpec.authorizer.owner == Some funder)
+        assertMsg "allocation admin must match expected payment instrument admin"
+          (allocationSpec.admin == packageData.paymentInstrumentAdmin)
+        assertMsg "allocation must contain a matching sender-side payment leg"
+          (any (matchesPaymentLeg seller packageData.paymentInstrumentId quoteTerms.netPurchasePrice)
+            allocationSpec.transferLegSides)
+
+        create PrivateQuote with
+          seller
+          funder
+          rfqRequestCid = self
+          packageId
+          receivableCid
+          packageData
+          quoteTerms
+          fundingAllocationCid
+
+template PrivateQuote
+  with
+    seller : Party
+    funder : Party
+    rfqRequestCid : ContractId RFQRequest
+    packageId : Text
+    receivableCid : ContractId Receivable
+    packageData : RFQPackageData
+    quoteTerms : QuoteTerms
+    fundingAllocationCid : ContractId Token.Allocation
+  where
+    signatory funder
+    observer seller
+    ensure hasValidQuoteTerms quoteTerms

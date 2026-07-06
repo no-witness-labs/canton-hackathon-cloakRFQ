@@ -144,7 +144,7 @@ The set of Private Quotes submitted for a Blind RFQ.
 
 ### Quote Terms
 
-The commercial, operational, and disclosure terms contained in a Private Quote, such as purchase price, fees, reserve or holdback, settlement timing, recourse, Required Disclosure, Debtor Notification requirement, Quote Expiry, and Proof-of-Funds status.
+The commercial, operational, and disclosure terms contained in a Private Quote, such as purchase price, fees, reserve or holdback, settlement timing, recourse, Required Disclosure, Debtor Notification requirement, Quote Expiry, and funding evidence status or committed allocation reference.
 
 ### Net Purchase Price
 
@@ -256,7 +256,7 @@ The requirement that a Funder provide acceptable quote-scoped Proof of Funds bef
 
 ### Proof-Backed Private Quote
 
-A Private Quote that has passed the Proof-of-Funds Gate. This does not mean funds are locked, reserved, escrowed, or guaranteed through settlement.
+A Private Quote that has satisfied the funding-evidence requirement. In the Phase 2 CIP-56 path, this means the quote references a validated committed allocation; it still does not mean production payment finality or bank settlement.
 
 ### Funding Capacity Attestation
 
@@ -268,7 +268,7 @@ The accepted limitation that Proof of Funds may show funds existed at a verifica
 
 ### Funding Lock
 
-A stronger future mechanism that reserves or locks funds for a Private Quote. The MVP should not claim Funding Lock behavior unless it is explicitly implemented.
+A stronger mechanism that reserves or locks funds for a Private Quote. In Phase 2, CloakRFQ uses committed CIP-56 allocation evidence for quote funding; this must not be overstated as production payment finality, bank settlement, or custody integration.
 
 ### Quote Bond
 

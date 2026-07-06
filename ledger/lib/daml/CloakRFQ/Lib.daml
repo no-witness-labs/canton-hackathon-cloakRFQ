@@ -59,11 +59,29 @@ data RiskResult = RiskResult
     riskTier : RiskTier
   deriving (Eq, Show)
 
+data RecourseModel = Recourse | NonRecourse | NegotiableRecourse
+  deriving (Eq, Show)
+
+data RequiredDisclosure = MinimalDisclosure | StandardDisclosure | EnhancedDisclosure
+  deriving (Eq, Show)
+
+data QuoteTerms = QuoteTerms
+  with
+    netPurchasePrice : Decimal                    -- Amount the Funder offers to pay the Seller.
+    settlementTiming : Text                       -- Expected settlement timing, e.g. same day, T+1, or T+2.
+    recourseModel : RecourseModel                 -- Whether the Seller retains recourse after sale.
+    requiredDisclosure : RequiredDisclosure       -- Additional disclosure required by the Funder.
+    debtorNotificationRequired : Bool             -- Whether this quote requires Debtor notification.
+    quoteExpiresAt : Time                         -- Time after which the quote is no longer selectable.
+  deriving (Eq, Show)
+
 data RFQPackageData = RFQPackageData
   with
     receivableTerms : ReceivableTerms  -- Receivable terms disclosed as part of the package.
     riskTier : RiskTier                -- Risk tier certified by the Risk Assessor for this package.
     responseDeadline : Time            -- Shared quote response deadline for this RFQ event.
+    paymentInstrumentAdmin : Party     -- CIP-56 token registry/admin expected for quote funding.
+    paymentInstrumentId : Text         -- CIP-56 instrument id expected for quote funding, e.g. USD.
   deriving (Eq, Show)
 
 isPositiveAmount : Decimal -> Bool
@@ -72,3 +90,7 @@ isPositiveAmount amount = amount > 0.0
 hasValidReceivableTerms : ReceivableTerms -> Bool
 hasValidReceivableTerms terms =
   isPositiveAmount terms.payableAmount
+
+hasValidQuoteTerms : QuoteTerms -> Bool
+hasValidQuoteTerms terms =
+  isPositiveAmount terms.netPurchasePrice

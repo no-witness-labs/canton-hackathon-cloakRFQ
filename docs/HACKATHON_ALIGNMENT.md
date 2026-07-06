@@ -114,7 +114,7 @@ Show a working multi-party Canton/Daml workflow:
 
 1. Seller creates a Receivable and opens a Blind RFQ.
 2. Funders receive RFQ Disclosure Packages.
-3. Funders submit Private Quotes with Proof-of-Funds status.
+3. Funders submit Private Quotes backed by scoped funding evidence, concretely committed CIP-56 allocation evidence in Phase 2.
 4. Seller sees a Seller Quote View and selects the Best Compliant Quote.
 5. Settlement is demonstrated with a Demo Settlement Asset.
 6. Auditor or Regulator receives a Scoped Compliance Receipt.

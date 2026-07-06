@@ -66,6 +66,14 @@ There is no ledger-level Coordinator in the current Phase 1 MVP implementation.
 - Prepare package-safe `RFQPackageData`.
 - Create per-Funder `RFQRequest` bridge contracts for off-ledger identified or locally simulated Funders.
 
+### CIP-56 Allocation Notes
+
+CIP-56 defines standard token APIs for holdings, transfer instructions, allocation requests, allocation instructions, and allocations. CloakRFQ's Phase 2 design uses `AllocationV2` as the concrete funding-evidence primitive because committed allocations reserve assets for a settlement context until settlement, cancellation, expiry, or the allocation deadline.
+
+The RFQ package must disclose the expected payment instrument using the CIP-56 registry/admin party plus instrument id. The allocation check then compares the quote's `netPurchasePrice` against a sender-side allocation leg from the Funder account to the Seller account for that exact instrument.
+
+Privacy boundary: the Seller should not receive the Funder's full wallet balance or unrelated holdings. The quote workflow only needs the allocation reference and enough allocation view data to validate amount, instrument, deadline, commitment, and RFQ linkage.
+
 ### Outputs
 
 - `Receivable`
@@ -86,7 +94,8 @@ Starts when Funders can discover the RFQ or receive invitations. Ends when a quo
 - Funders
 - Coordinator
 - Compliance Party
-- optional Funding Evidence Provider or Proof-of-Funds mechanism
+- CIP-56 token registry/admin
+- optional wallet or custody provider for creating token allocations
 
 ### Actions
 
@@ -95,8 +104,10 @@ Starts when Funders can discover the RFQ or receive invitations. Ends when a quo
 - Workflow checks entitlement to the RFQ package.
 - Seller or workflow issues a Funder-specific `RFQDisclosurePackage`.
 - Funder submits `PrivateQuote`.
-- `PrivateQuote` carries Quote Terms, including Net Purchase Price, settlement timing, recourse model, fees, reserve or holdback, Required Disclosure, Debtor Notification requirement, Quote Expiry, and Proof-of-Funds status.
-- Proof-of-Funds Gate checks quote eligibility. It is not a Funding Lock, escrow, reserve, Quote Bond, or settlement guarantee.
+- `PrivateQuote` carries Quote Terms, including Net Purchase Price, settlement timing, recourse model, Required Disclosure, Debtor Notification requirement, and Quote Expiry.
+- In the concrete Phase 2 direction, funding evidence is a committed CIP-56 `AllocationV2` rather than a Seller-trusted `proofOfFundsPassed` boolean.
+- `RFQRequest.SubmitPrivateQuote` is a consuming Funder-controlled choice. It fetches the referenced CIP-56 allocation and checks that it is committed, authorizes the Funder as sender, references the RFQ request as settlement context, matches the package's expected payment instrument, and covers the quote price until quote expiry.
+- This is stronger than point-in-time Proof of Funds, but it is still scoped funding allocation rather than a claim about production custody, bank settlement, or legal payment finality.
 - Eligible and still-valid quotes become `EligibleQuote`s or `PendingQuote`s, depending on lifecycle state.
 - Seller selection mechanism produces enough information for the Seller to select the Best Compliant Quote.
 - Seller selects `SelectedQuote`.
@@ -112,11 +123,19 @@ The MVP must preserve real RFQ selection. It may use a multi-row `SellerQuoteVie
 
 Until the mechanism is chosen, do not document Seller visibility as necessarily limited to only the Winning Quote or necessarily exposing all Eligible Quotes.
 
+### CIP-56 Allocation Notes
+
+CIP-56 defines standard token APIs for holdings, transfer instructions, allocation requests, allocation instructions, and allocations. CloakRFQ's Phase 2 design uses `AllocationV2` as the concrete funding-evidence primitive because committed allocations reserve assets for a settlement context until settlement, cancellation, expiry, or the allocation deadline.
+
+The RFQ package must disclose the expected payment instrument using the CIP-56 registry/admin party plus instrument id. The allocation check then compares the quote's `netPurchasePrice` against a sender-side allocation leg from the Funder account to the Seller account for that exact instrument.
+
+Privacy boundary: the Seller should not receive the Funder's full wallet balance or unrelated holdings. The quote workflow only needs the allocation reference and enough allocation view data to validate amount, instrument, deadline, commitment, and RFQ linkage.
+
 ### Outputs
 
 - issued `RFQDisclosurePackage`s
 - submitted `PrivateQuote`s
-- Proof-of-Funds status or attestation
+- committed CIP-56 funding allocation reference
 - `EligibleQuote`s / `PendingQuote`s
 - selection view or selection protocol output
 - `SelectedQuote`
@@ -150,6 +169,14 @@ Starts when `SelectedQuote` enters the Settlement Window. Ends when the RFQ reac
 - Issue `ScopedComplianceReceipt` when required.
 
 Regulator receipt visibility is usually post-finality. If a selected regulation requires pre-approval, that requirement must be modeled explicitly rather than making Regulator visibility automatic for all RFQs.
+
+### CIP-56 Allocation Notes
+
+CIP-56 defines standard token APIs for holdings, transfer instructions, allocation requests, allocation instructions, and allocations. CloakRFQ's Phase 2 design uses `AllocationV2` as the concrete funding-evidence primitive because committed allocations reserve assets for a settlement context until settlement, cancellation, expiry, or the allocation deadline.
+
+The RFQ package must disclose the expected payment instrument using the CIP-56 registry/admin party plus instrument id. The allocation check then compares the quote's `netPurchasePrice` against a sender-side allocation leg from the Funder account to the Seller account for that exact instrument.
+
+Privacy boundary: the Seller should not receive the Funder's full wallet balance or unrelated holdings. The quote workflow only needs the allocation reference and enough allocation view data to validate amount, instrument, deadline, commitment, and RFQ linkage.
 
 ### Outputs
 

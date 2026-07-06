@@ -129,7 +129,7 @@ A Private Quote can include:
 | Required Disclosure             | Additional information required by the Funder as part of the quote.                            |
 | Debtor Notification requirement | Whether the quote requires notifying the Debtor.                                               |
 | Quote Expiry                    | Time after which the quote is no longer selectable.                                            |
-| Proof-of-Funds status           | Whether the quote passed the Proof-of-Funds Gate.                                              |
+| Funding evidence                 | Committed CIP-56 allocation reference or equivalent funding evidence for the quote.             |
 
 Important product principle:
 
@@ -152,7 +152,7 @@ The Seller Quote View may include:
 | Required Disclosure               | Yes.                                        |
 | Debtor Notification requirement   | Yes.                                        |
 | Compliance status                 | Yes, as an attestation or status.           |
-| Proof-of-Funds status             | Yes, as a status or attestation.            |
+| Funding evidence status/reference | Yes, as scoped allocation evidence.          |
 | Raw Proof-of-Funds data           | No by default.                              |
 | Funder balances / funding sources | No.                                         |
 | Full Funder identity              | No by default; revealed only when required. |
@@ -256,7 +256,7 @@ The MVP does not claim full anonymity, secrecy from a party's own infrastructure
 | Sensitive Attributes are not disclosed as raw data unless required.                                   | MVP guarantee target. |
 | Funders receive an attestation-first RFQ Disclosure Package.                                          | MVP guarantee target. |
 | Seller receives a minimal Seller Quote View, not raw Funder balances or funding sources.              | MVP guarantee target. |
-| Seller receives only Proof-of-Funds status or an attestation by default, not raw Proof-of-Funds evidence, balances, funding sources, or unrelated financial positions. | MVP guarantee target. |
+| Seller receives only scoped funding evidence, such as a committed CIP-56 allocation reference/status, not raw wallet balances, funding sources, or unrelated financial positions. | MVP guarantee target. |
 
 ### Stretch privacy ambitions
 
@@ -339,8 +339,8 @@ Not resolved for post-MVP.
 Show multiple party views:
 
 - Seller sees the Receivable, RFQ, Seller Quote View, selected quote, fallback status if applicable, and final sale state.
-- Funder A sees only its RFQ Disclosure Package, Proof-of-Funds status, and its own Private Quote.
-- Funder B sees only its RFQ Disclosure Package, Proof-of-Funds status, and its own Private Quote.
+- Funder A sees only its RFQ Disclosure Package, funding evidence status, and its own Private Quote.
+- Funder B sees only its RFQ Disclosure Package, funding evidence status, and its own Private Quote.
 - Coordinator sees workflow status but not quote contents.
 - Compliance Party sees eligibility data and can produce attestations.
 - Risk Assessor sees only risk-relevant data and produces Risk Attestations.
