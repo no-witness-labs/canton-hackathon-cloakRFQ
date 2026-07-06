@@ -1,16 +1,16 @@
-# Phase 2 Technical Design - Private Quoting & Selection
+# Phase 2 Technical Design - Private Quote Intake
 
 ## Purpose
 
-Define the current Phase 2 ledger direction for Private Quote submission and selection preparation.
+Define the current Phase 2 ledger direction for Private Quote intake.
 
-This note is narrower than the full product phase. It documents the implemented Daml surface and the still-open design questions. Settlement and finality remain Phase 3.
+This note documents the implemented Daml surface and the still-open design questions. Quote review, selection, settlement, and finality remain outside Phase 2.
 
 ## Boundary
 
-Phase 2 starts from an existing per-Funder `RFQRequest` created after Phase 1 origination and eligibility. It currently ends when a valid `PrivateQuote` exists for Seller review and later selection design.
+Phase 2 starts when a Funder has an existing per-Funder `RFQRequest` created after Phase 1 origination and eligibility. Phase 2 ends at the RFQ `responseDeadline`.
 
-The implemented boundary does not yet include public discovery, package access requests, quote ranking, Seller selection, fallback queues, or settlement.
+During Phase 2, Funders may submit `PrivateQuote`s. Quote review, Seller selection, fallback queues, and settlement are not Phase 2.
 
 ## Implemented Ledger Surface
 
@@ -18,7 +18,7 @@ The implemented boundary does not yet include public discovery, package access r
 |---|---|
 | `RFQRequest` | Per-Funder request carrying the Funder-visible RFQ package and authority certificate references. |
 | `RFQPackageData` | Funder-disclosed package data, including receivable terms, certified risk tier, response deadline, and expected CIP-56 payment instrument. |
-| `QuoteTerms` | Funder commercial terms: net purchase price, settlement timing, recourse model, required disclosure level, debtor notification requirement, and quote expiry. |
+| `QuoteTerms` | Funder commercial terms: net purchase price, recourse model, debtor notification requirement, and quote expiry. |
 | `PrivateQuote` | Funder-signed quote created through the request workflow. Visible to the Seller, not to competing Funders. |
 | `Splice.Api.Token.AllocationV2:Allocation` | CIP-56 funding-evidence interface fetched during quote submission. |
 
@@ -33,7 +33,7 @@ The consuming shape is intentional:
 - a Funder cannot submit multiple quotes from the same request;
 - competing Funders remain hidden because each Funder has a separate request.
 
-The choice creates `PrivateQuote` only after checking the submitted quote terms and the referenced CIP-56 allocation.
+The choice creates `PrivateQuote` only after checking the submitted quote terms and the referenced CIP-56 allocation. Quote terms must keep the quote valid beyond the RFQ `responseDeadline`.
 
 ## CIP-56 Allocation Validation
 
@@ -50,7 +50,7 @@ The choice fetches the allocation and requires:
 - the transfer leg instrument id matches `RFQPackageData.paymentInstrumentId`;
 - the transfer leg amount covers `QuoteTerms.netPurchasePrice`.
 
-This avoids a Seller-trusted `proofOfFundsPassed` boolean. The `PrivateQuote` stores the allocation contract id as evidence.
+This avoids a Seller-trusted `proofOfFundsPassed` boolean. The `PrivateQuote` stores the allocation contract id as evidence. A committed allocation is mandatory at quote submission time.
 
 ## Privacy And Authenticity
 
@@ -66,6 +66,7 @@ Phase 2 tests use a test-only `MockFundingAllocation` template that implements t
 
 Covered behavior:
 
+- a quote expiring at the RFQ response deadline cannot create a `PrivateQuote`;
 - an underfunded committed allocation cannot create a `PrivateQuote`;
 - a correctly funded committed allocation can create a `PrivateQuote`;
 - successful quote submission consumes the original `RFQRequest`;
@@ -73,12 +74,9 @@ Covered behavior:
 
 ## Open Questions
 
-1. Exact Seller quote review and selection contract shape.
-2. Whether quote selection creates a distinct `SelectedQuote` or consumes `PrivateQuote` directly.
-3. How unselected or expired quote allocations are cancelled, released, or ignored.
-4. Whether Phase 2 should model the allocation request/instruction flow before the committed allocation exists.
-5. Whether certificate visibility should be handled by explicit disclosure, Funder observers, or a later authority-created request pattern.
-6. How fallback queue construction should preserve privacy while allowing Seller-controlled fallback.
+1. How unselected or expired quote allocations are cancelled, released, or ignored.
+2. Whether Phase 2 should model the allocation request/instruction flow before the committed allocation exists.
+3. Whether certificate visibility should be handled by explicit disclosure, Funder observers, or a later authority-created request pattern.
 
 ## External References
 

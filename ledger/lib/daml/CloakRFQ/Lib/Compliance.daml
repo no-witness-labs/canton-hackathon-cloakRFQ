@@ -1,0 +1,29 @@
+-- | Compliance disclosure and result data types.
+module CloakRFQ.Lib.Compliance where
+
+import CloakRFQ.Lib.Receivable
+
+data IdentityDisclosure = IdentityDisclosure
+  with
+    legalName : Text       -- Legal/business name of the disclosed entity.
+    jurisdiction : Text    -- Country or legal jurisdiction relevant to compliance.
+    entityType : Text      -- Legal form, e.g. company, sole proprietor, or government entity.
+  deriving (Eq, Show)
+
+data ComplianceDisclosure = ComplianceDisclosure
+  with
+    sellerIdentity : IdentityDisclosure      -- Seller legal identity disclosed for compliance review.
+    debtorIdentity : IdentityDisclosure      -- Debtor legal identity disclosed for compliance review.
+    receivableTerms : ReceivableTerms        -- Commercial terms of the receivable being checked.
+    transactionPurpose : Text                -- Why the Seller is preparing this RFQ package.
+    disclosureRestrictions : Text            -- Business/legal constraints on later package disclosure.
+  deriving (Eq, Show)
+
+data ComplianceResult = ComplianceResult
+  with
+    sellerEligible : Bool
+    rfqEligible : Bool
+  deriving (Eq, Show)
+
+isComplianceOk : ComplianceResult -> Bool
+isComplianceOk result = result.sellerEligible && result.rfqEligible

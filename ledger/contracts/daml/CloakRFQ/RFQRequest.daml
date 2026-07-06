@@ -48,7 +48,7 @@ template RFQRequest
       controller funder
       do
         now <- getTime
-        assertMsg "quote terms must be valid" (hasValidQuoteTerms quoteTerms)
+        assertMsg "quote terms must be valid for this request" (hasValidQuoteForRequest packageData quoteTerms)
         assertMsg "quote response deadline passed" (now <= packageData.responseDeadline)
         assertMsg "quote already expired" (now <= quoteTerms.quoteExpiresAt)
 

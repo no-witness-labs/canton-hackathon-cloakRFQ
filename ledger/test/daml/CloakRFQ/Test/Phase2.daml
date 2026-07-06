@@ -119,14 +119,32 @@ phase2PrivateQuote = do
       complianceCertificateCid = complianceCertificate
       riskCertificateCid = riskCertificate
 
-  let quoteExpiresAt = time (date 2030 Jun 30) 12 0 0
+  let quoteExpiresAt = time (date 2030 Jul 2) 12 0 0
   let quoteTerms = QuoteTerms with
         netPurchasePrice = 465000.0
-        settlementTiming = "T+2"
-        recourseModel = NonRecourse
-        requiredDisclosure = MinimalDisclosure
+        recourseModel = WithoutRecourse
         debtorNotificationRequired = False
         quoteExpiresAt
+
+  earlyExpiryAllocation <- submit funderB do
+    createCmd MockFundingAllocation with
+      funder = funderB
+      seller
+      tokenAdmin
+      rfqRequestCid = requestB
+      amount = 470000.0
+      instrumentId = "USD"
+      settlementDeadline = packageData.responseDeadline
+      createdAt = time (date 2030 Jun 1) 12 0 0
+
+  submitMustFail funderB do
+    exerciseCmd requestB SubmitPrivateQuote with
+      quoteTerms = QuoteTerms with
+        netPurchasePrice = 465000.0
+        recourseModel = WithoutRecourse
+        debtorNotificationRequired = False
+        quoteExpiresAt = packageData.responseDeadline
+      fundingAllocationCid = toInterfaceContractId @Token.Allocation earlyExpiryAllocation
 
   underfundedAllocation <- submit funderB do
     createCmd MockFundingAllocation with

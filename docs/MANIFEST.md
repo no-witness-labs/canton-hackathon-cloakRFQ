@@ -47,7 +47,7 @@ This repository is not complete as production implementation. The following impl
 | `docs/CLOAKRFQ_MVP_BUILD_SPEC.md`                                   | MVP implementation handoff spec.                      |
 | `docs/technical-design/001-high-level-technical-design.md`           | High-level implementation-oriented technical design.  |
 | `docs/technical-design/002-phase-1-origination-eligibility.md`       | Phase 1 ledger design and current implementation notes. |
-| `docs/technical-design/003-phase-2-private-quoting-selection.md`      | Phase 2 Private Quote and CIP-56 allocation design notes. |
+| `docs/technical-design/003-phase-2-private-quote-intake.md`      | Phase 2 Private Quote intake and CIP-56 allocation design notes. |
 | `ledger/`                                                            | Daml multi-package ledger model and tests for Phase 1 and early Phase 2. |
 | `docs/adr/0001-receivable-sale-rfq-mvp.md`                          | Receivable Sale instead of secured loan.              |
 | `docs/adr/0002-maximum-practical-privacy-for-rfqs.md`               | Maximum Practical Privacy.                            |
