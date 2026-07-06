@@ -1,10 +1,10 @@
 # CloakRFQ Receipts — Package Manifest
 
-Updated: 2026-07-02
+Updated: 2026-07-06
 
 ## Completeness status
 
-This repository now contains both the product/design documentation and the initial Phase 1 Daml ledger implementation. It is no longer only a domain-discovery documentation bundle.
+This repository now contains both the product/design documentation and the Daml ledger implementation for Phase 1 plus the first Phase 2 Private Quote workflow. It is no longer only a domain-discovery documentation bundle.
 
 It contains:
 
@@ -15,9 +15,9 @@ It contains:
 - the hackathon roadmap (`docs/HACKATHON_ROADMAP.md`), documenting the compact completion plan for the MVP and submission package;
 - the root agent instructions (`AGENTS.md`) and detailed agent workflow (`docs/AGENT_WORKFLOW.md`);
 - the MVP implementation handoff spec (`docs/CLOAKRFQ_MVP_BUILD_SPEC.md`);
-- the high-level and Phase 1 technical design notes under `docs/technical-design/`;
+- the high-level, Phase 1, and Phase 2 technical design notes under `docs/technical-design/`;
 - the accepted ADRs created so far (`docs/adr/0001` through `docs/adr/0012`);
-- the Phase 1 Daml ledger packages under `ledger/`;
+- the Phase 1 and early Phase 2 Daml ledger packages under `ledger/`;
 - a README describing the repository.
 
 This repository is not complete as production implementation. The following implementation and design details are intentionally still open:
@@ -47,7 +47,8 @@ This repository is not complete as production implementation. The following impl
 | `docs/CLOAKRFQ_MVP_BUILD_SPEC.md`                                   | MVP implementation handoff spec.                      |
 | `docs/technical-design/001-high-level-technical-design.md`           | High-level implementation-oriented technical design.  |
 | `docs/technical-design/002-phase-1-origination-eligibility.md`       | Phase 1 ledger design and current implementation notes. |
-| `ledger/`                                                            | Daml multi-package Phase 1 ledger model and tests.    |
+| `docs/technical-design/003-phase-2-private-quoting-selection.md`      | Phase 2 Private Quote and CIP-56 allocation design notes. |
+| `ledger/`                                                            | Daml multi-package ledger model and tests for Phase 1 and early Phase 2. |
 | `docs/adr/0001-receivable-sale-rfq-mvp.md`                          | Receivable Sale instead of secured loan.              |
 | `docs/adr/0002-maximum-practical-privacy-for-rfqs.md`               | Maximum Practical Privacy.                            |
 | `docs/adr/0003-functionality-preserving-privacy.md`                 | Functionality-Preserving Privacy.                     |

@@ -66,14 +66,6 @@ There is no ledger-level Coordinator in the current Phase 1 MVP implementation.
 - Prepare package-safe `RFQPackageData`.
 - Create per-Funder `RFQRequest` bridge contracts for off-ledger identified or locally simulated Funders.
 
-### CIP-56 Allocation Notes
-
-CIP-56 defines standard token APIs for holdings, transfer instructions, allocation requests, allocation instructions, and allocations. CloakRFQ's Phase 2 design uses `AllocationV2` as the concrete funding-evidence primitive because committed allocations reserve assets for a settlement context until settlement, cancellation, expiry, or the allocation deadline.
-
-The RFQ package must disclose the expected payment instrument using the CIP-56 registry/admin party plus instrument id. The allocation check then compares the quote's `netPurchasePrice` against a sender-side allocation leg from the Funder account to the Seller account for that exact instrument.
-
-Privacy boundary: the Seller should not receive the Funder's full wallet balance or unrelated holdings. The quote workflow only needs the allocation reference and enough allocation view data to validate amount, instrument, deadline, commitment, and RFQ linkage.
-
 ### Outputs
 
 - `Receivable`
@@ -170,14 +162,6 @@ Starts when `SelectedQuote` enters the Settlement Window. Ends when the RFQ reac
 
 Regulator receipt visibility is usually post-finality. If a selected regulation requires pre-approval, that requirement must be modeled explicitly rather than making Regulator visibility automatic for all RFQs.
 
-### CIP-56 Allocation Notes
-
-CIP-56 defines standard token APIs for holdings, transfer instructions, allocation requests, allocation instructions, and allocations. CloakRFQ's Phase 2 design uses `AllocationV2` as the concrete funding-evidence primitive because committed allocations reserve assets for a settlement context until settlement, cancellation, expiry, or the allocation deadline.
-
-The RFQ package must disclose the expected payment instrument using the CIP-56 registry/admin party plus instrument id. The allocation check then compares the quote's `netPurchasePrice` against a sender-side allocation leg from the Funder account to the Seller account for that exact instrument.
-
-Privacy boundary: the Seller should not receive the Funder's full wallet balance or unrelated holdings. The quote workflow only needs the allocation reference and enough allocation view data to validate amount, instrument, deadline, commitment, and RFQ linkage.
-
 ### Outputs
 
 - `SettlementResult`
@@ -196,7 +180,7 @@ Privacy boundary: the Seller should not receive the Funder's full wallet balance
 | Compliance | Compliance applies selected policy assumptions to Seller eligibility, RFQ eligibility, disclosure constraints, and package access. |
 | Risk | Risk Assessor acts before package issuance and produces Debtor or Receivable Risk Attestations; Funders price risk themselves. |
 | Regulator risk visibility | Regulator usually needs risk outcomes, references, threshold status, or risk tier when required, not raw underwriting data or raw debtor credit files by default. |
-| Proof of Funds | Gates quote eligibility only; does not imply locked, reserved, escrowed, single-use, or guaranteed funds. |
+| Funding evidence | Phase 2 uses committed CIP-56 allocations as scoped quote funding evidence; this is not a claim about production custody, bank settlement, or legal payment finality. |
 | Quote privacy | Competing Funders do not see competing Private Quotes. |
 | Coordinator visibility | Coordinator routes workflow state and invitations without Private Quote contents by default. |
 | Funder identity | Identity disclosure is staged and purpose-bound; stronger Unselected Funder hiding remains implementation-dependent. |

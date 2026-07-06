@@ -7,7 +7,7 @@ holds both the planning documentation and the first implementation.
 
 ```
 docs/    Planning documentation — product brief, PRD, ADRs, technical design, roadmap.
-ledger/  Daml multi-package Phase 1 ledger model and script tests.
+ledger/  Daml multi-package ledger model and script tests for Phase 1 and early Phase 2.
 web/     Next.js 14 (App Router + TypeScript) UI prototype of the MVP. See web/README.md.
 ```
 
@@ -39,6 +39,8 @@ npm run dev   # http://localhost:3000
 - `docs/MANIFEST.md` — package completeness notes and file inventory.
 - `docs/CLOAKRFQ_MVP_BUILD_SPEC.md` — implementation handoff spec for the MVP.
 - `docs/technical-design/001-high-level-technical-design.md` — first implementation-oriented high-level technical design note.
+- `docs/technical-design/002-phase-1-origination-eligibility.md` — Phase 1 ledger design and implementation notes.
+- `docs/technical-design/003-phase-2-private-quoting-selection.md` — Phase 2 Private Quote and CIP-56 allocation design notes.
 - `docs/adr/0001-receivable-sale-rfq-mvp.md` — model the MVP as a Receivable Sale, not a secured loan.
 - `docs/adr/0002-maximum-practical-privacy-for-rfqs.md` — target Maximum Practical Privacy for RFQs.
 - `docs/adr/0003-functionality-preserving-privacy.md` — preserve real-world RFQ functionality before optimizing privacy.
@@ -53,7 +55,7 @@ npm run dev   # http://localhost:3000
 
 ## Status
 
-Phase 1 ledger design and initial Daml implementation are in progress as of 2026-07-02.
+Phase 1 ledger implementation is working, and Phase 2 Private Quote submission is now started as of 2026-07-06.
 
 Implemented ledger scope currently covers represented Receivable registration, Compliance/Risk attestations and certificates, `RFQPackageData`, per-Funder `RFQRequest` bridge contracts, and allocation-backed `PrivateQuote` submission.
 
