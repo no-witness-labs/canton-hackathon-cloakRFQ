@@ -33,7 +33,7 @@ function TxIndicator() {
 }
 
 export default function Workspace() {
-  const { state, setRole, explorerUrl } = useStore();
+  const { state, setRole } = useStore();
   const role = state.role;
   const lg = LEGEND[role];
 
@@ -68,12 +68,6 @@ export default function Workspace() {
           <span className="spacer" />
           <NewDealButton />
           <TxIndicator />
-          {explorerUrl && (
-            <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="chip ghost"
-              style={{ textDecoration: 'none' }} title="View this party on the 5N Lighthouse explorer (Canton DevNet)">
-              Explorer ↗
-            </a>
-          )}
           <span className="live"><span className="dot" /> Live RFQ-4471</span>
           <WalletConnector />
         </div>
@@ -121,15 +115,15 @@ function Toast() {
       <span className="dot" style={{ background: state.toastColor }} />
       <span>{state.toast}</span>
       {state.toastTx && (ext
-        ? <a href={ext} target="_blank" rel="noopener noreferrer" style={toastLinkStyle}>View transaction ↗</a>
-        : <Link href={`/activity?tx=${state.toastTx}`} style={toastLinkStyle}>View transaction →</Link>
+        ? <a href={ext} target="_blank" rel="noopener noreferrer" style={toastLinkStyle}>Explore transaction ↗</a>
+        : <Link href={`/activity?tx=${state.toastTx}`} style={toastLinkStyle}>View in Activity →</Link>
       )}
     </div>
   );
 }
 
 function WalletConnector() {
-  const { state, walletParty, explorerUrl, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet } = useStore();
+  const { state, walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet } = useStore();
   const role = state.role;
   const wParty = walletParty(role);
   const connected = state.walletState === 'connected';
@@ -198,12 +192,7 @@ function WalletConnector() {
                     Simulated connection — no browser key signs here. The Party ID above is the real on-ledger party; the app authorizes commands as it server-side.
                   </p>
                 </div>
-                <div style={{ padding: '6px 16px 15px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {explorerUrl && (
-                    <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="btn dark sm" style={{ textDecoration: 'none', justifyContent: 'center' }}>
-                      <Icon name="card" size={14} /> View party on 5N Lighthouse ↗
-                    </a>
-                  )}
+                <div style={{ padding: '6px 16px 15px' }}>
                   <button className="w-disconnect" onClick={disconnectWallet}><Icon name="logout" size={14} sw={2.2} /> Disconnect wallet</button>
                 </div>
               </>
