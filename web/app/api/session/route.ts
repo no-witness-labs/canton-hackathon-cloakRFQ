@@ -11,6 +11,7 @@ import { NextRequest } from 'next/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;   // provisioning does ~9 sequential DevNet allocations (Vercel Pro; Hobby caps at 10s)
 
 const ENABLED = process.env.CLOAKRFQ_SESSION_PROVISIONING === '1';
 const TARGET = (process.env.CLOAKRFQ_LEDGER_TARGET ?? '').replace(/\/$/, '');
