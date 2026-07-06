@@ -14,7 +14,7 @@ The MVP workflow has three phases:
 2. **Private Quote Intake**
 3. **Settlement & Finality**
 
-Use **Private Quoting** and **Private Quote** in technical design. Avoid **Bidding** unless referencing an accepted ADR title or legacy product wording. In implementation-facing text, Proof of Funds gates quote eligibility.
+Use **Private Quoting** and **Private Quote** in technical design. Avoid **Bidding** unless referencing an accepted ADR title or legacy product wording. In implementation-facing text, committed allocation evidence gates Phase 2 quote eligibility.
 
 ## Disclosure Layers
 

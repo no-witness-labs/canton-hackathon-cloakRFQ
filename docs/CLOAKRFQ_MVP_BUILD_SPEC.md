@@ -4,7 +4,7 @@ Last updated: 2026-06-20
 
 ## Purpose
 
-CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. The MVP demonstrates private quotes, scoped attestations, proof-of-funds eligibility, Seller quote comparison, fallback, on-ledger demo settlement, and scoped compliance receipts.
+CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. The MVP demonstrates private quotes, scoped attestations, committed allocation-backed quote eligibility, Seller quote comparison, fallback, on-ledger demo settlement, and scoped compliance receipts.
 
 ## MVP scope
 
@@ -42,7 +42,7 @@ These are implementation candidates, not final law:
 - ComplianceAttestation
 - RiskAttestation
 - PrivateQuote
-- ProofOfFundsStatus
+- FundingAllocationEvidence
 - SellerQuoteView
 - SelectedQuote
 - FallbackQueue
@@ -63,7 +63,7 @@ These are implementation candidates, not final law:
 
 - Competing Funders do not see each other's Private Quotes.
 - Coordinator does not read Private Quote contents by default.
-- Seller sees Seller Quote View and funding evidence status or allocation reference, not raw Proof-of-Funds evidence, Funder balances, funding sources, or unrelated financial positions.
+- Seller sees Seller Quote View and scoped allocation reference/status, not raw Funder balances, funding sources, or unrelated financial positions.
 - Funder identity is hidden by default unless required.
 - Auditor/Regulator receives Scoped Compliance Receipt, not full RFQ data.
 - Outsiders see nothing useful.
@@ -98,7 +98,7 @@ Do not claim these unless implemented:
 
 ## Implementation notes
 
-- Keep Proof of Funds as eligibility evidence, not a lock.
+- Keep committed CIP-56 allocation evidence scoped to the RFQ; do not describe it as escrow, custody, bank settlement, production payment finality, or guaranteed settlement completion.
 - Keep Demo Settlement Asset clearly non-production.
 - Treat Receivable assignment as an MVP workflow state transition. Do not claim production legal assignment, perfection, enforceability against the Debtor, or jurisdiction-specific receivables-transfer compliance unless those workflows are explicitly added.
 - Treat Binding Quotes as workflow-binding for the MVP, not as externally legally enforceable commitments unless legal-enforcement workflows are explicitly added.

@@ -8,7 +8,7 @@ Last updated: 2026-06-20
 
 Working product language:
 
-> CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. Funders submit Private Quotes with quote-scoped Proof of Funds, Sellers select the Best Compliant Quote through a minimal Seller Quote View, Compliance and Risk parties provide scoped attestations, and Auditors or Regulators receive Scoped Compliance Receipts without exposing unnecessary bidders, quotes, identities, balances, or sensitive commercial data.
+> CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. Funders submit Private Quotes backed by committed CIP-56 allocation evidence, Sellers select the Best Compliant Quote through a minimal Seller Quote View, Compliance and Risk parties provide scoped attestations, and Auditors or Regulators receive Scoped Compliance Receipts without exposing unnecessary bidders, quotes, identities, balances, or sensitive commercial data.
 
 The guiding product question is:
 
@@ -47,11 +47,11 @@ It is a private RFQ flow for selling a Receivable at a discount, with privacy an
 | Quote visibility         | Funders do not see each other's Private Quotes.                                                                                              |
 | Quote selection          | Seller selects the Best Compliant Quote based on Selection Criteria.                                                                         |
 | Best deal                | Best does not automatically mean highest headline price.                                                                                     |
-| Required Disclosure      | Disclosure requested by a Funder is part of the quote's commercial terms.                                                                    |
+| Disclosure cost          | Disclosure requirements can affect quote attractiveness, but the MVP does not model a back-and-forth Funder disclosure-request workflow.     |
 | RFQ package              | Funders receive an attestation-first RFQ Disclosure Package.                                                                                 |
 | Debtor notification      | Debtor Notification is optional and disclosure-controlled.                                                                                   |
 | Risk assessment          | Risk Assessor is an optional scoped role, separate from Compliance and Audit.                                                                |
-| Proof of Funds           | Required as bid eligibility evidence, but not a lock, reserve, escrow, or settlement guarantee.                                              |
+| Funding evidence         | Phase 2 requires committed CIP-56 allocation-backed quotes. This allocates funds for the RFQ context during the quote validity window, but is not escrow, custody, bank settlement, production payment finality, or a guarantee settlement will complete. |
 | Seller selection surface | Seller uses a Seller Quote View with minimum comparison fields.                                                                              |
 | Funder identity          | Hidden by default in the Seller Quote View; revealed only when needed by selection, compliance, settlement, audit, regulation, or RFQ terms. |
 | Fallback                 | Use a Seller-Controlled Fallback Queue, not automatic highest-price fallback.                                                                |
@@ -81,7 +81,7 @@ It is a private RFQ flow for selling a Receivable at a discount, with privacy an
 3. Optional Risk Assessor issues Risk Attestations.
 4. Compliance Party provides required eligibility attestations.
 5. Funders receive RFQ Disclosure Packages.
-6. Funders submit Private Quotes with quote-scoped Proof of Funds.
+6. Funders submit Private Quotes backed by committed CIP-56 allocation evidence.
 7. Bidding closes; eligible still-valid quotes become Pending Quotes.
 8. Private Quotes remain hidden from competing Funders and Coordinators by default.
 9. Seller receives a Seller Quote View for Eligible Quotes, with Funder identity hidden by default unless disclosure is required.
@@ -107,7 +107,7 @@ The RFQ Disclosure Package is the minimum pre-quote information a Funder receive
 | Debtor payment risk     | Debtor Risk Attestation rather than raw Debtor identity by default.                                               |
 | Seller eligibility      | Seller eligibility attestation.                                                                                   |
 | Jurisdiction/compliance | Jurisdiction or transaction eligibility attestation.                                                              |
-| Recourse preference     | Recourse, non-recourse, or negotiable.                                                                            |
+| Recourse preference     | With recourse or without recourse.                                                                                 |
 | Settlement preference   | Desired settlement window.                                                                                        |
 | Disclosure Boundary     | What the Seller is willing to reveal pre-quote, post-selection, during settlement, and to Regulators or Auditors. |
 
@@ -115,61 +115,50 @@ The RFQ Disclosure Package is the minimum pre-quote information a Funder receive
 
 Minor, situational, or later-stage details may be grouped as Supplemental RFQ Information. Examples include industry category, invoice dispute notes, debtor concentration notes, payment history summary, collection preference, notification preference, extra document references, jurisdiction notes, insurance notes, relationship history, or custom due-diligence requests.
 
-## Quote Terms currently in scope
+## Implemented Phase 2 Quote Terms
 
-A Private Quote can include:
+A Private Quote includes:
 
 | Quote term                      | Meaning                                                                                        |
 | ------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Net Purchase Price              | Amount the Seller expects to receive after discount, fees, reserves, and other economic terms. |
-| Settlement timing               | Same day, T+1, T+2, or another window.                                                         |
-| Recourse model                  | Recourse, non-recourse, or negotiable.                                                         |
-| Fees                            | Processing, service, or factoring fees.                                                        |
-| Reserve / holdback              | Amount held back until Debtor payment or another condition.                                    |
-| Required Disclosure             | Additional information required by the Funder as part of the quote.                            |
+| Net Purchase Price              | Amount the Funder offers to pay the Seller for the Receivable.                                 |
+| Recourse model                  | Whether the quote is with recourse or without recourse.                                        |
 | Debtor Notification requirement | Whether the quote requires notifying the Debtor.                                               |
-| Quote Expiry                    | Time after which the quote is no longer selectable.                                            |
-| Funding evidence                 | Committed CIP-56 allocation reference or equivalent funding evidence for the quote.             |
+| Quote Expiry                    | Time after which the quote and its committed allocation are no longer binding for the RFQ workflow. |
+| Funding allocation reference    | Committed CIP-56 allocation evidence backing the quote.                                        |
+
+Real-world factoring may also price fees, reserves, holdbacks, settlement windows, and additional diligence or disclosure requests. The MVP does not model those separately; they are either outside scope or economically compressed into Net Purchase Price.
 
 Important product principle:
 
-> **Required Disclosure is itself part of the price.**
+> **Disclosure burden can affect the real economic attractiveness of a quote.**
 
-A Seller may prefer a slightly lower quote if it requires less disclosure, settles faster, or has better recourse terms.
+A Seller may prefer a slightly lower quote if it requires less sensitive disclosure, fewer diligence steps, or a better recourse position. The MVP keeps this as product context; the implemented Phase 2 quote terms stay intentionally smaller.
 
 ## Seller Quote View
 
 The Seller Quote View is the minimum Seller-visible comparison surface needed to select the Best Compliant Quote.
 
-The Seller Quote View may include:
+The MVP Seller Quote View may include:
 
 | Field                             | Seller visibility                           |
 | --------------------------------- | ------------------------------------------- |
-| Net Purchase Price                | Yes.                                        |
-| Settlement timing                 | Yes.                                        |
-| Recourse model                    | Yes.                                        |
-| Fees / reserve / holdback         | Yes.                                        |
-| Required Disclosure               | Yes.                                        |
-| Debtor Notification requirement   | Yes.                                        |
-| Compliance status                 | Yes, as an attestation or status.           |
-| Funding evidence status/reference | Yes, as scoped allocation evidence.          |
-| Raw Proof-of-Funds data           | No by default.                              |
-| Funder balances / funding sources | No.                                         |
-| Full Funder identity              | No by default; revealed only when required. |
+| Net Purchase Price                  | Yes.                                        |
+| Recourse model                      | Yes.                                        |
+| Debtor Notification requirement     | Yes.                                        |
+| Quote Expiry                        | Yes.                                        |
+| Compliance status                   | Yes, as an attestation or status.           |
+| Funding allocation reference/status | Yes, as scoped allocation evidence.         |
+| Raw Funder balances / funding sources | No.                                       |
+| Full Funder identity                | No by default; revealed only when required. |
 
 The MVP should not yet claim Winning-Only Disclosure. The Seller may see multiple eligible quote comparison rows unless a later quote-selection mechanism supports stronger privacy without weakening RFQ functionality.
 
-## Proof of Funds model
+## Funding evidence model
 
-Proof of Funds is required as bid eligibility evidence.
+Phase 2 Private Quotes require committed CIP-56 allocation evidence at submission time. The allocation must cover the quote amount, reference the RFQ context, and remain valid through Quote Expiry.
 
-It means the Funder had enough funding capacity to support the quote at a relevant verification point. It does **not** mean the funds are locked, reserved, escrowed, unspendable, single-use, or guaranteed to be available at settlement.
-
-Current accepted limitation:
-
-> A Funder may prove funds existed and later spend them, or may use the same funds to support multiple quotes, unless a stronger mechanism is added.
-
-Possible future mechanisms include Funding Capacity Attestation, Funding Evidence Provider, on-ledger funds check, Funding Lock, escrow, settlement-bank commitment, or Quote Bond.
+This allocates funds for the RFQ workflow during the quote validity window. It is not escrow, custody, bank settlement, production payment finality, or a guarantee that settlement will complete. The Seller receives scoped allocation evidence, not raw Funder balances, funding sources, or unrelated financial positions.
 
 ## Fallback model
 
@@ -195,7 +184,7 @@ A Binding Quote:
 - remains selectable until Quote Expiry if otherwise eligible;
 - may be placed in the Seller-Controlled Fallback Queue while valid;
 - cannot be arbitrarily withdrawn during its Quote Validity Period unless the RFQ terms explicitly allow withdrawal;
-- does not imply funds are locked, reserved, escrowed, or guaranteed through settlement;
+- does not imply escrow, custody, bank settlement, production payment finality, or guaranteed settlement completion;
 - does not imply monetary penalties in the MVP.
 
 In the MVP, "Binding Quote" means binding under the demo workflow rules during the Quote Validity Period. It does not claim external legal enforceability unless a legal agreement, enforcement mechanism, or jurisdiction-specific legal workflow is explicitly added.
@@ -280,7 +269,7 @@ The MVP should not become:
 - A full cryptographic blind auction unless implementation feasibility is proven.
 - A production-grade settlement or payment network.
 - A system that changes the RFQ into threshold acceptance purely for privacy reasons.
-- A system that claims Proof of Funds locks, reserves, prevents later spending, or guarantees settlement unless locking, escrow, or settlement integration is actually implemented.
+- A system that overstates committed allocation evidence as escrow, custody, bank settlement, production payment finality, or guaranteed settlement completion.
 - A system that automatically promotes fallback quotes purely by highest headline price.
 - A system that imposes monetary penalties unless a Quote Bond, escrow, legal agreement, or equivalent mechanism is explicitly designed.
 
@@ -296,9 +285,7 @@ Current boundary: the Seller Quote View is the MVP selection surface, but strong
 
 What exact technical proof is used for the MVP?
 
-Current boundary: Proof of Funds screens for funding capacity at a relevant point. It does not mean funds are locked, reserved, escrowed, prevented from later movement, or guaranteed for settlement unless a later design explicitly adds that mechanism.
-
-Open options include a mocked proof, an on-ledger funds check, a Funding Capacity Attestation, a Funding Evidence Provider, or a settlement-bank check.
+Current boundary: Phase 2 uses committed CIP-56 allocation evidence for quote funding. This allocates funds for the RFQ workflow during the quote validity window, but it is not escrow, custody, bank settlement, production payment finality, or guaranteed settlement completion.
 
 ### Resolved product decisions
 

@@ -14,7 +14,7 @@ Build CloakRFQ Receipts as a private, functionality-preserving RFQ marketplace f
 
 The MVP demonstrates one complete happy path and one Selected Quote failure/fallback branch. A Seller creates a Receivable, opens a Blind RFQ, receives Eligible Quotes through a Seller Quote View, selects the Best Compliant Quote, and completes On-Ledger Demo Settlement using a Demo Settlement Asset. Funders submit Private Quotes backed by funding evidence, concretely a committed CIP-56 allocation in Phase 2 and do not see each other's quotes. Compliance and optional Risk parties provide scoped attestations. If the Selected Quote fails before RFQ Finality, the Seller may promote a still-valid Eligible Quote from a Seller-Controlled Fallback Queue. If required, an Auditor or Regulator receives a Scoped Compliance Receipt rather than the full RFQ workflow.
 
-The MVP is positioned for Track 1: Private DeFi & Capital Markets, with invoice financing / Receivable Sales as the use case. It must not overclaim production payment finality, production custody, production legal assignment, Debtor enforceability, ZK proofs, cryptographic blind auction behavior, Funding Locks, escrow, stablecoin settlement, Canton Coin/Amulet integration, or real bank settlement.
+The MVP is positioned for Track 1: Private DeFi & Capital Markets, with invoice financing / Receivable Sales as the use case. It must not overclaim production payment finality, production custody, production legal assignment, Debtor enforceability, ZK proofs, cryptographic blind auction behavior, escrow, stablecoin settlement, Canton Coin/Amulet integration, or real bank settlement.
 
 ## Why Canton
 
@@ -47,13 +47,13 @@ The MVP is successful if:
 8. As a Seller, I want Compliance Party eligibility attestations, so that only compliant participants and transactions proceed.
 9. As a Seller, I want optional Risk Attestations, so that Funders can price risk without unnecessary raw data exposure.
 10. As a Seller, I want Private Quotes to pass a Proof-of-Funds Gate, so that I do not compare quotes with no funding-capacity evidence.
-11. As a Seller, I want Proof of Funds to be bid eligibility evidence only, so that the product does not overclaim that funds are locked, reserved, escrowed, or guaranteed.
+11. As a Seller, I want Private Quotes backed by committed CIP-56 allocation evidence, so that quote funding is reserved for the RFQ context without overclaiming escrow, custody, bank settlement, production payment finality, or guaranteed settlement completion.
 12. As a Seller, I want a Seller Quote View, so that I can compare Eligible Quotes without receiving raw Proof-of-Funds evidence or Funder balances by default.
-13. As a Seller, I want the Seller Quote View to show Net Purchase Price, settlement timing, recourse model, fees, reserves or holdbacks, Required Disclosure, Debtor Notification requirement, Compliance status, and funding evidence status, so that I can select the Best Compliant Quote.
+13. As a Seller, I want the Seller Quote View to show Net Purchase Price, recourse model, Debtor Notification requirement, Quote Expiry, Compliance status, and funding allocation evidence, so that I can compare the implemented MVP quote terms without seeing raw Funder balances or funding sources.
 14. As a Seller, I want Funder identity hidden by default in the Seller Quote View, so that unnecessary Funder identity disclosure is avoided.
 15. As a Seller, I want Funder identity disclosed only when required by selection, compliance, settlement, audit, regulation, or RFQ terms, so that disclosure has a defined purpose.
 16. As a Seller, I want to select the Best Compliant Quote based on Selection Criteria, so that I am not forced to select the highest headline price.
-17. As a Seller, I want Required Disclosure to be part of a Private Quote's commercial terms, so that I can account for privacy cost when comparing quotes.
+17. As a Seller, I want the MVP to preserve the product principle that disclosure burden can affect quote attractiveness, even though the implemented Phase 2 quote terms do not include a separate Required Disclosure field.
 18. As a Seller, I want Debtor Notification requirements to be quote terms, so that I can choose between confidential and disclosed Receivable Sale paths where allowed.
 19. As a Seller, I want Private Quotes to have Quote Expiry, so that quote validity is explicit and bounded.
 20. As a Seller, I want Private Quotes to be Binding Quotes during the Quote Validity Period under demo workflow rules, so that fallback and selection behavior is credible in the MVP.
@@ -67,7 +67,7 @@ The MVP is successful if:
 28. As a Funder, I want to receive only the RFQ Disclosure Package I am entitled to see, so that I can evaluate the Receivable without seeing unnecessary Seller or Debtor data.
 29. As a Funder, I want to submit a Private Quote, so that my commercial terms are not visible to competing Funders.
 30. As a Funder, I want my Private Quote hidden from the Coordinator by default, so that workflow routing does not imply quote visibility.
-31. As a Funder, I want to include Net Purchase Price, settlement timing, recourse, fees, reserve or holdback, Required Disclosure, Debtor Notification requirement, Quote Expiry, and funding evidence status in my Private Quote, so that the Seller can evaluate my offer as a complete commercial package.
+31. As a Funder, I want to include Net Purchase Price, recourse model, Debtor Notification requirement, Quote Expiry, and committed funding allocation evidence in my Private Quote, so that the Seller can evaluate the implemented MVP quote package.
 32. As a Funder, I want to provide funding evidence status or attestation without exposing raw balances or funding sources to the Seller by default, so that funding evidence remains scoped.
 33. As a Funder, I want to see my own quote outcome, so that I know whether my quote was selected, unselected, expired, or used as fallback.
 34. As a Funder, I want competing Funders to be unable to see my Private Quote, so that my pricing strategy and terms remain confidential.
@@ -106,12 +106,12 @@ The MVP is successful if:
 - Keep Coordinators as workflow routers by default, not quote-visible marketplace operators.
 - Provide an attestation-first RFQ Disclosure Package with Core Pre-Quote Facts.
 - Treat Debtor Notification as optional and disclosure-controlled.
-- Require Proof of Funds as bid eligibility evidence for Private Quotes.
-- Do not treat Proof of Funds as a Funding Lock, reserve, escrow, Quote Bond, settlement guarantee, single-use proof, or guarantee that funds remain available at settlement.
+- Require committed CIP-56 allocation evidence for Private Quotes in Phase 2.
+- Do not treat committed allocation evidence as escrow, custody, bank settlement, production payment finality, Quote Bond, or a guarantee that settlement will complete.
 - Provide a Seller Quote View as the MVP quote-selection surface.
-- Hide full Funder identity by default in Seller Quote View unless disclosure is required by Selection Criteria, Required Disclosure, compliance, settlement, audit, regulation, or RFQ terms.
+- Hide full Funder identity by default in Seller Quote View unless disclosure is required by Selection Criteria, compliance, settlement, audit, regulation, or RFQ terms.
 - Allow the Seller to select the Best Compliant Quote using Selection Criteria rather than highest headline price alone.
-- Treat Required Disclosure as part of Quote Terms and therefore part of the commercial comparison.
+- Treat disclosure burden as a commercial factor in the product story, while keeping the implemented Phase 2 Quote Terms limited to Net Purchase Price, recourse model, Debtor Notification requirement, Quote Expiry, and committed allocation evidence.
 - Use Binding Quotes with Quote Expiry during the MVP, binding under demo workflow rules only.
 - Use a Seller-Controlled Fallback Queue for still-valid Eligible Quotes if the Selected Quote fails before RFQ Finality.
 - Use On-Ledger Demo Settlement with a Demo Settlement Asset to show a represented Receivable assignment and demo payment transfer as application workflow state transitions.

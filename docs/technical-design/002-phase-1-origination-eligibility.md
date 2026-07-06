@@ -250,7 +250,7 @@ Certificate visibility is still a Phase 2 concern. Today the certificates are Se
 
 For Phase 1, `RFQRequest` means ready to open, not already open to the market. Phase 2 decides how it becomes visible to Funders and how package access works.
 
-All Funder-interested disclosed business information should live inside `RFQPackageData`; fields outside it should exist only for technical linking, authorization, and validation. The Phase 1 `RFQPackageData` baseline is `receivableTerms`, `riskTier`, and `responseDeadline`. Do not include a Seller-authored `complianceOk` boolean; compliance readiness is validated on-ledger by fetching and checking `ComplianceCertificate`.
+All Funder-interested disclosed business information should live inside `RFQPackageData`; fields outside it should exist only for technical linking, authorization, and validation. The current `RFQPackageData` baseline is `receivableTerms`, `riskTier`, `responseDeadline`, `paymentInstrumentAdmin`, and `paymentInstrumentId`. Do not include a Seller-authored `complianceOk` boolean; compliance readiness is validated on-ledger by fetching and checking `ComplianceCertificate`.
 
 Funder discovery and routing are out of scope for the MVP ledger model. In a production or later-branch design, Funders may arrive through a public platform, private Seller invitation, broker/third-party workflow, or another off-ledger channel. For the local MVP, parties are simulated locally, so per-Funder request instances can be tested without deciding the off-ledger sourcing path.
 
