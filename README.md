@@ -41,6 +41,7 @@ npm run dev   # http://localhost:3000
 - `docs/technical-design/001-high-level-technical-design.md` — first implementation-oriented high-level technical design note.
 - `docs/technical-design/002-phase-1-origination-eligibility.md` — Phase 1 ledger design and implementation notes.
 - `docs/technical-design/003-phase-2-private-quote-intake.md` — Phase 2 Private Quote intake and CIP-56 allocation design notes.
+- `docs/technical-design/004-workflow-diagrams.md` — diagram-first technical workflow summary for the implemented Phase 1 and Phase 2 ledger flow.
 - `docs/adr/0001-receivable-sale-rfq-mvp.md` — model the MVP as a Receivable Sale, not a secured loan.
 - `docs/adr/0002-maximum-practical-privacy-for-rfqs.md` — target Maximum Practical Privacy for RFQs.
 - `docs/adr/0003-functionality-preserving-privacy.md` — preserve real-world RFQ functionality before optimizing privacy.
