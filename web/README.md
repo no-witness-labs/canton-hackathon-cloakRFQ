@@ -1,10 +1,12 @@
 # CloakRFQ Receipts — Next.js demo
 
-Frontend demo of **CloakRFQ Receipts**: a private, functionality-preserving RFQ
-marketplace for **Receivable Sales** on Canton. This is a **placeholder /
-mocked** UI — there is no ledger behind it yet. Its job is to make the
-documented workflow and its multi-party selective-disclosure story
-understandable in three minutes (see `../docs/`).
+Frontend for **CloakRFQ Receipts**: a private, functionality-preserving RFQ
+marketplace for **Receivable Sales** on Canton. The UI is **live-backed** — each
+action submits a real Daml transaction to a Canton participant (a local sandbox
+or DevNet) and reads back per-party contract visibility. The wallet connector is
+a simulated demo (no browser key-signing); authorization is handled server-side
+per party. Its job is to make the Phase 1 origination workflow and its
+multi-party selective-disclosure story understandable in a few minutes.
 
 The UI is built to match the design prototype `CloakRFQ.dc.html` (the visual +
 UX source of truth) and its `handoff/` spec.

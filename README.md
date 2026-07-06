@@ -18,10 +18,11 @@ built to match the design prototype `CloakRFQ.dc.html`. A single workspace
 with a **role switcher** across all seven Canton parties (Seller, Funder A/B/C,
 Compliance, Risk Assessor, Coordinator, Auditor/Regulator, Outsider) shows the
 same RFQ from each party's entitled view — demonstrating selective disclosure,
-the happy path, the failure/fallback branch, and a wallet connector that joins
-as the party for the selected role. All data is **mocked client-side** (no
-Daml/ledger yet); the per-role visibility rules in `web/lib/store.tsx` are where
-Canton on-ledger enforcement slots in. See `web/README.md` for details.
+the Phase 1 origination flow, and a simulated wallet connector that acts as the
+party for the selected role. The UI is **live-backed**: each action submits a
+real Daml transaction to a Canton participant (local sandbox or DevNet) and reads
+back per-party contract visibility — the selective disclosure is enforced
+on-ledger, not mocked. See `web/README.md` for details.
 
 ```bash
 cd web
