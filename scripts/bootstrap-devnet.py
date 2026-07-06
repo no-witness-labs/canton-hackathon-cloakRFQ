@@ -26,7 +26,7 @@ AUD       = os.environ.get("CLOAKRFQ_OIDC_AUDIENCE", CID)
 SCOPE     = os.environ.get("CLOAKRFQ_OIDC_SCOPE", "daml_ledger_api")
 USER_ID   = os.environ.get("CLOAKRFQ_LEDGER_USER_ID", "6")  # the Daml user the token maps to
 ROOT      = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DAR       = os.path.join(ROOT, "ledger", ".daml", "dist", "cloakrfq-ledger-0.1.0.dar")
+DAR       = os.path.join(ROOT, "ledger", "contracts", ".daml", "dist", "cloakrfq-contracts-0.1.0.dar")
 
 ROLES = {
     "seller": "cloakrfqSeller", "funderA": "cloakrfqFunderA", "funderB": "cloakrfqFunderB",
@@ -97,7 +97,7 @@ def main():
     code, _ = api(tok, "POST", f"/v2/users/{USER_ID}/rights", json.dumps({"userId": USER_ID, "rights": rights}).encode())
     print(f"{'✓' if code == 200 else '✗'} granted CanActAs x{len(rights)} to user {USER_ID} (HTTP {code})")
 
-    cfg = {"jsonApiUrl": LEDGER, "packageRef": "#cloakrfq-ledger", "userId": USER_ID, "parties": parties}
+    cfg = {"jsonApiUrl": LEDGER, "packageRef": "#cloakrfq-contracts", "userId": USER_ID, "parties": parties}
     out = os.path.join(ROOT, "web", "public", "ledger-config.json")
     open(out, "w").write(json.dumps(cfg, indent=2))
     print(f"✓ wrote {out}")
