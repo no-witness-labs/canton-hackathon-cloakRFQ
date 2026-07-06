@@ -3,7 +3,7 @@
 import { Icon, type IconName } from '@/lib/icons';
 import { useState, useEffect, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { subscribeTx, getTxLog, getTxVersion, isSessionMode, newSession, explorerTxUrl } from '@/lib/ledger';
+import { subscribeTx, getTxLog, getTxVersion, isSessionMode, newSession } from '@/lib/ledger';
 import {
   useStore, ROLES, LEGEND, BOUNDARY, truncParty, usd, FUNDER_PARTY_NAMES,
   type ReceivableForm, type RiskTier, type ComplianceView, type RiskView, type RFQRequestView,
@@ -107,16 +107,14 @@ const toastLinkStyle: React.CSSProperties = { marginLeft: 12, paddingLeft: 12, b
 function Toast() {
   const { state } = useStore();
   if (!state.toast) return null;
-  // On DevNet, deep-link the real transaction on the 5N Lighthouse explorer;
-  // off DevNet (local sandbox) fall back to the in-app Activity view.
-  const ext = state.toastTx ? explorerTxUrl(state.toastTx) : null;
+  // The /tx page waits for the explorer to index the tx, then forwards — so a
+  // fresh transaction never lands on a 404. (It routes to Activity off DevNet.)
   return (
     <div className="toast">
       <span className="dot" style={{ background: state.toastColor }} />
       <span>{state.toast}</span>
-      {state.toastTx && (ext
-        ? <a href={ext} target="_blank" rel="noopener noreferrer" style={toastLinkStyle}>Explore transaction ↗</a>
-        : <Link href={`/activity?tx=${state.toastTx}`} style={toastLinkStyle}>View in Activity →</Link>
+      {state.toastTx && (
+        <a href={`/tx/${state.toastTx}`} target="_blank" rel="noopener noreferrer" style={toastLinkStyle}>Explore transaction ↗</a>
       )}
     </div>
   );
