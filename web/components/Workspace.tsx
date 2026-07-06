@@ -4,6 +4,13 @@ import { Icon, type IconName } from '@/lib/icons';
 import { useState, useEffect, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { subscribeTx, getTxLog, getTxVersion, isSessionMode, newSession } from '@/lib/ledger';
+import {
+  useStore, ROLES, LEGEND, BOUNDARY, truncParty, usd, FUNDER_PARTY_NAMES,
+  type ReceivableForm, type RiskTier, type ComplianceView, type RiskView, type RFQRequestView,
+} from '@/lib/store';
+
+const TIER_LABEL: Record<string, string> = { LowRisk: 'Low risk', MediumRisk: 'Medium risk', HighRisk: 'High risk' };
+const fmtAmount = (n: number, ccy: string) => `${usd(n)} ${ccy}`;
 
 function NewDealButton() {
   if (!isSessionMode()) return null;
@@ -14,10 +21,6 @@ function NewDealButton() {
     </button>
   );
 }
-import {
-  useStore, ROLES, LEGEND, BOUNDARY, DLEVELS, calc, truncParty, usd,
-  type Role, type Quote, type ReceivableForm, type AttView,
-} from '@/lib/store';
 
 function TxIndicator() {
   useSyncExternalStore(subscribeTx, getTxVersion, getTxVersion);
@@ -47,7 +50,7 @@ export default function Workspace() {
       <h1 className="disp" style={{ fontSize: 20, fontWeight: 700 }}>Sandbox not ready</h1>
       <p className="t-ink3" style={{ marginTop: 8 }}>The Canton ledger isn&apos;t reachable. Bring it up, then reload:</p>
       <pre style={{ background: 'var(--panel)', padding: 14, borderRadius: 10, marginTop: 10, color: 'var(--ink2)' }}>./scripts/start-sandbox.sh</pre>
-      <p className="t-mut" style={{ marginTop: 8, fontSize: 13 }}>This Workspace now reads live contracts; the per-party proof is at <b>/ledger</b>.</p>
+      <p className="t-mut" style={{ marginTop: 8, fontSize: 13 }}>This Workspace reads live Phase 1 contracts; the per-party proof is at <b>/ledger</b>.</p>
     </div>
   );
 
@@ -59,7 +62,7 @@ export default function Workspace() {
             <span className="brand-mark"><Icon name="lock" size={17} /></span>
             <div>
               <div className="brand-name">Cloak<span>RFQ</span> <span className="rec">Receipts</span></div>
-              <div className="brand-sub">Private RFQ · Canton</div>
+              <div className="brand-sub">Private RFQ · Canton · Phase 1</div>
             </div>
           </div>
           <span className="spacer" />
@@ -87,8 +90,8 @@ export default function Workspace() {
       <main className="main">
         {role === 'seller' && <SellerView />}
         {role === 'funder' && <FunderView />}
-        {role === 'compliance' && <ComplianceView />}
-        {role === 'risk' && <RiskView />}
+        {role === 'compliance' && <ComplianceRoleView />}
+        {role === 'risk' && <RiskRoleView />}
         {role === 'coordinator' && <CoordinatorView />}
         {role === 'auditor' && <AuditorView />}
         {role === 'outsider' && <OutsiderView />}
@@ -122,12 +125,12 @@ function WalletConnector() {
     ? [
         { k: 'Party', v: 'None — connected as a non-party', color: '#e8c15f' },
         { k: 'Ledger', v: 'Canton Devnet · demo', color: '#cdd2db' },
-        { k: 'Entitlements', v: 'No RFQ, quote, identity or settlement visibility', color: '#9aa1ad' },
+        { k: 'Entitlements', v: 'No Receivable, attestation or RFQ visibility', color: '#9aa1ad' },
       ]
     : [
         { k: 'Party ID', v: wParty.id, color: '#cdd2db' },
         { k: 'Participant node', v: wParty.node, color: '#cdd2db' },
-        { k: 'Ledger', v: 'Canton Devnet · Demo Settlement Asset', color: '#cdd2db' },
+        { k: 'Ledger', v: 'Canton Devnet · CloakRFQ Phase 1', color: '#cdd2db' },
         { k: 'Scoped to', v: LEGEND[role].sees, color: '#9aa1ad' },
       ];
   const providers: { id: string; label: string; sub: string; icon: IconName; sw?: number }[] = [
@@ -197,22 +200,12 @@ function WalletConnector() {
                     </button>
                   ))}
                 </div>
-                <div className="w-foot">Demo Settlement Asset · Canton Devnet — non-production. No real custody or signing.</div>
+                <div className="w-foot">CloakRFQ Phase 1 · Canton Devnet — non-production. No real custody or signing.</div>
               </>
             )}
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-function Stat({ k, v, s, accent }: { k: string; v: string; s?: string; accent?: boolean }) {
-  return (
-    <div className={'stat' + (accent ? ' accent' : '')}>
-      <div className="k">{k}</div>
-      <div className="v">{v}</div>
-      {s && <div className="s">{s}</div>}
     </div>
   );
 }
@@ -227,7 +220,6 @@ function Seg({ opts, val, onPick }: { opts: { label: string; value: string | num
   );
 }
 
-/* ============================ SELLER ============================ */
 const fieldInput: React.CSSProperties = { background: 'rgba(255,255,255,.03)', border: '1px solid var(--line3)', color: 'var(--ink)', borderRadius: 8, padding: '9px 11px', fontSize: 13, fontFamily: 'inherit', width: '100%', outline: 'none' };
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -245,44 +237,63 @@ function StatusRow({ k, v, ok }: { k: string; v: string; ok: boolean }) {
     </div>
   );
 }
+const attRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 0', borderBottom: '1px solid var(--line3)' };
 
+/* ============================ SELLER ============================ */
 function ReceivableForm({ onCreate }: { onCreate: (r: ReceivableForm) => void }) {
   const [f, setF] = useState<ReceivableForm>({
-    ref: 'RCV-9F2A', invoiceId: 'INV-4471', faceValue: 480000, currency: 'USD', daysToDue: 45,
-    debtorName: 'Meridian Retail Group', recoursePreference: 'Negotiable', settlementPreference: 'T+2',
+    invoiceId: 'INV-4471', debtorName: 'Meridian Retail Group',
+    payableAmount: 480000, currency: 'USD',
+    issueDate: '2026-01-01', dueDate: '2026-02-15', paymentTerms: 'Net 45',
+    buyerReference: 'AP-DEPT-42', purchaseOrderReference: 'PO-98776', sourceSystemReference: 'NETSUITE-AR-10031',
   });
   const set = (p: Partial<ReceivableForm>) => setF((s) => ({ ...s, ...p }));
-  const valid = f.ref.trim() !== '' && f.debtorName.trim() !== '' && f.faceValue > 0 && f.daysToDue >= 0;
+  const valid = f.invoiceId.trim() !== '' && f.debtorName.trim() !== '' && f.payableAmount > 0 && f.issueDate !== '' && f.dueDate !== '';
   return (
     <section className="panel">
-      <div className="panel-h"><h2 className="lg">New Receivable</h2><span className="spacer" /><span className="chip ghost">Seller-only</span></div>
+      <div className="panel-h"><h2 className="lg">Register Receivable</h2><span className="spacer" /><span className="chip ghost">Seller-only · registrar = owner</span></div>
       <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 11 }}>
-          <Field label="Reference"><input style={fieldInput} value={f.ref} onChange={(e) => set({ ref: e.target.value })} /></Field>
           <Field label="Invoice ID"><input style={fieldInput} value={f.invoiceId} onChange={(e) => set({ invoiceId: e.target.value })} /></Field>
-          <Field label="Face value"><input style={fieldInput} type="number" value={f.faceValue} onChange={(e) => set({ faceValue: Number(e.target.value) })} /></Field>
+          <Field label="Payment terms"><input style={fieldInput} value={f.paymentTerms} onChange={(e) => set({ paymentTerms: e.target.value })} /></Field>
+          <Field label="Payable amount"><input style={fieldInput} type="number" value={f.payableAmount} onChange={(e) => set({ payableAmount: Number(e.target.value) })} /></Field>
           <Field label="Currency"><input style={fieldInput} value={f.currency} onChange={(e) => set({ currency: e.target.value })} /></Field>
-          <Field label="Days to due"><input style={fieldInput} type="number" value={f.daysToDue} onChange={(e) => set({ daysToDue: Number(e.target.value) })} /></Field>
-          <Field label="Settlement pref"><input style={fieldInput} value={f.settlementPreference} onChange={(e) => set({ settlementPreference: e.target.value })} /></Field>
+          <Field label="Issue date"><input style={fieldInput} type="date" value={f.issueDate} onChange={(e) => set({ issueDate: e.target.value })} /></Field>
+          <Field label="Due date"><input style={fieldInput} type="date" value={f.dueDate} onChange={(e) => set({ dueDate: e.target.value })} /></Field>
         </div>
         <Field label="Debtor — raw identity, stays with you"><input style={fieldInput} value={f.debtorName} onChange={(e) => set({ debtorName: e.target.value })} /></Field>
-        <Field label="Recourse preference">
-          <Seg opts={[{ label: 'Recourse', value: 'Recourse' }, { label: 'Non-recourse', value: 'Non-recourse' }, { label: 'Negotiable', value: 'Negotiable' }]} val={f.recoursePreference} onPick={(v) => set({ recoursePreference: String(v) })} />
-        </Field>
-        <button className="btn accent block" disabled={!valid} onClick={() => onCreate(f)}><Icon name="plus" size={16} sw={2.4} /> Create Receivable</button>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 11 }}>
+          <Field label="Buyer ref"><input style={fieldInput} value={f.buyerReference} onChange={(e) => set({ buyerReference: e.target.value })} /></Field>
+          <Field label="PO ref"><input style={fieldInput} value={f.purchaseOrderReference} onChange={(e) => set({ purchaseOrderReference: e.target.value })} /></Field>
+          <Field label="Source system"><input style={fieldInput} value={f.sourceSystemReference} onChange={(e) => set({ sourceSystemReference: e.target.value })} /></Field>
+        </div>
+        <button className="btn accent block" disabled={!valid} onClick={() => onCreate(f)}><Icon name="plus" size={16} sw={2.4} /> Register Receivable</button>
       </div>
     </section>
   );
 }
 
-function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; risk: AttView | null; comp: AttView | null }) {
+function AttestStatus({ risk, comp }: { risk: RiskView | null; comp: ComplianceView | null }) {
+  const compVal = comp ? (comp.sellerEligible && comp.rfqEligible ? 'Eligible' : 'Not eligible') : 'Not issued';
+  const riskVal = risk ? TIER_LABEL[risk.riskTier] ?? risk.riskTier : 'Not issued';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <StatusRow k="Compliance attestation" v={compVal} ok={!!comp && comp.sellerEligible && comp.rfqEligible} />
+      <StatusRow k="Risk attestation" v={riskVal} ok={!!risk} />
+    </div>
+  );
+}
+
+function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; risk: RiskView | null; comp: ComplianceView | null }) {
   const [funders, setFunders] = useState<string[]>(['A', 'B', 'C']);
   const toggle = (k: string) => setFunders((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
+  const eligible = !!comp && comp.sellerEligible && comp.rfqEligible;
+  const ready = eligible && !!risk && funders.length > 0;
   return (
     <section className="panel">
-      <div className="panel-h"><h2 className="lg">Open Blind RFQ</h2><span className="spacer" /><span className="chip ghost">attestation-first</span></div>
+      <div className="panel-h"><h2 className="lg">Open RFQ</h2><span className="spacer" /><span className="chip ghost">certificate-backed</span></div>
       <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-        <p className="t-ink3" style={{ fontSize: 12.5, lineHeight: 1.5 }}>Invite Funders to quote. They receive the risk/eligibility <b>statuses</b> only — never the raw Debtor identity or invoice document.</p>
+        <p className="t-ink3" style={{ fontSize: 12.5, lineHeight: 1.5 }}>Opening the RFQ derives a <b>Compliance Certificate</b> and <b>Risk Certificate</b> from the attestations, then creates one private <b>RFQRequest</b> per invited Funder — each Funder sees only its own.</p>
         <Field label="Invite Funders">
           <div style={{ display: 'flex', gap: 8 }}>
             {['A', 'B', 'C'].map((k) => (
@@ -290,57 +301,55 @@ function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; r
             ))}
           </div>
         </Field>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <StatusRow k="Debtor risk (carried in)" v={risk ? risk.result : 'Unrated — no Risk Attestation'} ok={!!risk} />
-          <StatusRow k="Eligibility (carried in)" v={comp ? 'Verified' : 'Unverified — no Compliance Attestation'} ok={!!comp} />
-        </div>
-        <button className="btn accent block" disabled={funders.length === 0} onClick={() => onOpen(funders)}><Icon name="send" size={16} sw={2.4} /> Open RFQ to {funders.length} Funder{funders.length === 1 ? '' : 's'}</button>
+        <AttestStatus risk={risk} comp={comp} />
+        {!eligible && comp && <p className="t-red" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Compliance marked the package not eligible — the certificate choice will reject. Re-issue an eligible attestation to proceed.</p>}
+        <button className="btn accent block" disabled={!ready} onClick={() => onOpen(funders)}>
+          <Icon name="send" size={16} sw={2.4} /> Open RFQ to {funders.length} Funder{funders.length === 1 ? '' : 's'}
+        </button>
+        {(!comp || !risk) && <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Issue both attestations first — from the <b>Compliance</b> and <b>Risk Assessor</b> roles.</p>}
       </div>
     </section>
   );
 }
 
-function StepHint({ title, body, risk, comp }: { title: string; body: string; risk: AttView | null; comp: AttView | null }) {
+function StepHint({ title, body, risk, comp }: { title: string; body: string; risk: RiskView | null; comp: ComplianceView | null }) {
   return (
     <section className="panel">
       <div className="panel-h"><h2 className="lg">{title}</h2></div>
       <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.55 }}>{body}</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <StatusRow k="Compliance attestation" v={comp ? comp.result : 'Not issued'} ok={!!comp} />
-          <StatusRow k="Risk attestation" v={risk ? risk.result : 'Not issued'} ok={!!risk} />
-        </div>
-        <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Tip: issue these from the <b>Compliance</b> and <b>Risk Assessor</b> roles — they&apos;re carried into the RFQ.</p>
+        <AttestStatus risk={risk} comp={comp} />
+        <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Tip: issue these from the <b>Compliance</b> and <b>Risk Assessor</b> roles — they&apos;re certified into the RFQ.</p>
       </div>
     </section>
   );
 }
 
 function SellerView() {
-  const { state, eligible, excludedQ, createReceivable, openRFQ } = useStore();
+  const { state, createReceivable, openRFQ } = useStore();
   const rcv = state.receivable;
-  const { riskAtt: risk, complianceAtt: comp } = state;
+  const { risk, compliance: comp } = state;
 
-  // Step 1 — originate the Receivable
+  // Step 1 — register the Receivable
   if (!rcv) return (
     <div className="grid-seller">
       <div className="col"><ReceivableForm onCreate={createReceivable} /></div>
-      <div className="col"><StepHint title="Step 1 · Originate" body="Create the Receivable you want to finance. It is private to you on the ledger — the raw Debtor identity never leaves this contract. Next you'll open a Blind RFQ to invited Funders." risk={risk} comp={comp} /></div>
+      <div className="col"><StepHint title="Step 1 · Originate" body="Register the Receivable you want to finance. It is private to you on the ledger (registrar == owner) — the raw Debtor identity never leaves this contract. Next, gather the Compliance and Risk attestations, then open the RFQ." risk={risk} comp={comp} /></div>
     </div>
   );
 
   const left = (
     <div className="col">
       <section className="panel">
-        <div className="panel-h"><h2>Receivable</h2><span className="spacer" /><span className="h-tag">{rcv.ref}</span></div>
+        <div className="panel-h"><h2>Receivable</h2><span className="spacer" /><span className="h-tag">{rcv.invoiceId}</span></div>
         <div className="panel-b">
-          <div className="face">{usd(rcv.faceValue)}</div>
-          <div className="t-ink3" style={{ fontSize: 12.5, marginTop: 3 }}>Face value · {rcv.currency} · {rcv.invoiceId}</div>
+          <div className="face">{usd(rcv.payableAmount)}</div>
+          <div className="t-ink3" style={{ fontSize: 12.5, marginTop: 3 }}>Payable · {rcv.currency} · {rcv.paymentTerms}</div>
           <div className="meta-grid">
-            <div className="meta"><div className="k">Due</div><div className="v">in {rcv.daysToDue} days</div></div>
-            <div className="meta"><div className="k">Recourse pref</div><div className="v">{rcv.recoursePreference}</div></div>
-            <div className="meta"><div className="k">Validity</div><div className="v t-accent" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Icon name="check" size={13} sw={2.5} />Verified</div></div>
-            <div className="meta"><div className="k">Settle pref</div><div className="v">{rcv.settlementPreference}</div></div>
+            <div className="meta"><div className="k">Issued</div><div className="v mono">{rcv.issueDate}</div></div>
+            <div className="meta"><div className="k">Due</div><div className="v mono">{rcv.dueDate}</div></div>
+            <div className="meta"><div className="k">Buyer ref</div><div className="v">{rcv.buyerReference ?? '—'}</div></div>
+            <div className="meta"><div className="k">PO ref</div><div className="v">{rcv.purchaseOrderReference ?? '—'}</div></div>
           </div>
         </div>
       </section>
@@ -349,8 +358,8 @@ function SellerView() {
         <div className="panel-h"><h2>Debtor</h2></div>
         <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Identity (to you)</span><span style={{ fontSize: 13, fontWeight: 600 }}>{rcv.debtorName}</span></div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span>{risk ? <span className="chip accent">{risk.result}</span> : <span className="chip ghost">pending</span>}</div>
-          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>Funders receive the <span className="t-ink3">Debtor Risk Attestation</span> — not the raw Debtor identity — before quoting.</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span>{risk ? <span className="chip accent">{TIER_LABEL[risk.riskTier] ?? risk.riskTier}</span> : <span className="chip ghost">pending</span>}</div>
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>Funders receive the certified <span className="t-ink3">risk tier</span> — not the raw Debtor identity.</p>
         </div>
       </section>
 
@@ -368,7 +377,7 @@ function SellerView() {
     </div>
   );
 
-  // Step 2 — open the Blind RFQ
+  // Step 2 — gather attestations & open the RFQ
   if (!state.rfqOpen) return (
     <div className="grid-seller">
       {left}
@@ -376,215 +385,64 @@ function SellerView() {
     </div>
   );
 
-  // Step 3+ — quote view
+  // Step 3 — RFQ open: certificates derived, per-Funder requests created
   return (
     <div className="grid-seller">
       {left}
       <div className="col">
         <div className="hook">
-          <span className="hook-ic"><Icon name="plus" size={16} /></span>
+          <span className="hook-ic"><Icon name="check" size={16} /></span>
           <div>
-            <div className="t">Disclosure is part of the price.</div>
-            <div className="s">The lowest all-in cost isn&apos;t always the Best Compliant Quote — recourse, settlement, debtor notification and required disclosure are priced in too.</div>
+            <div className="t">RFQ package assembled.</div>
+            <div className="s">Two Seller-derived certificates back the request, and each Funder received its own private RFQRequest — hidden from every other Funder.</div>
           </div>
         </div>
 
         <section className="panel">
+          <div className="panel-h"><h2 className="lg">Certificates</h2><span className="spacer" /><span className="chip ghost">Seller-derived</span></div>
+          <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <StatusRow k="Compliance certificate" v={comp?.certified ? 'Derived' : 'Pending'} ok={!!comp?.certified} />
+            <StatusRow k="Risk certificate" v={risk?.certified ? 'Derived' : 'Pending'} ok={!!risk?.certified} />
+            <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>Each certificate exposes only the Funder-visible certified terms — not the full compliance disclosure or raw risk data.</p>
+          </div>
+        </section>
+
+        <section className="panel">
           <div className="panel-h">
-            <h2 className="lg">Seller Quote View</h2>
-            <span className="h-tag">{eligible.length} eligible</span>
+            <h2 className="lg">Per-Funder RFQ requests</h2>
+            <span className="h-tag">{state.requests.length} sent</span>
             <span className="spacer" />
-            <span className="chip ghost"><Icon name="eyeoff" size={12} /> identities hidden</span>
+            <span className="chip ghost"><Icon name="eyeoff" size={12} /> Funders isolated</span>
           </div>
-
-          <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {eligible.length === 0 && <div className="t-mut" style={{ fontSize: 12.5, padding: '8px 2px', lineHeight: 1.5 }}>No Private Quotes yet. Switch to a <b>Funder</b> to submit one against this RFQ.</div>}
-            {eligible.map((q) => <QuoteCard key={q.key} q={q} />)}
-            {excludedQ && (
-              <div className="excluded">
-                <Icon name="xcircle" size={16} color="#f0795f" />
-                <div className="t-ink3" style={{ fontSize: 12 }}><span className="t-ink2" style={{ fontWeight: 600 }}>{excludedQ.label} · {excludedQ.net}</span> — highest headline price, but <span className="t-red">failed the Proof-of-Funds Gate</span>. Not shown as an Eligible Quote.</div>
-              </div>
-            )}
+          <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {state.requests.map((r) => <RFQRequestCard key={r.cid} r={r} />)}
+            <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Quoting, selection and settlement are Phase 2/3 — not on the ledger yet. Phase 1 ends with these private requests. Verify per-party isolation on <b>/ledger</b>.</p>
           </div>
-
-          <div className="action"><ActionZone /></div>
         </section>
       </div>
     </div>
   );
 }
 
-function QuoteCard({ q }: { q: Quote }) {
-  const { state, fallbackUsed } = useStore();
-  const ph = state.phase;
-  const isSelected = state.selected === q.key;
-  const fbPos = state.fallback.indexOf(q.key);
-  const isFallback = fbPos >= 0;
-  const isWinner = state.winner === q.key;
-  const settled = ph === 'settled';
-
-  let statusLabel = 'Eligible · pending', statusColor = '#9aa1ad';
-  if (settled) { if (isWinner) { statusLabel = 'Winner · settled'; statusColor = '#57e3a0'; } else { statusLabel = 'Unselected'; statusColor = '#6b7280'; } }
-  else if (ph === 'failed') { if (isSelected) { statusLabel = 'Commitment failure'; statusColor = '#f0795f'; } else if (isFallback) { statusLabel = 'Fallback #' + (fbPos + 1); statusColor = '#e8c15f'; } else { statusLabel = 'Unselected'; statusColor = '#6b7280'; } }
-  else if (ph === 'settling') { if (state.settleVia === q.key) { statusLabel = 'Settling…'; statusColor = '#e8c15f'; } else if (isFallback) { statusLabel = 'Fallback #' + (fbPos + 1); statusColor = '#e8c15f'; } else { statusLabel = 'Pending'; statusColor = '#6b7280'; } }
-  else if (ph === 'selected') { if (isSelected) { statusLabel = 'Best Compliant Quote'; statusColor = '#57e3a0'; } else if (isFallback) { statusLabel = 'Fallback #' + (fbPos + 1); statusColor = '#e8c15f'; } else { statusLabel = 'Eligible'; statusColor = '#6b7280'; } }
-
-  const hot = ((ph === 'selected' || ph === 'failed') && isSelected) || (settled && isWinner);
-  const dim = settled && !isWinner;
-  const cls = 'qcard' + (hot ? ' hot' : isFallback && ph !== 'quoting' ? ' fb' : '') + (dim ? ' dim' : '');
-  const tagColor = statusColor === '#6b7280' || statusColor === '#9aa1ad' ? '#9aa1ad' : '#0c1217';
-  const nameShown = isWinner && settled ? q.name : 'Funder · ' + q.label;
-  const idNote = isWinner && settled ? 'identity disclosed — your counterparty' : 'pseudonymous';
-
+function RFQRequestCard({ r }: { r: RFQRequestView }) {
   return (
-    <div className={cls}>
-      <span className="qtag" style={{ background: statusColor, color: tagColor }}>{statusLabel}</span>
+    <div className="qcard">
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 13 }}>
-        <span className="q-av">{q.label}</span>
+        <span className="q-av">{FUNDER_PARTY_NAMES[r.funderKey]?.[0] ?? r.funderKey}</span>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div className="q-name">{nameShown}</div>
-          <div className="q-id-note">{idNote}</div>
+          <div className="q-name">Funder {r.funderKey} · {FUNDER_PARTY_NAMES[r.funderKey] ?? '—'}</div>
+          <div className="q-id-note">private RFQRequest · observer = this Funder only</div>
         </div>
         <div style={{ textAlign: 'right', flex: 'none' }}>
-          <div className="q-net">{q.net}</div>
-          <div className="q-net-sub">net · {q.disc} disc</div>
+          <div className="q-net">{usd(r.payableAmount)}</div>
+          <div className="q-net-sub">{r.currency} certified</div>
         </div>
       </div>
-
-      <div className="q-stats">
-        <Stat k="Advance" v={q.adv} s={q.advAmt} />
-        <Stat k="Reserve" v={q.reserve} s="on debtor pay" />
-        <Stat k="All-in cost" v={q.allIn} s={`${q.allInPct} of face`} />
-        <Stat k="Eff. rate" v={q.effApr} s="annualized" accent />
-      </div>
-
-      <div className="q-terms">
-        <div className="term"><div className="k">Recourse</div><div className="v">{q.recourse}</div></div>
-        <div className="term"><div className="k">Settlement</div><div className="v mono">{q.settle}</div></div>
-        <div className="term"><div className="k">Notification</div><div className="v">{q.notify}</div></div>
-        <div className="term" style={{ gridColumn: '1/-1' }}>
-          <div className="k">Required disclosure</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <span style={{ fontSize: 12.5 }}>{q.disclosure}</span>
-            <span className="dlevel-pill" style={{ color: q.dColor, border: `1px solid ${q.dColor}` }}>{q.dLevel}</span>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 13 }}>
-        <span className="mono t-accent" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600 }}><Icon name="check" size={12} sw={2.5} /> Proof-of-Funds passed</span>
-        <span className="mono t-accent" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600 }}><Icon name="check" size={12} sw={2.5} /> Compliance eligible</span>
-        <span className="spacer" />
-        {ph === 'quoting' && <SelectButton q={q} />}
-      </div>
-    </div>
-  );
-}
-
-function SelectButton({ q }: { q: Quote }) {
-  const { onSelect } = useStore();
-  return <button className="btn accent sm" onClick={() => onSelect(q.key)}>Select as Best Compliant Quote</button>;
-}
-
-function FallbackQueue() {
-  const { state, qByKey, moveFb } = useStore();
-  return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
-        <span className="mono t-amber" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Seller-controlled fallback queue</span>
-        <span className="t-mut" style={{ fontSize: 11 }}>ordered by your criteria, not headline price</span>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {state.fallback.map((k, i) => {
-          const q = qByKey(k);
-          return (
-            <div key={k} className="fb-row">
-              <span className="fb-pos">#{i + 1}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>Funder · {q.label}</div>
-                <div className="mono t-ink3" style={{ fontSize: 11 }}>{q.net} · {q.recourse} · {q.dLevel} disclosure</div>
-              </div>
-              <div style={{ display: 'flex', gap: 5, flex: 'none' }}>
-                <button className="fb-move" onClick={() => moveFb(k, -1)} disabled={i === 0} aria-label="Move up"><Icon name="up" size={13} sw={2.4} /></button>
-                <button className="fb-move" onClick={() => moveFb(k, 1)} disabled={i === state.fallback.length - 1} aria-label="Move down"><Icon name="down" size={13} sw={2.4} /></button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ActionZone() {
-  const { state, qByKey, fallbackUsed, onSettle, onFail, onPromote, onReset } = useStore();
-  const ph = state.phase;
-
-  if (ph === 'quoting') return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }} className="t-ink3">
-      <Icon name="info" size={15} color="#6b7280" />
-      <span style={{ fontSize: 12.5 }}>Select the <span className="t-ink2">Best Compliant Quote</span> to open the Settlement Window. Remaining eligible quotes form a Seller-controlled fallback queue.</span>
-    </div>
-  );
-
-  if (ph === 'selected') return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <FallbackQueue />
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button className="btn accent" onClick={onSettle}><Icon name="bolt" size={16} sw={2.4} /> Settle selected quote</button>
-        <button className="btn ghost-red" onClick={onFail}>Simulate commitment failure</button>
-      </div>
-    </div>
-  );
-
-  if (ph === 'settling') return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '6px 0' }}>
-      <span className="spinner" />
-      <div><div className="disp" style={{ fontWeight: 600, fontSize: 14 }}>On-Ledger Demo Settlement…</div><div className="t-ink3" style={{ fontSize: 12, marginTop: 1 }}>Assigning Receivable and transferring Demo Settlement Asset — both legs settle or neither does.</div></div>
-    </div>
-  );
-
-  if (ph === 'failed') return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="banner red">
-        <Icon name="alert" size={18} color="#f0795f" />
-        <div style={{ fontSize: 12.5 }}><b>Commitment Failure</b> — the Selected Quote&apos;s Funder failed to settle before RFQ Finality. Promote a Fallback Quote to recover.</div>
-      </div>
-      <FallbackQueue />
-      <button className="btn amber" onClick={onPromote} style={{ alignSelf: 'flex-start' }}><Icon name="up" size={16} sw={2.4} /> Promote fallback quote</button>
-    </div>
-  );
-
-  // settled
-  const w = qByKey(state.winner!);
-  const settledLine = fallbackUsed
-    ? `Primary quote failed — ${w.name} promoted from fallback and settled.`
-    : `Receivable assigned to ${w.name} · Demo Settlement Asset transferred to Seller.`;
-  const rows: { k: string; v: string; color: string }[] = [
-    { k: 'Receivable assigned to', v: w.name, color: '#eef0f3' },
-    { k: 'Net Purchase Price received', v: w.net, color: '#57e3a0' },
-    { k: 'Advance paid now', v: `${w.advAmt} · ${w.adv}`, color: '#eef0f3' },
-    { k: 'Reserve released on Debtor payment', v: w.reserve, color: '#eef0f3' },
-    { k: 'All-in cost · eff. rate', v: `${w.allIn} · ${w.effApr} APR`, color: '#eef0f3' },
-    { k: 'Recourse', v: w.recourse, color: '#eef0f3' },
-    { k: 'Settlement', v: `On-Ledger Demo · ${w.settle}`, color: '#eef0f3' },
-    { k: 'Debtor Notification', v: w.notify === 'Required' ? 'Required — disclosed sale' : 'Not required — confidential', color: w.notify === 'Required' ? '#e8c15f' : '#57e3a0' },
-    { k: 'Fallback', v: fallbackUsed ? 'Used' : 'None', color: fallbackUsed ? '#e8c15f' : '#9aa1ad' },
-    { k: 'Demo Settlement Asset', v: 'non-production', color: '#9aa1ad' },
-  ];
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
-        <span style={{ width: 40, height: 40, borderRadius: 11, background: 'rgba(87,227,160,0.14)', display: 'grid', placeItems: 'center', color: '#57e3a0', flex: 'none' }}><Icon name="check" size={21} sw={2.5} /></span>
-        <div><div className="disp" style={{ fontWeight: 600, fontSize: 16 }}>Receivable Sale settled</div><div className="t-ink3" style={{ fontSize: 12.5, marginTop: 1 }}>{settledLine}</div></div>
-        <span className="spacer" />
-        <button className="btn dark sm" onClick={onReset}>Run again</button>
-      </div>
-      <div className="receipt">
-        {rows.map((r) => (
-          <div key={r.k} className="receipt-row"><span className="k">{r.k}</span><span className="v" style={{ color: r.color }}>{r.v}</span></div>
-        ))}
+      <div className="q-terms" style={{ marginTop: 12 }}>
+        <div className="term"><div className="k">Risk tier</div><div className="v">{TIER_LABEL[r.riskTier] ?? r.riskTier}</div></div>
+        <div className="term"><div className="k">Payment terms</div><div className="v">{r.paymentTerms}</div></div>
+        <div className="term"><div className="k">Due</div><div className="v mono">{r.dueDate}</div></div>
+        <div className="term"><div className="k">Response by</div><div className="v mono">{r.responseDeadline.replace('T', ' ').replace('Z', ' UTC')}</div></div>
       </div>
     </div>
   );
@@ -592,69 +450,53 @@ function ActionZone() {
 
 /* ============================ FUNDER ============================ */
 function FunderView() {
-  const { state, qByKey, curDraft, setFunderTab, setDraft, submitQuote } = useStore();
-  const invited = state.rfqFunders;
+  const { state, invitedFunders, requestFor, setFunderTab } = useStore();
+  const invited = invitedFunders;
   useEffect(() => { if (invited.length && !invited.includes(state.funderTab)) setFunderTab(invited[0]); }, [invited, state.funderTab, setFunderTab]);
   const ft = invited.includes(state.funderTab) ? state.funderTab : (invited[0] ?? state.funderTab);
-  const cf = qByKey(ft);
-  const draft = curDraft();
-  const dc = calc(draft.net, draft.advPct);
-  const submitted = !!state.quoteEdits[ft];
-  const fbi = state.fallback.indexOf(ft);
-  const ph = state.phase;
+  const req = requestFor(ft);
 
-  let fout = 'Submitted — pending Seller selection', foc = '#9aa1ad';
-  if (ph === 'settled') { if (state.winner === ft) { fout = 'Won — Receivable assigned to you, settlement complete'; foc = '#57e3a0'; } else { fout = 'Unselected — RFQ finalised with another Funder'; foc = '#6b7280'; } }
-  else if (ph === 'failed') { if (state.selected === ft) { fout = 'Your Selected Quote hit Commitment Failure'; foc = '#f0795f'; } else if (fbi >= 0) { fout = 'In fallback queue · position ' + (fbi + 1); foc = '#e8c15f'; } else { fout = 'Unselected'; foc = '#6b7280'; } }
-  else if (ph === 'settling') { if (state.settleVia === ft) { fout = 'Settling — On-Ledger Demo Settlement in progress'; foc = '#e8c15f'; } else if (state.selected === ft) { fout = 'Selected — in Settlement Window'; foc = '#57e3a0'; } else if (fbi >= 0) { fout = 'In fallback queue · position ' + (fbi + 1); foc = '#e8c15f'; } else { fout = 'Unselected'; foc = '#6b7280'; } }
-  else if (ph === 'selected') { if (state.selected === ft) { fout = 'Selected as Best Compliant Quote'; foc = '#57e3a0'; } else if (fbi >= 0) { fout = 'In fallback queue · position ' + (fbi + 1); foc = '#e8c15f'; } else { fout = 'Not selected — quote still valid'; foc = '#6b7280'; } }
-
-  const rcv = state.receivable;
-  const pkg = rcv ? [
-    { label: 'Receivable amount', value: `${usd(rcv.faceValue)} ${rcv.currency}`, redacted: false },
-    { label: 'Payment timing', value: `Due in ${rcv.daysToDue} days`, redacted: false },
-    { label: 'Receivable validity', value: state.complianceAtt ? 'Verified (attestation)' : 'Unverified', redacted: false },
-    { label: 'Debtor payment risk', value: state.riskAtt ? `${state.riskAtt.result} (Risk Attestation)` : 'Unrated — no attestation', redacted: false },
-    { label: 'Seller eligibility', value: state.complianceAtt ? 'Eligible (attestation)' : 'Unverified — no attestation', redacted: false },
-    { label: 'Recourse preference', value: rcv.recoursePreference, redacted: false },
-    { label: 'Settlement preference', value: rcv.settlementPreference, redacted: false },
-    { label: 'Raw Debtor identity', value: 'withheld pre-quote', redacted: true },
-    { label: 'Invoice document', value: 'withheld pre-quote', redacted: true },
-  ] : [];
-
-  if (!state.rfqOpen) return (
+  if (!state.rfqOpen || !req) return (
     <div style={{ maxWidth: 600, margin: '40px auto' }}>
       <section className="panel">
         <div className="panel-h"><h2 className="lg">No open RFQ</h2><span className="spacer" /><span className="chip ghost">waiting</span></div>
         <div className="panel-b">
-          <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.6 }}>The Seller hasn&apos;t opened a Blind RFQ yet. Once you&apos;re invited, your RFQ Disclosure Package and quote composer appear here.</p>
-          <p className="t-mut" style={{ fontSize: 12, marginTop: 8 }}>Switch to <span className="t-accent">Seller</span> to create a Receivable and open the RFQ.</p>
+          <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.6 }}>No RFQRequest has been addressed to you yet. Once the Seller opens the RFQ, your private RFQ Disclosure Package appears here — and only yours.</p>
+          <p className="t-mut" style={{ fontSize: 12, marginTop: 8 }}>Switch to <span className="t-accent">Seller</span> to register a Receivable, gather attestations and open the RFQ.</p>
         </div>
       </section>
     </div>
   );
 
+  const pkg = [
+    { label: 'Certified receivable amount', value: fmtAmount(req.payableAmount, req.currency), redacted: false },
+    { label: 'Payment terms', value: req.paymentTerms, redacted: false },
+    { label: 'Issue date', value: req.issueDate, redacted: false },
+    { label: 'Due date', value: req.dueDate, redacted: false },
+    { label: 'Certified risk tier', value: TIER_LABEL[req.riskTier] ?? req.riskTier, redacted: false },
+    { label: 'Response deadline', value: req.responseDeadline.replace('T', ' ').replace('Z', ' UTC'), redacted: false },
+    { label: 'Raw Debtor identity', value: 'withheld — Seller-only', redacted: true },
+    { label: 'Full compliance disclosure', value: 'withheld — Compliance-only', redacted: true },
+    { label: 'Other Funders’ requests', value: 'not visible to you', redacted: true },
+  ];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <div className="eyebrow" style={{ marginBottom: 8 }}>You are quoting as</div>
+        <div className="eyebrow" style={{ marginBottom: 8 }}>You are viewing as</div>
         <div className="funder-tabs">
-          {invited.map((k) => {
-            const q = qByKey(k);
-            return (
-              <button key={k} className={'ftab' + (k === ft ? ' on' : '')} onClick={() => setFunderTab(k)}>
-                <div className="lab">Funder · {q.label}</div>
-                <div className="sub">competing quotes hidden</div>
-              </button>
-            );
-          })}
+          {invited.map((k) => (
+            <button key={k} className={'ftab' + (k === ft ? ' on' : '')} onClick={() => setFunderTab(k)}>
+              <div className="lab">Funder {k} · {FUNDER_PARTY_NAMES[k] ?? '—'}</div>
+              <div className="sub">other requests hidden</div>
+            </button>
+          ))}
         </div>
       </div>
 
       <div className="grid-funder">
-        {/* disclosure package */}
         <section className="panel">
-          <div className="panel-h"><h2>RFQ Disclosure Package</h2><span className="spacer" /><span className="mono t-accent" style={{ fontSize: 10 }}>attestation-first</span></div>
+          <div className="panel-h"><h2>RFQ Disclosure Package</h2><span className="spacer" /><span className="mono t-accent" style={{ fontSize: 10 }}>certificate-backed</span></div>
           <div style={{ padding: '6px 17px 14px' }}>
             {pkg.map((d) => (
               <div key={d.label} className="kvrow">
@@ -667,63 +509,23 @@ function FunderView() {
           </div>
         </section>
 
-        {/* composer + outcome + competing */}
         <div className="col">
-          <section className="panel">
-            <div className="panel-h">
-              <h2>Compose Private Quote</h2><span className="spacer" />
-              {submitted && <span className="chip accent">submitted</span>}
-              <span className="mono t-mut" style={{ fontSize: 10 }}>Funder · {cf.label}</span>
-            </div>
-            <div style={{ padding: '14px 17px 16px', display: 'flex', flexDirection: 'column', gap: 15 }}>
-              <div>
-                <div className="eyebrow sm" style={{ marginBottom: 7 }}>Net Purchase Price offered</div>
-                <div className="netbox">
-                  <span className="mono t-ink3" style={{ fontSize: 18 }}>$</span>
-                  <input value={draft.net.toLocaleString('en-US')} inputMode="numeric"
-                    onChange={(e) => setDraft({ net: parseInt(String(e.target.value).replace(/[^0-9]/g, '')) || 0 })} />
-                  <span className="mono t-mut" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>/ {rcv ? usd(rcv.faceValue) : '$0'} face</span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                <Stat k="All-in cost" v={dc.allIn} s={`${dc.allInPct} of face`} />
-                <Stat k="Eff. rate" v={dc.effApr} s="annualized" accent />
-                <Stat k="Reserve" v={dc.reserve} s="held" />
-              </div>
-
-              <div><div className="eyebrow sm" style={{ marginBottom: 7 }}>Advance rate · {dc.advAmt} now</div>
-                <Seg val={draft.advPct} onPick={(v) => setDraft({ advPct: Number(v) })} opts={[{ label: '85%', value: 85 }, { label: '88%', value: 88 }, { label: '90%', value: 90 }, { label: '92%', value: 92 }]} /></div>
-              <div><div className="eyebrow sm" style={{ marginBottom: 7 }}>Recourse model</div>
-                <Seg val={draft.recourse} onPick={(v) => setDraft({ recourse: String(v) })} opts={[{ label: 'Recourse', value: 'Recourse' }, { label: 'Non-recourse', value: 'Non-recourse' }, { label: 'Negotiable', value: 'Negotiable' }]} /></div>
-              <div><div className="eyebrow sm" style={{ marginBottom: 7 }}>Settlement timing</div>
-                <Seg val={draft.settle} onPick={(v) => setDraft({ settle: String(v) })} opts={[{ label: 'T+1', value: 'T+1' }, { label: 'T+2', value: 'T+2' }, { label: 'T+3', value: 'T+3' }]} /></div>
-              <div><div className="eyebrow sm" style={{ marginBottom: 7 }}>Required disclosure <span className="t-amber" style={{ textTransform: 'none', letterSpacing: 0 }}>— priced into the deal</span></div>
-                <Seg val={draft.dLevel} onPick={(v) => setDraft({ dLevel: String(v) })} opts={DLEVELS.map((d) => ({ label: d.label, value: d.dLevel }))} /></div>
-              <div><div className="eyebrow sm" style={{ marginBottom: 7 }}>Debtor notification</div>
-                <Seg val={draft.notify} onPick={(v) => setDraft({ notify: String(v) })} opts={[{ label: 'Required', value: 'Required' }, { label: 'Not required', value: 'Not required' }]} /></div>
-
-              <span className="chip accent" style={{ justifyContent: 'center', padding: 9, borderRadius: 8 }}><Icon name="check" size={12} sw={2.5} /> Proof-of-Funds attached · passes the gate</span>
-              <button className="btn accent block" onClick={submitQuote}><Icon name="send" size={16} sw={2.4} /> Submit Private Quote</button>
-              <p className="t-mut" style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.5, marginTop: -6 }}>Sealed to the RFQ — competing Funders and the Coordinator never see it. Switch to <span className="t-accent">Seller</span> to watch it land in the Quote View.</p>
-            </div>
-          </section>
-
           <section className="panel" style={{ padding: '16px 17px' }}>
-            <div className="eyebrow" style={{ marginBottom: 9 }}>Your quote outcome</div>
+            <div className="eyebrow" style={{ marginBottom: 9 }}>Your RFQ status</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span className="outcome-dot" style={{ background: foc }} />
-              <span className="disp" style={{ fontWeight: 600, fontSize: 14.5, color: foc }}>{fout}</span>
+              <span className="outcome-dot" style={{ background: '#57e3a0' }} />
+              <span className="disp" style={{ fontWeight: 600, fontSize: 14.5, color: '#57e3a0' }}>Invited — private request received</span>
             </div>
+            <p className="t-mut" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>Submitting a Private Quote against this request is <span className="t-ink3">Phase 2</span> — not on the ledger yet.</p>
           </section>
 
           <section className="panel dashed" style={{ padding: '16px 17px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11 }}>
               <Icon name="eyeoff" size={15} color="#6b7280" />
-              <span className="t-ink3" style={{ fontSize: 12.5 }}>Competing Private Quotes — <span className="t-ink2" style={{ fontWeight: 600 }}>hidden from you</span></span>
+              <span className="t-ink3" style={{ fontSize: 12.5 }}>Other Funders&apos; requests — <span className="t-ink2" style={{ fontWeight: 600 }}>hidden from you</span></span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}><span className="bar" /><span className="bar" /></div>
-            <p className="t-mut" style={{ fontSize: 11, marginTop: 11, lineHeight: 1.5 }}>In a Blind RFQ, you never see other Funders&apos; pricing or identities. The Coordinator can&apos;t read quote contents either.</p>
+            <p className="t-mut" style={{ fontSize: 11, marginTop: 11, lineHeight: 1.5 }}>On Canton, each RFQRequest names a single Funder as observer. You cannot see the Receivable, the attestations, the certificates, or any other Funder&apos;s request — confirm it on <b>/ledger</b>.</p>
           </section>
         </div>
       </div>
@@ -732,73 +534,101 @@ function FunderView() {
 }
 
 /* ============================ COMPLIANCE ============================ */
-function ComplianceView() {
-  const { state, eligible, excludedQ, issueCompliance } = useStore();
-  const att = state.complianceAtt;
+function ComplianceRoleView() {
+  const { state, issueCompliance } = useStore();
+  const att = state.compliance;
+  const rcv = state.receivable;
   return (
     <div className="grid-2">
       <section className="panel">
-        <div className="panel-h"><h2 className="lg">Eligibility attestation</h2><span className="spacer" /><span className="h-tag">Compliance Party</span></div>
+        <div className="panel-h"><h2 className="lg">Compliance attestation</h2><span className="spacer" /><span className="h-tag">Compliance Party</span></div>
         <div style={{ padding: '6px 18px 14px' }}>
-          {att
-            ? <><AttestRow a={{ party: 'Compliance Party', subject: att.subject, result: att.result }} tone="accent" />
-                <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Issued on-ledger. The Seller observes it; the <span className="t-ink3">status</span> — not the raw data — is carried into the RFQ.</p></>
-            : <AttestForm tone="accent" label="Issue Compliance Attestation" subjectDefault="Seller eligibility — Northwind Components" resultDefault="Eligible" onIssue={issueCompliance} />}
+          {!rcv
+            ? <p className="t-mut" style={{ fontSize: 12.5, padding: '8px 0', lineHeight: 1.5 }}>No Receivable yet. Switch to <span className="t-accent">Seller</span> to register one, then attest here.</p>
+            : att
+              ? <>
+                  <AttestRow party="Compliance Party" subject="Seller & RFQ eligibility" result={att.sellerEligible && att.rfqEligible ? 'Eligible' : 'Not eligible'} tone="accent" />
+                  <div style={{ ...attRowStyle }}>
+                    <span className="t-ink3" style={{ fontSize: 12.5 }}>Compliance certificate</span>
+                    <span className={'chip ' + (att.certified ? 'accent' : 'ghost')}>{att.certified ? 'Derived by Seller' : 'Awaiting Seller derivation'}</span>
+                  </div>
+                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Issued on-ledger with the full compliance disclosure. The Seller observes the result and derives a certificate that exposes only the certified terms.</p>
+                </>
+              : <ComplianceForm onIssue={issueCompliance} />}
         </div>
       </section>
       <div className="col">
-        <section className="panel">
-          <div className="panel-h"><h2>Proof-of-Funds Gate</h2></div>
-          <div style={{ padding: '6px 17px 13px' }}>
-            {eligible.length === 0 && !excludedQ && <p className="t-mut" style={{ fontSize: 12, padding: '8px 0' }}>No Private Quotes submitted yet.</p>}
-            {eligible.map((q) => (
-              <div key={q.key} style={attRowStyle}>
-                <span className="mono" style={{ fontSize: 13 }}>Funder · {q.label}</span>
-                <span className="chip accent">Passed</span>
-              </div>
-            ))}
-            {excludedQ && (
-              <div style={attRowStyle}>
-                <span className="mono" style={{ fontSize: 13 }}>Funder · {excludedQ.label}</span>
-                <span className="chip red">Failed — excluded</span>
-              </div>
-            )}
-            <p className="t-mut" style={{ fontSize: 11, lineHeight: 1.5, marginTop: 10, paddingTop: 11, borderTop: '1px solid var(--line3)' }}>Proof-of-Funds is <span className="t-ink3">bid-eligibility evidence only</span> — not a funds lock, reserve, escrow, or settlement guarantee.</p>
-          </div>
-        </section>
-        <HiddenNote title="Private Quote prices & terms — not visible to you">The Compliance Party issues eligibility attestations from scoped data. It does not see Net Purchase Price, fees, or other commercial quote terms — those flow to the Seller as status only.</HiddenNote>
+        <HiddenNote title="Risk tier & quote terms — not visible to you">The Compliance Party reviews the seller/debtor identities and receivable terms it was disclosed. It does not see the certified risk tier, the per-Funder RFQ requests, or any Funder identities.</HiddenNote>
       </div>
+    </div>
+  );
+}
+
+function ComplianceForm({ onIssue }: { onIssue: (sellerEligible: boolean, rfqEligible: boolean) => void }) {
+  const [eligible, setEligible] = useState(true);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
+      <Field label="Eligibility result">
+        <Seg val={eligible ? 'yes' : 'no'} onPick={(v) => setEligible(v === 'yes')} opts={[{ label: 'Eligible', value: 'yes' }, { label: 'Not eligible', value: 'no' }]} />
+      </Field>
+      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Sets both <span className="mono">sellerEligible</span> and <span className="mono">rfqEligible</span>. A not-eligible attestation blocks the Seller&apos;s certificate derivation.</p>
+      <button className="btn accent block" onClick={() => onIssue(eligible, eligible)}>
+        <Icon name="check" size={15} sw={2.3} /> Issue Compliance Attestation
+      </button>
     </div>
   );
 }
 
 /* ============================ RISK ============================ */
-function RiskView() {
+function RiskRoleView() {
   const { state, issueRisk } = useStore();
-  const att = state.riskAtt;
+  const att = state.risk;
+  const rcv = state.receivable;
   return (
     <div className="grid-2">
       <section className="panel">
         <div className="panel-h"><h2 className="lg">Risk attestation</h2><span className="spacer" /><span className="h-tag">Risk Assessor</span></div>
         <div style={{ padding: '6px 18px 14px' }}>
-          {att
-            ? <><AttestRow a={{ party: 'Risk Assessor', subject: att.subject, result: att.result }} tone="amber" />
-                <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Issued on-ledger. Funders receive this <span className="t-ink3">status</span> in the RFQ — never the raw Debtor records.</p></>
-            : <AttestForm tone="amber" label="Issue Risk Attestation" subjectDefault="Debtor Risk — Meridian Retail Group" resultDefault="BBB+ · Low" onIssue={issueRisk} />}
+          {!rcv
+            ? <p className="t-mut" style={{ fontSize: 12.5, padding: '8px 0', lineHeight: 1.5 }}>No Receivable yet. Switch to <span className="t-accent">Seller</span> to register one, then tier it here.</p>
+            : att
+              ? <>
+                  <AttestRow party="Risk Assessor" subject="Receivable risk tier" result={TIER_LABEL[att.riskTier] ?? att.riskTier} tone="amber" />
+                  <div style={{ ...attRowStyle }}>
+                    <span className="t-ink3" style={{ fontSize: 12.5 }}>Risk certificate</span>
+                    <span className={'chip ' + (att.certified ? 'accent' : 'ghost')}>{att.certified ? 'Derived by Seller' : 'Awaiting Seller derivation'}</span>
+                  </div>
+                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Funders receive the certified <span className="t-ink3">tier</span> in their RFQRequest — never the raw Debtor records.</p>
+                </>
+              : <RiskForm onIssue={issueRisk} />}
         </div>
       </section>
       <div className="col">
         <section className="panel" style={{ padding: '16px 17px' }}>
           <div className="eyebrow" style={{ marginBottom: 11 }}>Scope</div>
-          <p className="t-ink2" style={{ fontSize: 12, lineHeight: 1.6 }}>The Risk Assessor is a <span className="t-amber">separate scoped role</span> from Compliance, Coordination, and Audit. It evaluates Debtor and Receivable risk and issues attestations so Funders can price risk — without raw Debtor records being disclosed by default.</p>
+          <p className="t-ink2" style={{ fontSize: 12, lineHeight: 1.6 }}>The Risk Assessor is a <span className="t-amber">separate scoped role</span> from Compliance. It tiers the receivable terms it was disclosed and issues an attestation, so Funders can price risk from the certified tier — without raw Debtor records being disclosed.</p>
         </section>
-        <HiddenNote title="Out of risk scope — not visible to you">Private Quote prices and terms, eligibility decisions, the Quote Book, and Funder or Seller identities beyond what risk assessment requires are not disclosed to the Risk Assessor.</HiddenNote>
+        <HiddenNote title="Out of risk scope — not visible to you">Compliance eligibility decisions, the per-Funder RFQ requests, and Funder or Seller identities beyond what risk tiering requires are not disclosed to the Risk Assessor.</HiddenNote>
       </div>
     </div>
   );
 }
 
-function AttestRow({ a, tone }: { a: { party: string; subject: string; result: string }; tone: 'accent' | 'amber' }) {
+function RiskForm({ onIssue }: { onIssue: (tier: RiskTier) => void }) {
+  const [tier, setTier] = useState<RiskTier>('LowRisk');
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
+      <Field label="Risk tier">
+        <Seg val={tier} onPick={(v) => setTier(v as RiskTier)} opts={[{ label: 'Low', value: 'LowRisk' }, { label: 'Medium', value: 'MediumRisk' }, { label: 'High', value: 'HighRisk' }]} />
+      </Field>
+      <button className="btn accent block" onClick={() => onIssue(tier)}>
+        <Icon name="risk" size={15} sw={2} /> Issue Risk Attestation
+      </button>
+    </div>
+  );
+}
+
+function AttestRow({ party, subject, result, tone }: { party: string; subject: string; result: string; tone: 'accent' | 'amber' }) {
   const bg = tone === 'accent' ? 'rgba(87,227,160,0.12)' : 'rgba(232,193,95,0.12)';
   const bd = tone === 'accent' ? 'rgba(87,227,160,0.28)' : 'rgba(232,193,95,0.28)';
   const col = tone === 'accent' ? '#57e3a0' : '#e8c15f';
@@ -808,26 +638,10 @@ function AttestRow({ a, tone }: { a: { party: string; subject: string; result: s
         <Icon name={tone === 'accent' ? 'check' : 'risk'} size={15} sw={tone === 'accent' ? 2.5 : 2} />
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>{a.subject}</div>
-        <div className="mono t-mut" style={{ fontSize: 11, marginTop: 2 }}>{a.party}</div>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>{subject}</div>
+        <div className="mono t-mut" style={{ fontSize: 11, marginTop: 2 }}>{party}</div>
       </div>
-      <span className={'chip ' + tone}>{a.result}</span>
-    </div>
-  );
-}
-
-const attRowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 0', borderBottom: '1px solid var(--line3)' };
-function AttestForm({ label, subjectDefault, resultDefault, tone, onIssue }: { label: string; subjectDefault: string; resultDefault: string; tone: 'accent' | 'amber'; onIssue: (subject: string, result: string) => void }) {
-  const [subject, setSubject] = useState(subjectDefault);
-  const [result, setResult] = useState(resultDefault);
-  const valid = subject.trim() !== '' && result.trim() !== '';
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
-      <Field label="Subject"><input style={fieldInput} value={subject} onChange={(e) => setSubject(e.target.value)} /></Field>
-      <Field label="Result / status"><input style={fieldInput} value={result} onChange={(e) => setResult(e.target.value)} /></Field>
-      <button className="btn accent block" disabled={!valid} onClick={() => onIssue(subject, result)}>
-        <Icon name={tone === 'accent' ? 'check' : 'risk'} size={15} sw={2.3} /> {label}
-      </button>
+      <span className={'chip ' + tone}>{result}</span>
     </div>
   );
 }
@@ -846,40 +660,29 @@ function HiddenNote({ title, children }: { title: string; children: React.ReactN
 
 /* ============================ COORDINATOR ============================ */
 function CoordinatorView() {
-  const { state, eligible, fallbackUsed } = useStore();
-  const ph = state.phase;
+  const { state } = useStore();
   const rcv = state.receivable;
+  const comp = state.compliance, risk = state.risk;
   const done = '#57e3a0', active = '#e8c15f', pend = '#3a3f48';
-  const post = ph === 'selected' || ph === 'settling' || ph === 'failed' || ph === 'settled';
-
-  let selSub = 'pending', selC: string = pend;
-  if (ph === 'quoting') { selSub = eligible.length ? 'Seller comparing eligible quotes' : 'awaiting Private Quotes'; selC = eligible.length ? active : pend; }
-  else if (post) { selSub = 'Best Compliant Quote selected'; selC = done; }
-  let setSub = 'pending', setC: string = pend;
-  if (ph === 'settling') { setSub = 'attempting On-Ledger Demo Settlement'; setC = active; }
-  else if (ph === 'failed') { setSub = 'Commitment Failure — fallback available'; setC = '#f0795f'; }
-  else if (ph === 'settled') { setSub = 'completed' + (fallbackUsed ? ' via fallback' : ''); setC = done; }
-  const finC: string = ph === 'settled' ? done : ph === 'failed' ? active : pend;
-  const finSub = ph === 'settled' ? 'reached' : ph === 'failed' ? 'pending — fallback in progress' : 'pending';
+  const step = (ok: boolean, running: boolean) => (ok ? done : running ? active : pend);
 
   const steps = [
-    { n: '1', label: 'Receivable created', sub: rcv ? `${rcv.ref} · ${usd(rcv.faceValue)}` : 'awaiting origination', color: rcv ? done : (ph === 'origination' ? active : pend) },
-    { n: '2', label: 'Blind RFQ opened', sub: state.rfqOpen ? `${state.rfqFunders.length} Funder${state.rfqFunders.length === 1 ? '' : 's'} invited` : 'pending', color: state.rfqOpen ? done : (rcv ? active : pend) },
-    { n: '3', label: 'Disclosure Packages delivered', sub: state.rfqOpen ? 'attestation-first' : 'pending', color: state.rfqOpen ? done : pend },
-    { n: '4', label: 'Private Quotes submitted', sub: `${eligible.length} received`, color: eligible.length ? done : (state.rfqOpen ? active : pend) },
-    { n: '5', label: 'Seller selection', sub: selSub, color: selC },
-    { n: '6', label: 'Settlement Window', sub: setSub, color: setC },
-    { n: '7', label: 'RFQ Finality', sub: finSub, color: finC },
+    { n: '1', label: 'Receivable registered', sub: rcv ? `${rcv.invoiceId} · ${usd(rcv.payableAmount)}` : 'awaiting origination', color: step(!!rcv, !rcv) },
+    { n: '2', label: 'Compliance attestation', sub: comp ? (comp.sellerEligible && comp.rfqEligible ? 'Eligible' : 'Not eligible') : 'pending', color: step(!!comp, !!rcv && !comp) },
+    { n: '3', label: 'Compliance certificate', sub: comp?.certified ? 'Seller-derived' : 'pending', color: step(!!comp?.certified, !!comp && !comp.certified) },
+    { n: '4', label: 'Risk attestation', sub: risk ? (TIER_LABEL[risk.riskTier] ?? risk.riskTier) : 'pending', color: step(!!risk, !!rcv && !risk) },
+    { n: '5', label: 'Risk certificate', sub: risk?.certified ? 'Seller-derived' : 'pending', color: step(!!risk?.certified, !!risk && !risk.certified) },
+    { n: '6', label: 'Per-Funder RFQ requests', sub: state.rfqOpen ? `${state.requests.length} Funder${state.requests.length === 1 ? '' : 's'} invited` : 'pending', color: step(state.rfqOpen, !!comp && !!risk && !state.rfqOpen) },
   ];
 
   return (
     <div className="grid-2">
       <section className="panel">
-        <div className="panel-h"><h2 className="lg">RFQ workflow status</h2><span className="spacer" /><span className="h-tag">routing only · {rcv?.ref ?? '—'}</span></div>
+        <div className="panel-h"><h2 className="lg">Phase 1 workflow status</h2><span className="spacer" /><span className="h-tag">routing only · {rcv?.invoiceId ?? '—'}</span></div>
         <div style={{ padding: 18 }}>
           {steps.map((t, i) => {
             const dotBg = t.color === pend ? '#1b1e24' : t.color;
-            const dotFg = t.color === pend ? '#6b7280' : (t.color === '#f0795f' ? '#fff' : '#0c1217');
+            const dotFg = t.color === pend ? '#6b7280' : '#0c1217';
             return (
               <div className="tl-row" key={t.n}>
                 <div className="tl-rail">
@@ -899,22 +702,14 @@ function CoordinatorView() {
         <section className="panel dashed" style={{ padding: '16px 17px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <Icon name="lock" size={15} color="#6b7280" />
-            <span className="t-ink3" style={{ fontSize: 12.5 }}>Private Quote contents — <span className="t-ink2" style={{ fontWeight: 600 }}>not disclosed to Coordinator</span></span>
+            <span className="t-ink3" style={{ fontSize: 12.5 }}>Phase 1 has <span className="t-ink2" style={{ fontWeight: 600 }}>no Coordinator party</span> on-ledger</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {(state.rfqFunders.length ? state.rfqFunders.map((k) => 'Funder ' + k) : ['—']).map((l) => (
-              <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="mono t-mut" style={{ fontSize: 11, width: 72, flex: 'none' }}>{l}</span>
-                <span className="bar" style={{ flex: 1, height: 26 }} />
-              </div>
-            ))}
-          </div>
-          <p className="t-mut" style={{ fontSize: 11, marginTop: 12, lineHeight: 1.5 }}>The Coordinator routes invitations, deadlines and workflow state — but is not a quote-visible marketplace operator. Quote prices and terms stay sealed.</p>
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.55 }}>The origination workflow is Seller-driven end to end: the Seller registers the Receivable, gathers scoped attestations, derives the certificates, and authors one RFQRequest per Funder. A Coordinator/quote-router is introduced in a later phase. This view mirrors the on-ledger progress; it holds no privileged data.</p>
         </section>
         <section className="panel" style={{ padding: '16px 17px' }}>
-          <div className="eyebrow" style={{ marginBottom: 11 }}>Parties routed</div>
+          <div className="eyebrow" style={{ marginBottom: 11 }}>Parties in Phase 1</div>
           <div className="routed">
-            {['Seller', `${state.rfqFunders.length} Funders`, 'Compliance', 'Risk Assessor', 'Auditor'].map((p) => <span key={p}>{p}</span>)}
+            {['Seller', `${state.requests.length} Funders`, 'Compliance', 'Risk Assessor'].map((p) => <span key={p}>{p}</span>)}
           </div>
         </section>
       </div>
@@ -924,47 +719,34 @@ function CoordinatorView() {
 
 /* ============================ AUDITOR ============================ */
 function AuditorView() {
-  const { state, qByKey, fallbackUsed } = useStore();
-  const ready = state.phase === 'settled';
-  const w = state.winner ? qByKey(state.winner) : null;
-  const rows = ready && w ? [
-    { k: 'RFQ / workflow reference', v: 'RFQ-4471', color: '#eef0f3' },
-    { k: 'Opaque Receivable reference', v: 'RCV-9F2A', color: '#eef0f3' },
-    { k: 'Seller eligibility', v: 'Eligible', color: '#57e3a0' },
-    { k: 'Winning Funder eligibility', v: 'Eligible · Funder ' + w.label, color: '#57e3a0' },
-    { k: 'Risk Attestation reference', v: 'RA-22B7', color: '#eef0f3' },
-    { k: 'Proof-of-Funds Gate (winning quote)', v: 'Passed', color: '#57e3a0' },
-    { k: 'Quote-selection statement', v: 'Best Compliant Quote on Selection Criteria', color: '#eef0f3' },
-    { k: 'Settlement status', v: fallbackUsed ? 'Completed via fallback' : 'Completed', color: '#57e3a0' },
-    { k: 'Debtor Notification mode', v: w.notify === 'Required' ? 'Debtor notified' : 'Confidential — not notified', color: w.notify === 'Required' ? '#e8c15f' : '#57e3a0' },
-    { k: 'Fallback status', v: fallbackUsed ? 'Fallback used — ' + w.label + ' promoted' : 'None', color: fallbackUsed ? '#e8c15f' : '#9aa1ad' },
-    { k: 'RFQ Finality timestamp', v: '2026-06-25 14:32 UTC', color: '#9aa1ad' },
-  ] : [];
-  const withheld = ['Full RFQ workflow', 'Full Quote Book', 'All Private Quotes', 'Raw Proof-of-Funds data', 'Raw Sensitive Attributes', 'Raw invoice documents', 'Unselected Funder identities', 'Full party records'];
+  const { state } = useStore();
+  const comp = state.compliance, risk = state.risk;
+  const rows = [
+    { k: 'Receivable registered', v: state.receivable ? state.receivable.invoiceId : '—', color: state.receivable ? '#eef0f3' : '#6b7280' },
+    { k: 'Compliance attestation', v: comp ? (comp.sellerEligible && comp.rfqEligible ? 'Eligible' : 'Not eligible') : 'pending', color: comp ? '#57e3a0' : '#6b7280' },
+    { k: 'Compliance certificate', v: comp?.certified ? 'Derived' : 'pending', color: comp?.certified ? '#57e3a0' : '#6b7280' },
+    { k: 'Risk attestation', v: risk ? (TIER_LABEL[risk.riskTier] ?? risk.riskTier) : 'pending', color: risk ? '#57e3a0' : '#6b7280' },
+    { k: 'Risk certificate', v: risk?.certified ? 'Derived' : 'pending', color: risk?.certified ? '#57e3a0' : '#6b7280' },
+    { k: 'Per-Funder RFQ requests', v: String(state.requests.length), color: state.requests.length ? '#57e3a0' : '#6b7280' },
+  ];
+  const withheld = ['Raw Debtor identity', 'Full compliance disclosure', 'Raw risk records', 'Per-Funder request contents', 'Funder identities'];
 
   return (
     <div className="grid-auditor">
       <section className="panel">
         <div className="panel-h">
           <span style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(87,227,160,0.12)', border: '1px solid rgba(87,227,160,0.28)', display: 'grid', placeItems: 'center', color: '#57e3a0', flex: 'none' }}><Icon name="shield" size={16} /></span>
-          <h2 className="lg">Scoped Compliance Receipt</h2><span className="spacer" /><span className="h-tag">entitled disclosure</span>
+          <h2 className="lg">Origination trail</h2><span className="spacer" /><span className="h-tag">Phase 1</span>
         </div>
-        {ready ? (
-          <div style={{ padding: '6px 18px 16px' }}>
-            {rows.map((r) => (
-              <div key={r.k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '11px 0', borderBottom: '1px solid var(--line3)' }}>
-                <span className="t-ink3" style={{ fontSize: 12.5 }}>{r.k}</span>
-                <span className="mono" style={{ fontSize: 12.5, fontWeight: 500, textAlign: 'right', color: r.color }}>{r.v}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ padding: '48px 30px', textAlign: 'center' }}>
-            <span style={{ display: 'inline-grid', width: 48, height: 48, borderRadius: 13, background: '#15171c', border: '1px solid var(--line4)', placeItems: 'center', color: '#6b7280', marginBottom: 14 }}><Icon name="clock" size={22} /></span>
-            <div className="disp" style={{ fontWeight: 600, fontSize: 14.5 }}>Receipt issued at RFQ Finality</div>
-            <p className="t-ink3" style={{ fontSize: 12.5, marginTop: 7, maxWidth: 330, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.55 }}>The Scoped Compliance Receipt is generated once the Receivable Sale settles. Switch to the <span className="t-accent">Seller</span> and complete settlement to populate it.</p>
-          </div>
-        )}
+        <div style={{ padding: '6px 18px 16px' }}>
+          {rows.map((r) => (
+            <div key={r.k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '11px 0', borderBottom: '1px solid var(--line3)' }}>
+              <span className="t-ink3" style={{ fontSize: 12.5 }}>{r.k}</span>
+              <span className="mono" style={{ fontSize: 12.5, fontWeight: 500, textAlign: 'right', color: r.color }}>{r.v}</span>
+            </div>
+          ))}
+          <p className="t-mut" style={{ fontSize: 11, lineHeight: 1.5, marginTop: 12 }}>The scoped <span className="t-ink3">Compliance Receipt</span> — an entitled audit disclosure at RFQ finality — is a later phase. Phase 1 records only the origination trail above.</p>
+        </div>
       </section>
 
       <section className="panel dashed-red" style={{ padding: '16px 17px' }}>
@@ -980,7 +762,7 @@ function AuditorView() {
             </div>
           ))}
         </div>
-        <p className="t-mut" style={{ fontSize: 11, marginTop: 13, lineHeight: 1.55 }}>Auditors and Regulators verify the compliance trail without ever receiving the full RFQ, Quote Book, or raw evidence.</p>
+        <p className="t-mut" style={{ fontSize: 11, marginTop: 13, lineHeight: 1.55 }}>In Phase 1 the Auditor is not yet a party on any contract — nothing is disclosed to it on-ledger.</p>
       </section>
     </div>
   );
@@ -992,7 +774,7 @@ function OutsiderView() {
     { hash: '0x9f2a··4471', label: 'Contract created' },
     { hash: '0x4c7d··88a1', label: 'Choice exercised — view restricted' },
     { hash: '0xbb71··02de', label: 'Contract created' },
-    { hash: '0x71bb··ee04', label: 'Contract archived' },
+    { hash: '0x71bb··ee04', label: 'Contract created' },
   ];
   return (
     <div style={{ maxWidth: 680, margin: '0 auto' }}>
@@ -1011,7 +793,7 @@ function OutsiderView() {
         <div style={{ padding: '0 18px 18px' }}>
           <div className="note">
             <Icon name="eyeoff" size={17} color="#57e3a0" />
-            <div>No Receivable, RFQ, Private Quote, identity, price, or settlement detail is visible to non-parties. Outsiders see only that opaque contracts were created and archived — never <span className="t-accent">what</span>, <span className="t-accent">who</span>, or <span className="t-accent">how much</span>.</div>
+            <div>No Receivable, attestation, certificate, RFQ request, identity or amount is visible to non-parties. Outsiders see only that opaque contracts were created — never <span className="t-accent">what</span>, <span className="t-accent">who</span>, or <span className="t-accent">how much</span>.</div>
           </div>
         </div>
       </section>

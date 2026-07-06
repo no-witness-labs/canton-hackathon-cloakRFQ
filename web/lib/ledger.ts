@@ -24,7 +24,7 @@ const EMPTY_PARTIES: Record<Role, string> = {
   compliance: '', risk: '', coordinator: '', auditor: '', outsider: '',
 };
 
-let cfg: LedgerConfig = { jsonApiUrl: '', packageRef: '#cloakrfq-ledger', userId: 'cloakrfq', parties: EMPTY_PARTIES };
+let cfg: LedgerConfig = { jsonApiUrl: '', packageRef: '#cloakrfq-contracts', userId: 'cloakrfq', parties: EMPTY_PARTIES };
 
 /** Stable per-browser session id (for self-service per-visitor parties on the deploy). */
 function sessionId(): string {
@@ -73,13 +73,16 @@ export async function loadConfig(): Promise<boolean> {
 
 export const getParties = (): Record<Role, string> => cfg.parties;
 
-const tpl = (name: string) => `${cfg.packageRef}:CloakRFQ:${name}`;
+// Phase 1 templates live in per-module namespaces inside cloakrfq-contracts.
+const MODULE: Record<string, string> = {
+  Receivable: 'Receivable',
+  ComplianceAttestation: 'Compliance', ComplianceCertificate: 'Compliance',
+  RiskAttestation: 'Risk', RiskCertificate: 'Risk',
+  RFQRequest: 'RFQRequest',
+};
+const tpl = (name: string) => `${cfg.packageRef}:CloakRFQ.${MODULE[name] ?? name}:${name}`;
 
-const KNOWN: string[] = [
-  'Receivable', 'ComplianceAttestation', 'RiskAttestation', 'RFQRequest',
-  'PrivateQuote', 'SelectedQuote', 'DemoSettlementAsset', 'SettlementResult',
-  'ScopedComplianceReceipt',
-];
+const KNOWN: string[] = Object.keys(MODULE);
 
 export interface Contract { contractId: string; template: string; args: Record<string, unknown>; }
 
@@ -198,8 +201,12 @@ function digTx(o: unknown): Record<string, unknown> | null {
 function labelForEvents(events: TxEvent[]): string {
   const c = events.filter((e) => e.kind === 'created').map((e) => e.template);
   const a = events.filter((e) => e.kind === 'archived').map((e) => e.template);
-  if (a.includes('SelectedQuote') && c.includes('ScopedComplianceReceipt')) return 'Settle';
-  if (a.includes('PrivateQuote') && c.includes('SelectedQuote')) return 'Accept · select quote';
+  if (c.includes('RFQRequest')) return 'Open RFQ · per-Funder request';
+  if (c.includes('ComplianceCertificate')) return 'Derive Compliance certificate';
+  if (c.includes('RiskCertificate')) return 'Derive Risk certificate';
+  if (c.includes('ComplianceAttestation')) return 'Compliance attestation';
+  if (c.includes('RiskAttestation')) return 'Risk attestation';
+  if (c.includes('Receivable')) return 'Register Receivable';
   if (c.length && !a.length) return 'Create ' + c.join(', ');
   if (a.length) return `${a.join(', ')} archived` + (c.length ? ' · +' + c.join(', ') : '');
   return 'Transaction';
@@ -231,58 +238,116 @@ export async function fetchHistory(party: string): Promise<LedgerTx[]> {
 }
 
 // ============================================================================
-// DEMO SCENARIO — edit these values to change what gets seeded on load.
-// (Funders can also submit their own quotes live via the Workspace composer.)
+// PHASE 1 DEMO SCENARIO — edit these values to change what seedDemo() creates.
+// Mirrors ledger/test/daml/CloakRFQ/Test.daml (the values the phase1 script proves).
 //
-// Contract-enforced constraints: faceValue > 0, daysToDue >= 0, netPurchasePrice > 0;
-// recourse ∈ Recourse|NonRecourse|Negotiable; requiredDisclosure ∈ Minimal|Medium|High.
-// A quote with proofOfFundsPassed:false is shown excluded and cannot be selected.
+// Workflow: Seller registers a Receivable → Compliance issues a
+// ComplianceAttestation and the Seller derives a ComplianceCertificate → Risk
+// issues a RiskAttestation and the Seller derives a RiskCertificate → the Seller
+// creates one RFQRequest per Funder (each Funder sees only its own request).
 //
-// NOTE: the Workspace maps the labels VC-7/LC-3/HF-9 → A/B/C. Prices/terms are safe
-// to change freely; if you RENAME a label, also update LABEL_TO_KEY/NAMES in store.tsx.
+// Contract-enforced constraints: payableAmount > 0 (hasValidReceivableTerms),
+// registrar == owner, and CreateComplianceCertificate asserts both
+// sellerEligible && rfqEligible. riskTier ∈ LowRisk|MediumRisk|HighRisk.
+// JSON encoding: Decimal/Int → string, Date → "YYYY-MM-DD", Time → RFC3339,
+// Optional None → null, enums → constructor-name string, records → nested objects.
 // ============================================================================
-type EnumRecourse = 'Recourse' | 'NonRecourse' | 'Negotiable';
-type EnumDisclosure = 'Minimal' | 'Medium' | 'High';
-export interface QuoteSpec {
-  funder: Role; label: string; netPurchasePrice: string; advanceRatePct: number;
-  recourse: EnumRecourse; settlement: string; requiredDisclosure: EnumDisclosure;
-  debtorNotification: string; quoteExpiry: string; proofOfFundsPassed: boolean; complianceEligible: boolean;
-}
-export interface Scenario {
-  receivable: { ref: string; invoiceId: string; faceValue: string; currency: string; daysToDue: string; debtorName: string; recoursePreference: EnumRecourse; settlementPreference: string };
-  attestations: { compliance: string; risk: string };
-  quotes: QuoteSpec[];
+export type RiskTier = 'LowRisk' | 'MediumRisk' | 'HighRisk';
+
+export interface ReceivableTerms { payableAmount: string; currency: string; issueDate: string; dueDate: string; paymentTerms: string }
+export interface IdentityDisclosure { legalName: string; jurisdiction: string; entityType: string }
+
+export interface Phase1Scenario {
+  packageId: string;
+  receivable: {
+    invoiceId: string;
+    buyerReference: string | null;
+    purchaseOrderReference: string | null;
+    sourceSystemReference: string | null;
+    debtorName: string;
+    terms: ReceivableTerms;
+  };
+  sellerIdentity: IdentityDisclosure;
+  debtorIdentity: IdentityDisclosure;
+  compliance: {
+    transactionPurpose: string; disclosureRestrictions: string;
+    sellerEligible: boolean; rfqEligible: boolean;
+    policyVersion: string; certificationScope: string;
+  };
+  risk: { riskTier: RiskTier; riskPolicyVersion: string; certificationScope: string };
+  rfq: { responseDeadline: string; funders: Role[] };
 }
 
-export const SCENARIOS: Record<string, Scenario> = {
-  base: {
-    receivable: { ref: 'RCV-9F2A', invoiceId: 'INV-4471', faceValue: '480000.0', currency: 'USD', daysToDue: '45', debtorName: 'Meridian Retail Group', recoursePreference: 'Negotiable', settlementPreference: 'T+2' },
-    attestations: { compliance: 'Eligible', risk: 'BBB+ · Low' },
-    quotes: [
-      { funder: 'funderA', label: 'VC-7', netPurchasePrice: '468000.0', advanceRatePct: 90, recourse: 'Recourse',    settlement: 'T+1', requiredDisclosure: 'High',    debtorNotification: 'Required',     quoteExpiry: '18m', proofOfFundsPassed: true, complianceEligible: true },
-      { funder: 'funderB', label: 'LC-3', netPurchasePrice: '465200.0', advanceRatePct: 85, recourse: 'NonRecourse', settlement: 'T+2', requiredDisclosure: 'Minimal', debtorNotification: 'Not required', quoteExpiry: '22m', proofOfFundsPassed: true, complianceEligible: true },
-      { funder: 'funderC', label: 'HF-9', netPurchasePrice: '466800.0', advanceRatePct: 88, recourse: 'Negotiable', settlement: 'T+3', requiredDisclosure: 'Medium',  debtorNotification: 'Required',     quoteExpiry: '12m', proofOfFundsPassed: true, complianceEligible: true },
-    ],
+export const SCENARIO: Phase1Scenario = {
+  packageId: 'PKG-INV-4471',
+  receivable: {
+    invoiceId: 'INV-4471',
+    buyerReference: 'AP-DEPT-42',
+    purchaseOrderReference: 'PO-98776',
+    sourceSystemReference: 'NETSUITE-AR-10031',
+    debtorName: 'Meridian Retail Group',
+    terms: { payableAmount: '480000.0', currency: 'USD', issueDate: '2026-01-01', dueDate: '2026-02-15', paymentTerms: 'Net 45' },
   },
-  // Example variant: VC-7 FAILS the Proof-of-Funds Gate → shown excluded, not selectable.
-  stressed: {
-    receivable: { ref: 'RCV-9F2A', invoiceId: 'INV-4471', faceValue: '480000.0', currency: 'USD', daysToDue: '30', debtorName: 'Meridian Retail Group', recoursePreference: 'Recourse', settlementPreference: 'T+1' },
-    attestations: { compliance: 'Eligible', risk: 'BB · Medium' },
-    quotes: [
-      { funder: 'funderA', label: 'VC-7', netPurchasePrice: '470000.0', advanceRatePct: 92, recourse: 'Recourse',    settlement: 'T+1', requiredDisclosure: 'High',    debtorNotification: 'Required',     quoteExpiry: '10m', proofOfFundsPassed: false, complianceEligible: true },
-      { funder: 'funderB', label: 'LC-3', netPurchasePrice: '462000.0', advanceRatePct: 80, recourse: 'NonRecourse', settlement: 'T+3', requiredDisclosure: 'Minimal', debtorNotification: 'Not required', quoteExpiry: '20m', proofOfFundsPassed: true,  complianceEligible: true },
-      { funder: 'funderC', label: 'HF-9', netPurchasePrice: '466000.0', advanceRatePct: 88, recourse: 'Negotiable', settlement: 'T+2', requiredDisclosure: 'Medium',  debtorNotification: 'Required',     quoteExpiry: '14m', proofOfFundsPassed: true,  complianceEligible: true },
-    ],
+  sellerIdentity: { legalName: 'Aster Components LLC', jurisdiction: 'US-DE', entityType: 'Limited liability company' },
+  debtorIdentity: { legalName: 'Meridian Retail Group', jurisdiction: 'US-NY', entityType: 'Corporation' },
+  compliance: {
+    transactionPurpose: 'Receivable sale RFQ for working capital',
+    disclosureRestrictions: 'Package disclosure limited to eligible funders in later phases',
+    sellerEligible: true, rfqEligible: true,
+    policyVersion: 'MVP-COMPLIANCE-v1', certificationScope: 'Phase 1 RFQ package eligibility',
   },
+  risk: { riskTier: 'LowRisk', riskPolicyVersion: 'MVP-RISK-v1', certificationScope: 'Phase 1 receivable risk tier' },
+  rfq: { responseDeadline: '2026-07-01T12:00:00Z', funders: ['funderA', 'funderB', 'funderC'] },
 };
 
-/** The scenario seedDemo() uses. Switch to SCENARIOS.stressed — or edit base above. */
-export const SCENARIO: Scenario = SCENARIOS.base;
+// Command builders for the Phase 1 workflow — each mirrors a Test.daml step and is
+// reused by both seedDemo() (below) and the manual origination flow (store.tsx).
+export const receivableArgs = (registrar: string, s: Phase1Scenario) => ({
+  registrar, owner: registrar,
+  metadata: {
+    invoiceId: s.receivable.invoiceId,
+    buyerReference: s.receivable.buyerReference,
+    purchaseOrderReference: s.receivable.purchaseOrderReference,
+    sourceSystemReference: s.receivable.sourceSystemReference,
+  },
+  debtorName: s.receivable.debtorName,
+  terms: s.receivable.terms,
+});
+
+export const complianceAttestationArgs = (complianceParty: string, seller: string, receivableCid: string, s: Phase1Scenario) => ({
+  complianceParty, seller, packageId: s.packageId, receivableCid,
+  complianceDisclosure: {
+    sellerIdentity: s.sellerIdentity, debtorIdentity: s.debtorIdentity,
+    receivableTerms: s.receivable.terms,
+    transactionPurpose: s.compliance.transactionPurpose,
+    disclosureRestrictions: s.compliance.disclosureRestrictions,
+  },
+  complianceResult: { sellerEligible: s.compliance.sellerEligible, rfqEligible: s.compliance.rfqEligible },
+});
+
+export const riskAttestationArgs = (riskAssessor: string, seller: string, receivableCid: string, s: Phase1Scenario) => ({
+  riskAssessor, seller, packageId: s.packageId, receivableCid,
+  riskDisclosure: { receivableTerms: s.receivable.terms },
+  riskResult: { riskTier: s.risk.riskTier },
+});
+
+export const rfqRequestArgs = (
+  seller: string, funder: string, complianceParty: string, riskAssessor: string,
+  receivableCid: string, complianceCertificateCid: string, riskCertificateCid: string, s: Phase1Scenario,
+) => ({
+  seller, funder, complianceParty, riskAssessor,
+  packageId: s.packageId, receivableCid,
+  packageData: { receivableTerms: s.receivable.terms, riskTier: s.risk.riskTier, responseDeadline: s.rfq.responseDeadline },
+  complianceCertificateCid, riskCertificateCid,
+});
+
+const firstCid = (r: TxResult, template: string) => r.created.find((c) => c.template === template)!.contractId;
 
 let seedingPromise: Promise<void> | null = null;
 
-/** Seed the active demo scenario. Guarded so React StrictMode double-mounts (dev)
- *  or a double-click can't create duplicate contracts; a failed seed clears the guard. */
+/** Seed the Phase 1 origination workflow end-to-end. Guarded so React StrictMode
+ *  double-mounts (dev) or a double-click can't create duplicate contracts; a failed
+ *  seed clears the guard. */
 export function seedDemo(): Promise<void> {
   if (!seedingPromise) seedingPromise = doSeed().catch((e) => { seedingPromise = null; throw e; });
   return seedingPromise;
@@ -290,33 +355,29 @@ export function seedDemo(): Promise<void> {
 
 async function doSeed(): Promise<void> {
   const p = cfg.parties;
-  // Idempotent against the ledger: if a scenario is already seeded, do nothing.
-  // (The ledger is append-only — to re-seed with new values, restart the sandbox.)
-  const existing = await listActive(p.seller);
-  if (existing.some((c) => c.template === 'PrivateQuote')) return;
   const s = SCENARIO;
+  // Idempotent against the append-only ledger: if requests already exist, do nothing.
+  const existing = await listActive(p.seller);
+  if (existing.some((c) => c.template === 'RFQRequest')) return;
 
-  await submit(p.compliance, create('ComplianceAttestation',
-    { complianceParty: p.compliance, seller: p.seller, subject: 'Seller eligibility', result: s.attestations.compliance }), 'seed');
-  await submit(p.risk, create('RiskAttestation',
-    { riskAssessor: p.risk, seller: p.seller, subject: 'Debtor Risk', result: s.attestations.risk }), 'seed');
+  // 1. Seller self-registers the Receivable (registrar == owner).
+  const rcv = await submit(p.seller, create('Receivable', receivableArgs(p.seller, s)), 'seed');
+  const rcvCid = firstCid(rcv, 'Receivable');
 
-  const rcv = await submit(p.seller, create('Receivable', { seller: p.seller, ...s.receivable, validityVerified: true }), 'seed');
-  const rcvCid = rcv.created.find((c) => c.template === 'Receivable')!.contractId;
+  // 2. Compliance issues an attestation; 3. Seller derives the certificate.
+  const att = await submit(p.compliance, create('ComplianceAttestation', complianceAttestationArgs(p.compliance, p.seller, rcvCid, s)), 'seed');
+  const compCert = await submit(p.seller, exercise('ComplianceAttestation', firstCid(att, 'ComplianceAttestation'), 'CreateComplianceCertificate',
+    { policyVersion: s.compliance.policyVersion, certificationScope: s.compliance.certificationScope }), 'seed');
+  const compCertCid = firstCid(compCert, 'ComplianceCertificate');
 
-  await submit(p.seller, exercise('Receivable', rcvCid, 'OpenRFQ', {
-    coordinator: p.coordinator, funders: [p.funderA, p.funderB, p.funderC],
-    debtorRisk: s.attestations.risk, receivableValidity: 'Verified',
-  }), 'seed');
+  // 4. Risk issues an attestation; 5. Seller derives the certificate.
+  const riskAtt = await submit(p.risk, create('RiskAttestation', riskAttestationArgs(p.risk, p.seller, rcvCid, s)), 'seed');
+  const riskCert = await submit(p.seller, exercise('RiskAttestation', firstCid(riskAtt, 'RiskAttestation'), 'CreateRiskCertificate',
+    { riskPolicyVersion: s.risk.riskPolicyVersion, certificationScope: s.risk.certificationScope }), 'seed');
+  const riskCertCid = firstCid(riskCert, 'RiskCertificate');
 
-  for (const q of s.quotes) {
-    const funder = p[q.funder];
-    await submit(funder, create('PrivateQuote', {
-      funder, seller: p.seller, rfqRef: s.receivable.ref, funderLabel: q.label,
-      netPurchasePrice: q.netPurchasePrice, advanceRatePct: String(q.advanceRatePct),
-      recourse: q.recourse, settlement: q.settlement, requiredDisclosure: q.requiredDisclosure,
-      debtorNotification: q.debtorNotification, quoteExpiry: q.quoteExpiry,
-      proofOfFundsPassed: q.proofOfFundsPassed, complianceEligible: q.complianceEligible,
-    }), 'seed');
+  // 6. Seller creates one RFQRequest per Funder (each Funder observes only its own).
+  for (const role of s.rfq.funders) {
+    await submit(p.seller, create('RFQRequest', rfqRequestArgs(p.seller, p[role], p.compliance, p.risk, rcvCid, compCertCid, riskCertCid, s)), 'seed');
   }
 }
