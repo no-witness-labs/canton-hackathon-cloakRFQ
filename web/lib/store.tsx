@@ -21,7 +21,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { PartyRole } from './types';
 import {
-  loadConfig, getParties, listActive, createAs, exerciseAs, type Contract,
+  loadConfig, getParties, listActive, createAs, exerciseAs, getTxLog, explorerUrlForParty, type Contract,
   SCENARIO, type Phase1Scenario, type RiskTier,
   complianceAttestationArgs, riskAttestationArgs, rfqRequestArgs,
 } from './ledger';
@@ -120,7 +120,7 @@ const str = (v: unknown) => (v == null ? null : String(v));
 
 interface State {
   role: Role; phase: Phase; funderTab: string;
-  toast: string | null; toastColor: string;
+  toast: string | null; toastColor: string; toastTx: string | null;
   walletState: WalletState; walletMenuOpen: boolean;
   ready: boolean | null;
   receivable: ReceivableView | null;
@@ -134,6 +134,7 @@ interface StoreCtx {
   state: State;
   invitedFunders: string[];
   requestFor: (key: string) => RFQRequestView | undefined;
+  explorerUrl: string | null;   // 5N Lighthouse view for the acting party (DevNet only)
   setRole: (id: Role) => void;
   setFunderTab: (k: string) => void;
   createReceivable: (r: ReceivableForm) => void;
@@ -157,18 +158,21 @@ export function useStore(): StoreCtx {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>({
-    role: 'seller', phase: 'origination', funderTab: 'A', toast: null, toastColor: '#57e3a0',
+    role: 'seller', phase: 'origination', funderTab: 'A', toast: null, toastColor: '#57e3a0', toastTx: null,
     walletState: 'disconnected', walletMenuOpen: false, ready: null,
     receivable: null, compliance: null, risk: null, requests: [], rfqOpen: false,
   });
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const patch = useCallback((p: Partial<State>) => setState((s) => ({ ...s, ...p })), []);
 
-  const toast = useCallback((msg: string, color = '#57e3a0') => {
+  // A toast with a tx link stays up longer so it's clickable (dApp-style receipt).
+  const toast = useCallback((msg: string, color = '#57e3a0', tx: string | null = null) => {
     timers.current.forEach(clearTimeout);
-    setState((s) => ({ ...s, toast: msg, toastColor: color }));
-    timers.current.push(setTimeout(() => setState((s) => ({ ...s, toast: null })), 2600));
+    setState((s) => ({ ...s, toast: msg, toastColor: color, toastTx: tx }));
+    timers.current.push(setTimeout(() => setState((s) => ({ ...s, toast: null, toastTx: null })), tx ? 7000 : 2600));
   }, []);
+  // updateId of the transaction the just-completed action submitted (newest first).
+  const lastTx = () => getTxLog()[0]?.updateId ?? null;
 
   // Read the Seller's view → the shared deal state. The Seller is signatory or
   // observer on every Phase 1 contract, so it sees the whole package it authored.
@@ -236,6 +240,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const invitedFunders = useMemo(() => state.requests.map((r) => r.funderKey), [state.requests]);
   const requestFor = useCallback((key: string) => state.requests.find((r) => r.funderKey === key), [state.requests]);
 
+  // External explorer link for whichever party the current role acts as.
+  const explorerUrl = useMemo(() => {
+    const P = getParties();
+    const id = state.role === 'funder'
+      ? P[funderRole(state.funderTab)]
+      : P[state.role as 'seller' | 'compliance' | 'risk' | 'coordinator' | 'auditor' | 'outsider'];
+    return explorerUrlForParty(id ?? '');
+  }, [state.role, state.funderTab, state.ready]);  // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---- Phase 1 origination actions ----
   const createReceivable = useCallback((r: ReceivableForm) => {
     toast('Registering Receivable…', '#57e3a0');
@@ -255,7 +268,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }, 'Register Receivable');
         const d = await refreshData();
         patch({ phase: phaseFrom(d) });
-        toast('Receivable registered — private to you', '#57e3a0');
+        toast('Receivable registered — private to you', '#57e3a0', lastTx());
       } catch (e) { toast(String(e), '#f0795f'); }
     })();
   }, [patch, toast, refreshData]);
@@ -270,7 +283,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const scen: Phase1Scenario = { ...dealScenario(rcv), compliance: { ...SCENARIO.compliance, sellerEligible, rfqEligible } };
         await createAs(P.compliance, 'ComplianceAttestation', complianceAttestationArgs(P.compliance, P.seller, rcv.cid, scen), 'Compliance attestation');
         await refreshData();
-        toast('Compliance Attestation issued', '#57e3a0');
+        toast('Compliance Attestation issued', '#57e3a0', lastTx());
       } catch (e) { toast(String(e), '#f0795f'); }
     })();
   }, [state.receivable, toast, refreshData]);
@@ -285,7 +298,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const scen: Phase1Scenario = { ...dealScenario(rcv), risk: { ...SCENARIO.risk, riskTier } };
         await createAs(P.risk, 'RiskAttestation', riskAttestationArgs(P.risk, P.seller, rcv.cid, scen), 'Risk attestation');
         await refreshData();
-        toast('Risk Attestation issued', '#57e3a0');
+        toast('Risk Attestation issued', '#57e3a0', lastTx());
       } catch (e) { toast(String(e), '#f0795f'); }
     })();
   }, [state.receivable, toast, refreshData]);
@@ -318,7 +331,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         const d = await refreshData();
         patch({ phase: phaseFrom(d), funderTab: funderKeys[0] ?? 'A' });
-        toast('RFQ opened — one private request per Funder', '#57e3a0');
+        toast('RFQ opened — one private request per Funder', '#57e3a0', lastTx());
       } catch (e) { toast(String(e), '#f0795f'); }
     })();
   }, [state.receivable, state.compliance, state.risk, state.requests, patch, toast, refreshData]);
@@ -349,10 +362,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const disconnectWallet = useCallback(() => { patch({ walletState: 'disconnected', walletMenuOpen: false }); toast('Wallet disconnected', '#9aa1ad'); }, [patch, toast]);
 
   const value = useMemo<StoreCtx>(() => ({
-    state, invitedFunders, requestFor,
+    state, invitedFunders, requestFor, explorerUrl,
     setRole, setFunderTab, createReceivable, issueCompliance, issueRisk, openRFQ, onReset,
     walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet,
-  }), [state, invitedFunders, requestFor, setRole, setFunderTab, createReceivable, issueCompliance, issueRisk, openRFQ, onReset, walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet]);
+  }), [state, invitedFunders, requestFor, explorerUrl, setRole, setFunderTab, createReceivable, issueCompliance, issueRisk, openRFQ, onReset, walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -73,6 +73,16 @@ export async function loadConfig(): Promise<boolean> {
 
 export const getParties = (): Record<Role, string> => cfg.parties;
 
+/** External block-explorer URL for a party's ledger view (5N Lighthouse indexes the
+ *  DevNet participant). Returns null off DevNet (e.g. a local sandbox), where no
+ *  public explorer exists — Canton has no global explorer, only per-party views. */
+export function explorerUrlForParty(party: string): string | null {
+  if (!party) return null;
+  const onDevnet = /devnet|fivenorth|cantonloop/i.test(cfg.jsonApiUrl) || sessionMode;
+  if (!onDevnet) return null;
+  return `https://lighthouse.devnet.cantonloop.com/party/${encodeURIComponent(party)}`;
+}
+
 // Phase 1 templates live in per-module namespaces inside cloakrfq-contracts.
 const MODULE: Record<string, string> = {
   Receivable: 'Receivable',

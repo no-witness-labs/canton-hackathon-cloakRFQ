@@ -33,7 +33,7 @@ function TxIndicator() {
 }
 
 export default function Workspace() {
-  const { state, setRole } = useStore();
+  const { state, setRole, explorerUrl } = useStore();
   const role = state.role;
   const lg = LEGEND[role];
 
@@ -68,6 +68,12 @@ export default function Workspace() {
           <span className="spacer" />
           <NewDealButton />
           <TxIndicator />
+          {explorerUrl && (
+            <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="chip ghost"
+              style={{ textDecoration: 'none' }} title="View this party on the 5N Lighthouse explorer (Canton DevNet)">
+              Explorer ↗
+            </a>
+          )}
           <span className="live"><span className="dot" /> Live RFQ-4471</span>
           <WalletConnector />
         </div>
@@ -107,12 +113,21 @@ function Toast() {
   const { state } = useStore();
   if (!state.toast) return null;
   return (
-    <div className="toast"><span className="dot" style={{ background: state.toastColor }} />{state.toast}</div>
+    <div className="toast">
+      <span className="dot" style={{ background: state.toastColor }} />
+      <span>{state.toast}</span>
+      {state.toastTx && (
+        <Link href={`/activity?tx=${state.toastTx}`}
+          style={{ marginLeft: 12, paddingLeft: 12, borderLeft: '1px solid var(--line3)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}>
+          View transaction →
+        </Link>
+      )}
+    </div>
   );
 }
 
 function WalletConnector() {
-  const { state, walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet } = useStore();
+  const { state, walletParty, explorerUrl, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet } = useStore();
   const role = state.role;
   const wParty = walletParty(role);
   const connected = state.walletState === 'connected';
@@ -178,7 +193,12 @@ function WalletConnector() {
                     </div>
                   ))}
                 </div>
-                <div style={{ padding: '6px 16px 15px' }}>
+                <div style={{ padding: '6px 16px 15px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {explorerUrl && (
+                    <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="btn dark sm" style={{ textDecoration: 'none', justifyContent: 'center' }}>
+                      <Icon name="card" size={14} /> View party on 5N Lighthouse ↗
+                    </a>
+                  )}
                   <button className="w-disconnect" onClick={disconnectWallet}><Icon name="logout" size={14} sw={2.2} /> Disconnect wallet</button>
                 </div>
               </>
