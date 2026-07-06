@@ -36,6 +36,9 @@ export default function Workspace() {
   const { state, setRole } = useStore();
   const role = state.role;
   const lg = LEGEND[role];
+  const dealLabel = state.rfqOpen && state.receivable ? `${state.receivable.invoiceId} · RFQ open`
+    : state.receivable ? `${state.receivable.invoiceId} · building`
+    : 'Phase 1 · new deal';
 
   if (state.ready === null) return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
@@ -68,7 +71,7 @@ export default function Workspace() {
           <span className="spacer" />
           <NewDealButton />
           <TxIndicator />
-          <span className="live"><span className="dot" /> Live RFQ-4471</span>
+          <span className="live"><span className="dot" /> Live · {dealLabel}</span>
           <WalletConnector />
         </div>
 
@@ -88,6 +91,7 @@ export default function Workspace() {
       </header>
 
       <main className="main">
+        {role !== 'outsider' && <ProgressStepper />}
         {role === 'seller' && <SellerView />}
         {role === 'funder' && <FunderView />}
         {role === 'compliance' && <ComplianceRoleView />}
@@ -116,6 +120,32 @@ function Toast() {
       {state.toastTx && (
         <a href={`/tx/${state.toastTx}`} target="_blank" rel="noopener noreferrer" style={toastLinkStyle}>Explore transaction ↗</a>
       )}
+    </div>
+  );
+}
+
+// Live Phase 1 progress, shown across role views so the deal's journey is always visible.
+function ProgressStepper() {
+  const { state: s } = useStore();
+  const steps = [
+    { label: 'Receivable', done: !!s.receivable, active: !s.receivable },
+    { label: 'Compliance', done: !!s.compliance, active: !!s.receivable && !s.compliance },
+    { label: 'Risk', done: !!s.risk, active: !!s.receivable && !s.risk },
+    { label: 'Certificates', done: !!(s.compliance?.certified && s.risk?.certified), active: !!s.compliance && !!s.risk && !s.rfqOpen },
+    { label: 'RFQ open', done: s.rfqOpen, active: false },
+  ];
+  return (
+    <div className="stepper">
+      {steps.map((st, i) => {
+        const stateCls = st.done ? ' done' : st.active ? ' active' : '';
+        return (
+          <div className="step" key={st.label}>
+            {i < steps.length - 1 && <span className={'step-line' + (st.done ? ' done' : '')} />}
+            <span className={'step-dot' + stateCls}>{st.done ? '✓' : i + 1}</span>
+            <span className={'step-lab' + stateCls}>{st.label}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -344,63 +374,66 @@ function SellerView() {
 
   // Step 1 — register the Receivable
   if (!rcv) return (
-    <div className="grid-seller">
-      <div className="col"><ReceivableForm onCreate={createReceivable} /></div>
-      <div className="col"><StepHint title="Step 1 · Originate" body="Register the Receivable you want to finance. It is private to you on the ledger (registrar == owner) — the raw Debtor identity never leaves this contract. Next, gather the Compliance and Risk attestations, then open the RFQ." risk={risk} comp={comp} /></div>
+    <div className="grid-origination">
+      <ReceivableForm onCreate={createReceivable} />
+      <StepHint title="Step 1 · Originate" body="Register the Receivable you want to finance. It is private to you on the ledger (registrar == owner) — the raw Debtor identity never leaves this contract. Next, gather the Compliance and Risk attestations, then open the RFQ." risk={risk} comp={comp} />
     </div>
   );
 
-  const left = (
-    <div className="col">
-      <section className="panel">
-        <div className="panel-h"><h2>Receivable</h2><span className="spacer" /><span className="h-tag">{rcv.invoiceId}</span></div>
-        <div className="panel-b">
-          <div className="face">{usd(rcv.payableAmount)}</div>
-          <div className="t-ink3" style={{ fontSize: 12.5, marginTop: 3 }}>Payable · {rcv.currency} · {rcv.paymentTerms}</div>
-          <div className="meta-grid">
-            <div className="meta"><div className="k">Issued</div><div className="v mono">{rcv.issueDate}</div></div>
-            <div className="meta"><div className="k">Due</div><div className="v mono">{rcv.dueDate}</div></div>
-            <div className="meta"><div className="k">Buyer ref</div><div className="v">{rcv.buyerReference ?? '—'}</div></div>
-            <div className="meta"><div className="k">PO ref</div><div className="v">{rcv.purchaseOrderReference ?? '—'}</div></div>
+  const receivableCard = (
+    <section className="panel">
+      <div className="panel-h"><h2>Receivable</h2><span className="spacer" /><span className="h-tag">{rcv.invoiceId}</span></div>
+      <div className="panel-b">
+        <div className="face">{usd(rcv.payableAmount)}</div>
+        <div className="t-ink3" style={{ fontSize: 12.5, marginTop: 3 }}>Payable · {rcv.currency} · {rcv.paymentTerms}</div>
+        <div className="meta-grid">
+          <div className="meta"><div className="k">Issued</div><div className="v mono">{rcv.issueDate}</div></div>
+          <div className="meta"><div className="k">Due</div><div className="v mono">{rcv.dueDate}</div></div>
+          <div className="meta"><div className="k">Buyer ref</div><div className="v">{rcv.buyerReference ?? '—'}</div></div>
+          <div className="meta"><div className="k">PO ref</div><div className="v">{rcv.purchaseOrderReference ?? '—'}</div></div>
+        </div>
+      </div>
+    </section>
+  );
+
+  const debtorCard = (
+    <section className="panel">
+      <div className="panel-h"><h2>Debtor</h2></div>
+      <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Identity (to you)</span><span style={{ fontSize: 13, fontWeight: 600 }}>{rcv.debtorName}</span></div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span>{risk ? <span className="chip accent">{TIER_LABEL[risk.riskTier] ?? risk.riskTier}</span> : <span className="chip ghost">pending</span>}</div>
+        <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>Funders receive the certified <span className="t-ink3">risk tier</span> — not the raw Debtor identity.</p>
+      </div>
+    </section>
+  );
+
+  const boundaryCard = (
+    <section className="panel">
+      <div className="panel-h"><h2>Disclosure Boundary</h2></div>
+      <div style={{ padding: '7px 17px 13px' }}>
+        {BOUNDARY.map((b) => (
+          <div key={b.stage} style={{ display: 'flex', gap: 11, padding: '9px 0', borderBottom: '1px solid var(--line3)' }}>
+            <span className="mono t-accent" style={{ fontSize: 10, width: 78, flex: 'none', paddingTop: 1 }}>{b.stage}</span>
+            <span className="t-ink2" style={{ fontSize: 12, lineHeight: 1.45 }}>{b.what}</span>
           </div>
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="panel-h"><h2>Debtor</h2></div>
-        <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Identity (to you)</span><span style={{ fontSize: 13, fontWeight: 600 }}>{rcv.debtorName}</span></div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span>{risk ? <span className="chip accent">{TIER_LABEL[risk.riskTier] ?? risk.riskTier}</span> : <span className="chip ghost">pending</span>}</div>
-          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>Funders receive the certified <span className="t-ink3">risk tier</span> — not the raw Debtor identity.</p>
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="panel-h"><h2>Disclosure Boundary</h2></div>
-        <div style={{ padding: '7px 17px 13px' }}>
-          {BOUNDARY.map((b) => (
-            <div key={b.stage} style={{ display: 'flex', gap: 11, padding: '9px 0', borderBottom: '1px solid var(--line3)' }}>
-              <span className="mono t-accent" style={{ fontSize: 10, width: 78, flex: 'none', paddingTop: 1 }}>{b.stage}</span>
-              <span className="t-ink2" style={{ fontSize: 12, lineHeight: 1.45 }}>{b.what}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
+        ))}
+      </div>
+    </section>
   );
 
-  // Step 2 — gather attestations & open the RFQ
+  // Step 2 — gather attestations & open the RFQ. Boundary sits on the right, under
+  // Open RFQ, so the two columns stay balanced instead of leaving a right-side void.
   if (!state.rfqOpen) return (
     <div className="grid-seller">
-      {left}
-      <div className="col"><OpenRFQPanel onOpen={openRFQ} risk={risk} comp={comp} /></div>
+      <div className="col">{receivableCard}{debtorCard}</div>
+      <div className="col"><OpenRFQPanel onOpen={openRFQ} risk={risk} comp={comp} />{boundaryCard}</div>
     </div>
   );
 
   // Step 3 — RFQ open: certificates derived, per-Funder requests created
   return (
     <div className="grid-seller">
-      {left}
+      <div className="col">{receivableCard}{debtorCard}{boundaryCard}</div>
       <div className="col">
         <div className="hook">
           <span className="hook-ic"><Icon name="check" size={16} /></span>
@@ -551,7 +584,7 @@ function ComplianceRoleView() {
   const att = state.compliance;
   const rcv = state.receivable;
   return (
-    <div className="grid-2">
+    <div className="grid-centered">
       <section className="panel">
         <div className="panel-h"><h2 className="lg">Compliance attestation</h2><span className="spacer" /><span className="h-tag">Compliance Party</span></div>
         <div style={{ padding: '6px 18px 14px' }}>
@@ -597,7 +630,7 @@ function RiskRoleView() {
   const att = state.risk;
   const rcv = state.receivable;
   return (
-    <div className="grid-2">
+    <div className="grid-centered">
       <section className="panel">
         <div className="panel-h"><h2 className="lg">Risk attestation</h2><span className="spacer" /><span className="h-tag">Risk Assessor</span></div>
         <div style={{ padding: '6px 18px 14px' }}>
