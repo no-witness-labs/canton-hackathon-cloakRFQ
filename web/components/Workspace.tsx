@@ -3,7 +3,7 @@
 import { Icon, type IconName } from '@/lib/icons';
 import { useState, useEffect, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { subscribeTx, getTxLog, getTxVersion, isSessionMode, newSession } from '@/lib/ledger';
+import { subscribeTx, getTxLog, getTxVersion, isSessionMode, newSession, explorerTxUrl } from '@/lib/ledger';
 import {
   useStore, ROLES, LEGEND, BOUNDARY, truncParty, usd, FUNDER_PARTY_NAMES,
   type ReceivableForm, type RiskTier, type ComplianceView, type RiskView, type RFQRequestView,
@@ -109,18 +109,20 @@ export default function Workspace() {
 }
 
 /* ============================ shared ============================ */
+const toastLinkStyle: React.CSSProperties = { marginLeft: 12, paddingLeft: 12, borderLeft: '1px solid var(--line3)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600, whiteSpace: 'nowrap' };
 function Toast() {
   const { state } = useStore();
   if (!state.toast) return null;
+  // On DevNet, deep-link the real transaction on the 5N Lighthouse explorer;
+  // off DevNet (local sandbox) fall back to the in-app Activity view.
+  const ext = state.toastTx ? explorerTxUrl(state.toastTx) : null;
   return (
     <div className="toast">
       <span className="dot" style={{ background: state.toastColor }} />
       <span>{state.toast}</span>
-      {state.toastTx && (
-        <Link href={`/activity?tx=${state.toastTx}`}
-          style={{ marginLeft: 12, paddingLeft: 12, borderLeft: '1px solid var(--line3)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}>
-          View transaction →
-        </Link>
+      {state.toastTx && (ext
+        ? <a href={ext} target="_blank" rel="noopener noreferrer" style={toastLinkStyle}>View transaction ↗</a>
+        : <Link href={`/activity?tx=${state.toastTx}`} style={toastLinkStyle}>View transaction →</Link>
       )}
     </div>
   );
@@ -182,7 +184,7 @@ function WalletConnector() {
                   <span style={{ width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center', flex: 'none', background: observer ? 'rgba(232,193,95,0.12)' : 'rgba(87,227,160,0.12)', border: `1px solid ${observer ? 'rgba(232,193,95,0.28)' : 'rgba(87,227,160,0.28)'}`, color: dotColor }}><Icon name="user" size={18} /></span>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div className="disp" style={{ fontWeight: 600, fontSize: 14 }}>{chipName}</div>
-                    <div className="mono" style={{ fontSize: 10, color: dotColor, marginTop: 2 }}>{observer ? 'Non-party · observer only' : `${wParty!.badge} · Canton Devnet`}</div>
+                    <div className="mono" style={{ fontSize: 10, color: dotColor, marginTop: 2 }}>{observer ? 'Non-party · observer only' : `${wParty!.badge} · simulated`}</div>
                   </div>
                 </div>
                 <div style={{ padding: '10px 16px' }}>
@@ -192,6 +194,9 @@ function WalletConnector() {
                       <span className="mono" style={{ fontSize: 12, color: d.color, wordBreak: 'break-all', lineHeight: 1.4 }}>{d.v}</span>
                     </div>
                   ))}
+                  <p className="t-mut" style={{ fontSize: 10.5, lineHeight: 1.5, marginTop: 8 }}>
+                    Simulated connection — no browser key signs here. The Party ID above is the real on-ledger party; the app authorizes commands as it server-side.
+                  </p>
                 </div>
                 <div style={{ padding: '6px 16px 15px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {explorerUrl && (
