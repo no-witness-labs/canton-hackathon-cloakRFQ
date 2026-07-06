@@ -7,28 +7,30 @@ Verifies the UI and docs do not overclaim, per the ADRs and
 
 ZK proofs · cryptographic blind auction · production payment finality ·
 production custody · real bank / stablecoin / Canton Coin / Amulet settlement ·
-production legal assignment / perfection / Debtor enforceability · Funding Locks
-· escrow · full anonymity.
+production legal assignment / perfection / Debtor enforceability · escrow ·
+full anonymity · guaranteed settlement.
 
 Allowed framing: **On-Ledger Demo Settlement** with a **Demo Settlement Asset
-(non-production)**; **Proof-of-Funds = bid-eligibility evidence only, not a
-lock**; privacy = **role-scoped selective disclosure**, not anonymity.
+(non-production)**; **committed CIP-56 allocation evidence = scoped quote
+funding evidence that allocates funds for the RFQ context, not escrow, custody,
+bank settlement, production payment finality, or guaranteed settlement**; privacy
+= **role-scoped selective disclosure**, not anonymity.
 
 ## Method
 
 ```bash
-grep -rniE 'zero[- ]?knowledge|\bZK\b|production (settlement|custody)|real (money|bank|settlement)|stablecoin|canton coin|amulet|funding lock|escrow|guaranteed' web docs
+grep -rniE 'zero[- ]?knowledge|\bZK\b|production (settlement|custody)|real (money|bank|settlement)|stablecoin|canton coin|amulet|escrow|guaranteed' web docs
 ```
 Then confirm the safe phrasings are present in the UI copy.
 
-## Findings — PASS
+## Findings
 
-- **UI copy is claim-safe.** `web/` uses "Demo Settlement Asset · Canton Devnet —
-  non-production", "Demo Settlement Asset · non-production", and "Proof-of-Funds
-  is bid-eligibility evidence only — not a funds lock, reserve, escrow, or
-  settlement guarantee" (`web/components/Workspace.tsx`, `web/lib/types.ts`).
-- **No overclaim in product copy.** The flagged terms (ZK, escrow, Funding Lock,
-  stablecoin, Canton Coin, real bank settlement) appear **only** inside explicit
+- **UI copy needs a Phase 2 wording refresh before final submission.** It should
+  describe committed CIP-56 allocation evidence as scoped quote funding evidence
+  for the RFQ context, without calling it escrow, custody, bank settlement,
+  production payment finality, or guaranteed settlement.
+- **No overclaim in product copy.** The flagged terms (ZK, escrow, stablecoin,
+  Canton Coin, real bank settlement, guaranteed settlement) appear **only** inside explicit
   "do not claim / out of scope" lists in `docs/CLOAKRFQ_PRD.md`,
   `docs/CLOAKRFQ_MVP_BUILD_SPEC.md`, the ADRs, and `HACKATHON_ALIGNMENT.md`, or in
   negations in `web/README.md` ("not … real settlement"). None assert a capability.

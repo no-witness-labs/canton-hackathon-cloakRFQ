@@ -2,11 +2,16 @@
 
 ## Status
 
-Accepted
+Accepted; refined by ADR 0012
 
 ## Date
 
 2026-06-18
+
+
+## Refinement Note
+
+ADR 0012 keeps Proof of Funds as the broad product concept, but selects committed CIP-56 allocation evidence as the concrete Phase 2 mechanism. That means Phase 2 no longer relies only on point-in-time proof. The allocation-backed quote path reserves funds for the RFQ context until the allocation deadline or token-standard release path, while still not claiming escrow, custody, bank settlement, production payment finality, or guaranteed settlement completion.
 
 ## Context
 
