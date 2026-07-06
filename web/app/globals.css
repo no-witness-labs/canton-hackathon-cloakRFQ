@@ -127,10 +127,12 @@ svg { display: block; }
   .legend-cell + .legend-cell { border-left: 0; border-top: 1px solid var(--line2); }
   .legend-val { white-space: normal; overflow: visible; }
   .form-grid, .form-grid-3 { grid-template-columns: 1fr; }
+  .role-switch { flex-wrap: wrap; overflow-x: visible; }   /* show all 7 roles, no hidden horizontal scroll */
+  .role-btn { flex: 1 1 auto; }
   .step-dot { width: 24px; height: 24px; font-size: 11px; }
   .step-line { top: 12px; }
   .stepper { padding: 14px 4px 12px; }
-  .step-lab { font-size: 9.5px; }
+  .step-lab { font-size: 10px; }
   .toast { flex-wrap: wrap; left: 12px; right: 12px; transform: none; max-width: none; }
 }
 
@@ -255,6 +257,14 @@ svg { display: block; }
 /* ---------- outsider / public ---------- */
 .public-row { display: flex; align-items: center; gap: 13px; background: var(--sunken); border: 1px solid var(--line2); border-radius: 10px; padding: 13px 15px; }
 .note { display: flex; align-items: flex-start; gap: 11px; background: var(--accent-tint); border: 1px solid rgba(87, 227, 160, 0.18); border-radius: 11px; padding: 14px 16px; font-size: 12.5px; color: var(--ink2); line-height: 1.55; }
+
+/* ---------- demo badge / inline link / welcome modal ---------- */
+.demo-badge { font-family: var(--font-mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--amber); background: rgba(232, 193, 95, 0.1); border: 1px solid var(--amber-line); border-radius: 999px; padding: 4px 10px; flex: none; white-space: nowrap; }
+.linklike { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; }
+.linklike:hover { text-decoration: underline; }
+.modal-overlay { position: fixed; inset: 0; z-index: 300; background: rgba(8, 10, 13, 0.72); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: grid; place-items: center; padding: 20px; animation: pop .18s ease; }
+.modal-card { background: var(--panel); border: 1px solid var(--line5); border-radius: 16px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); padding: 24px; max-width: 480px; width: 100%; max-height: 90vh; overflow-y: auto; }
+.welcome-step-n { width: 26px; height: 26px; border-radius: 50%; flex: none; display: grid; place-items: center; background: rgba(87, 227, 160, 0.12); border: 1px solid var(--accent-line); color: var(--accent); font-family: var(--font-mono); font-weight: 600; font-size: 12px; }
 
 /* ---------- workflow progress stepper ---------- */
 .stepper { display: flex; align-items: flex-start; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px clamp(10px, 2vw, 22px) 14px; margin-bottom: clamp(16px, 3vw, 22px); }

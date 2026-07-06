@@ -38,39 +38,50 @@ export default function Workspace() {
   const lg = LEGEND[role];
   const dealLabel = state.rfqOpen && state.receivable ? `${state.receivable.invoiceId} · RFQ open`
     : state.receivable ? `${state.receivable.invoiceId} · building`
-    : 'Phase 1 · new deal';
+    : 'demo · new deal';
+  const [showWelcome, setShowWelcome] = useState(false);
+  useEffect(() => { try { setShowWelcome(!localStorage.getItem('cloakrfq-welcomed')); } catch { /* ignore */ } }, []);
+  const closeWelcome = () => { try { localStorage.setItem('cloakrfq-welcomed', '1'); } catch { /* ignore */ } setShowWelcome(false); };
 
   if (state.ready === null) return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div className="mono t-ink3">Setting up your Canton ledger session…</div>
-        <div className="mono t-mut" style={{ fontSize: 11, marginTop: 8 }}>first load provisions your own private parties (~20s on DevNet)</div>
+    <>
+      <WelcomeOverlay open={showWelcome} onClose={closeWelcome} />
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <span className="spinner" style={{ display: 'block', margin: '0 auto 14px' }} />
+          <div className="disp" style={{ fontSize: 15, fontWeight: 600 }}>Setting up your demo…</div>
+          <div className="t-mut" style={{ fontSize: 12, marginTop: 6 }}>Creating your private demo workspace — about 20 seconds.</div>
+        </div>
       </div>
-    </div>
+    </>
   );
   if (state.ready === false) return (
-    <div style={{ maxWidth: 560, margin: '60px auto', padding: 24 }}>
-      <h1 className="disp" style={{ fontSize: 20, fontWeight: 700 }}>Sandbox not ready</h1>
-      <p className="t-ink3" style={{ marginTop: 8 }}>The Canton ledger isn&apos;t reachable. Bring it up, then reload:</p>
-      <pre style={{ background: 'var(--panel)', padding: 14, borderRadius: 10, marginTop: 10, color: 'var(--ink2)' }}>./scripts/start-sandbox.sh</pre>
-      <p className="t-mut" style={{ marginTop: 8, fontSize: 13 }}>This Workspace reads live Phase 1 contracts; the per-party proof is at <b>/ledger</b>.</p>
+    <div style={{ maxWidth: 520, margin: '80px auto', padding: 24, textAlign: 'center' }}>
+      <h1 className="disp" style={{ fontSize: 20, fontWeight: 700 }}>Demo temporarily unavailable</h1>
+      <p className="t-ink3" style={{ marginTop: 10, lineHeight: 1.6 }}>We couldn&apos;t reach the demo ledger just now. Please refresh in a moment — no action needed on your part.</p>
+      <button className="btn accent" style={{ marginTop: 16 }} onClick={() => window.location.reload()}>Retry</button>
+      <p className="t-mut" style={{ marginTop: 18, fontSize: 11.5 }}>Running locally? Start the ledger with <span className="mono">./scripts/start-sandbox.sh</span>, then reload.</p>
     </div>
   );
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <WelcomeOverlay open={showWelcome} onClose={closeWelcome} />
       <header className="topbar">
         <div className="topbar-row">
           <div className="brand">
             <span className="brand-mark"><Icon name="lock" size={17} /></span>
             <div>
               <div className="brand-name">Cloak<span>RFQ</span> <span className="rec">Receipts</span></div>
-              <div className="brand-sub">Private RFQ · Canton · Phase 1</div>
+              <div className="brand-sub">Private invoice financing · Canton</div>
             </div>
           </div>
+          <span className="demo-badge" title="Interactive demo — no wallet, sign-up, or real money needed">Demo · no real funds</span>
           <span className="spacer" />
+          <button className="chip ghost" style={{ cursor: 'pointer' }} onClick={() => setShowWelcome(true)}>? How it works</button>
           <NewDealButton />
           <TxIndicator />
+          <Link href="/ledger" className="chip ghost" style={{ textDecoration: 'none' }} title="See the per-party privacy proof">Ledger</Link>
           <span className="live"><span className="dot" /> Live · {dealLabel}</span>
           <WalletConnector />
         </div>
@@ -120,6 +131,47 @@ function Toast() {
       {state.toastTx && (
         <a href={`/tx/${state.toastTx}`} target="_blank" rel="noopener noreferrer" style={toastLinkStyle}>Explore transaction ↗</a>
       )}
+    </div>
+  );
+}
+
+// First-run welcome — explains what the app is, the 3-step flow, and that it's a
+// role-play demo, so a new user isn't dropped into a jargon-heavy workspace cold.
+function WelcomeOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null;
+  const steps = [
+    { n: '1', t: 'Register your invoice', d: 'Add an unpaid invoice you want to turn into cash now — we call it a “Receivable”.' },
+    { n: '2', t: 'Get it approved', d: 'Switch to the Compliance and Risk roles (top tabs) and approve it — in this demo you play every party yourself.' },
+    { n: '3', t: 'Send private requests', d: 'Open the RFQ (Request for Quote) to send each lender (“Funder”) its own private request — no funder can see another’s.' },
+  ];
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 8 }}>
+          <span className="brand-mark"><Icon name="lock" size={17} /></span>
+          <h2 className="disp" style={{ fontSize: 19, fontWeight: 700 }}>Welcome to CloakRFQ</h2>
+        </div>
+        <p className="t-ink2" style={{ fontSize: 13.5, lineHeight: 1.6 }}>
+          A private marketplace for <b>invoice financing</b> on the Canton Network: sell an unpaid invoice
+          to lenders early — <b>without exposing your data to competing lenders</b>.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 13, margin: '16px 0' }}>
+          {steps.map((s) => (
+            <div key={s.n} style={{ display: 'flex', gap: 12 }}>
+              <span className="welcome-step-n">{s.n}</span>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13.5 }}>{s.t}</div>
+                <div className="t-ink3" style={{ fontSize: 12.5, lineHeight: 1.5, marginTop: 2 }}>{s.d}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="note" style={{ fontSize: 12 }}>
+          <Icon name="eyeoff" size={16} color="#57e3a0" />
+          <div>This is a free interactive <b>demo</b>. You role-play all seven parties to see how each sees only what it&apos;s entitled to. <b>No wallet, sign-up, or real money</b> needed — ledger actions are real test-net transactions.</div>
+        </div>
+        <button className="btn accent block" style={{ marginTop: 16 }} onClick={onClose}>Got it — start the demo</button>
+      </div>
     </div>
   );
 }
@@ -180,7 +232,7 @@ function WalletConnector() {
   return (
     <div className="wallet-wrap">
       {state.walletState === 'disconnected' && (
-        <button className="w-connect" onClick={toggleWalletMenu}><Icon name="card" size={15} /> Connect Wallet</button>
+        <button className="w-connect" onClick={toggleWalletMenu}><Icon name="card" size={15} /> Sign in (optional)</button>
       )}
       {state.walletState === 'connecting' && (
         <div className="w-connecting"><span className="sp" /> Connecting…</div>
@@ -227,8 +279,8 @@ function WalletConnector() {
             ) : (
               <>
                 <div style={{ padding: '14px 16px 6px' }}>
-                  <div className="disp" style={{ fontWeight: 600, fontSize: 13.5 }}>Connect a party wallet</div>
-                  <div className="t-ink3" style={{ fontSize: 11.5, marginTop: 2, lineHeight: 1.45 }}>You&apos;ll join the RFQ as <span className="t-ink2">{intentName}</span> — your ledger view follows the selected role.</div>
+                  <div className="disp" style={{ fontWeight: 600, fontSize: 13.5 }}>Sign in as this participant</div>
+                  <div className="t-ink3" style={{ fontSize: 11.5, marginTop: 2, lineHeight: 1.45 }}>Optional &amp; simulated — no real wallet. You&apos;ll appear as <span className="t-ink2">{intentName}</span>; your view follows the selected role.</div>
                 </div>
                 <div style={{ padding: '8px 12px 6px', display: 'flex', flexDirection: 'column', gap: 7 }}>
                   {providers.map((p) => (
@@ -293,8 +345,9 @@ function ReceivableForm({ onCreate }: { onCreate: (r: ReceivableForm) => void })
   const valid = f.invoiceId.trim() !== '' && f.debtorName.trim() !== '' && f.payableAmount > 0 && f.issueDate !== '' && f.dueDate !== '';
   return (
     <section className="panel">
-      <div className="panel-h"><h2 className="lg">Register Receivable</h2><span className="spacer" /><span className="chip ghost">Seller-only · registrar = owner</span></div>
+      <div className="panel-h"><h2 className="lg">Register your invoice</h2><span className="spacer" /><span className="chip ghost">private to you</span></div>
       <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+        <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Pre-filled with <span className="t-ink3">example data</span> — edit the fields or just continue. This becomes your on-ledger &ldquo;Receivable&rdquo; (the invoice you want to finance).</p>
         <div className="form-grid">
           <Field label="Invoice ID"><input style={fieldInput} value={f.invoiceId} onChange={(e) => set({ invoiceId: e.target.value })} /></Field>
           <Field label="Payment terms"><input style={fieldInput} value={f.paymentTerms} onChange={(e) => set({ paymentTerms: e.target.value })} /></Field>
@@ -327,6 +380,7 @@ function AttestStatus({ risk, comp }: { risk: RiskView | null; comp: ComplianceV
 }
 
 function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; risk: RiskView | null; comp: ComplianceView | null }) {
+  const { setRole } = useStore();
   const [funders, setFunders] = useState<string[]>(['A', 'B', 'C']);
   const toggle = (k: string) => setFunders((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
   const eligible = !!comp && comp.sellerEligible && comp.rfqEligible;
@@ -345,10 +399,19 @@ function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; r
         </Field>
         <AttestStatus risk={risk} comp={comp} />
         {!eligible && comp && <p className="t-red" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Compliance marked the package not eligible — the certificate choice will reject. Re-issue an eligible attestation to proceed.</p>}
+        {(!comp || !risk) && (
+          <div style={{ background: 'rgba(232,193,95,0.08)', border: '1px solid var(--amber-line)', borderRadius: 10, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--amber)' }}>Next step: get this approved</div>
+            <p className="t-ink3" style={{ fontSize: 11.5, lineHeight: 1.5 }}>In this demo you play these roles too. Approve the invoice, then come back here to open the RFQ.</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {!comp && <button className="btn amber sm" onClick={() => setRole('compliance')}>Approve as Compliance →</button>}
+              {!risk && <button className="btn amber sm" onClick={() => setRole('risk')}>Set risk as Risk Assessor →</button>}
+            </div>
+          </div>
+        )}
         <button className="btn accent block" disabled={!ready} onClick={() => onOpen(funders)}>
           <Icon name="send" size={16} sw={2.4} /> Open RFQ to {funders.length} Funder{funders.length === 1 ? '' : 's'}
         </button>
-        {(!comp || !risk) && <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Issue both attestations first — from the <b>Compliance</b> and <b>Risk Assessor</b> roles.</p>}
       </div>
     </section>
   );
@@ -461,7 +524,10 @@ function SellerView() {
           </div>
           <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {state.requests.map((r) => <RFQRequestCard key={r.cid} r={r} />)}
-            <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Quoting, selection and settlement are Phase 2/3 — not on the ledger yet. Phase 1 ends with these private requests. Verify per-party isolation on <b>/ledger</b>.</p>
+            <div style={{ background: 'rgba(87,227,160,0.06)', border: '1px solid var(--accent-line)', borderRadius: 10, padding: '11px 13px' }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>🎉 That&apos;s the end of this demo</div>
+              <p className="t-ink3" style={{ fontSize: 11.5, lineHeight: 1.5 }}>You&apos;ve privately requested financing from each lender. Receiving offers and settling payment aren&apos;t built yet. Want proof the requests are actually private? Open the <Link href="/ledger" className="linklike">per-party Ledger view →</Link> and switch between funders — each sees only its own.</p>
+            </div>
           </div>
         </section>
       </div>
@@ -495,7 +561,7 @@ function RFQRequestCard({ r }: { r: RFQRequestView }) {
 
 /* ============================ FUNDER ============================ */
 function FunderView() {
-  const { state, invitedFunders, requestFor, setFunderTab } = useStore();
+  const { state, invitedFunders, requestFor, setFunderTab, setRole } = useStore();
   const invited = invitedFunders;
   useEffect(() => { if (invited.length && !invited.includes(state.funderTab)) setFunderTab(invited[0]); }, [invited, state.funderTab, setFunderTab]);
   const ft = invited.includes(state.funderTab) ? state.funderTab : (invited[0] ?? state.funderTab);
@@ -504,10 +570,11 @@ function FunderView() {
   if (!state.rfqOpen || !req) return (
     <div style={{ maxWidth: 600, margin: '40px auto' }}>
       <section className="panel">
-        <div className="panel-h"><h2 className="lg">No open RFQ</h2><span className="spacer" /><span className="chip ghost">waiting</span></div>
+        <div className="panel-h"><h2 className="lg">No request for you yet</h2><span className="spacer" /><span className="chip ghost">waiting</span></div>
         <div className="panel-b">
-          <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.6 }}>No RFQRequest has been addressed to you yet. Once the Seller opens the RFQ, your private RFQ Disclosure Package appears here — and only yours.</p>
-          <p className="t-mut" style={{ fontSize: 12, marginTop: 8 }}>Switch to <span className="t-accent">Seller</span> to register a Receivable, gather attestations and open the RFQ.</p>
+          <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.6 }}>As a <b>lender</b>, you receive a private financing request once a seller sends one. Nothing is here yet because no deal has been opened in this demo.</p>
+          <p className="t-mut" style={{ fontSize: 12.5, marginTop: 10, lineHeight: 1.5 }}>In this demo you create the deal yourself: play the <b>Seller</b>, register an invoice and open the RFQ — then come back here to see your private request.</p>
+          <button className="btn accent sm" style={{ marginTop: 14 }} onClick={() => setRole('seller')}>Start a deal as the Seller →</button>
         </div>
       </section>
     </div>
@@ -561,7 +628,7 @@ function FunderView() {
               <span className="outcome-dot" style={{ background: '#57e3a0' }} />
               <span className="disp" style={{ fontWeight: 600, fontSize: 14.5, color: '#57e3a0' }}>Invited — private request received</span>
             </div>
-            <p className="t-mut" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>Submitting a Private Quote against this request is <span className="t-ink3">Phase 2</span> — not on the ledger yet.</p>
+            <p className="t-mut" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>Making an offer on this request isn&apos;t built yet — this demo covers how the private request reaches you. The key point: you only see <span className="t-ink3">your own</span> request, never other lenders&apos;.</p>
           </section>
 
           <section className="panel dashed" style={{ padding: '16px 17px' }}>
@@ -578,26 +645,33 @@ function FunderView() {
   );
 }
 
+function NextStep({ label, onGo }: { label: string; onGo: () => void }) {
+  return <button className="btn accent sm" style={{ marginTop: 14 }} onClick={onGo}>{label}</button>;
+}
+
 /* ============================ COMPLIANCE ============================ */
 function ComplianceRoleView() {
-  const { state, issueCompliance } = useStore();
+  const { state, issueCompliance, setRole } = useStore();
   const att = state.compliance;
   const rcv = state.receivable;
   return (
     <div className="grid-centered">
       <section className="panel">
-        <div className="panel-h"><h2 className="lg">Compliance attestation</h2><span className="spacer" /><span className="h-tag">Compliance Party</span></div>
+        <div className="panel-h"><h2 className="lg">Compliance approval</h2><span className="spacer" /><span className="h-tag">Compliance role</span></div>
         <div style={{ padding: '6px 18px 14px' }}>
           {!rcv
-            ? <p className="t-mut" style={{ fontSize: 12.5, padding: '8px 0', lineHeight: 1.5 }}>No Receivable yet. Switch to <span className="t-accent">Seller</span> to register one, then attest here.</p>
+            ? <p className="t-mut" style={{ fontSize: 12.5, padding: '8px 0', lineHeight: 1.5 }}>No invoice registered yet. Switch to <button className="linklike" onClick={() => setRole('seller')}>Seller</button> to register one, then approve it here.</p>
             : att
               ? <>
-                  <AttestRow party="Compliance Party" subject="Seller & RFQ eligibility" result={att.sellerEligible && att.rfqEligible ? 'Eligible' : 'Not eligible'} tone="accent" />
+                  <AttestRow party="Compliance role" subject="Seller & invoice eligibility" result={att.sellerEligible && att.rfqEligible ? 'Eligible' : 'Not eligible'} tone="accent" />
                   <div style={{ ...attRowStyle }}>
                     <span className="t-ink3" style={{ fontSize: 12.5 }}>Compliance certificate</span>
                     <span className={'chip ' + (att.certified ? 'accent' : 'ghost')}>{att.certified ? 'Derived by Seller' : 'Awaiting Seller derivation'}</span>
                   </div>
-                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Issued on-ledger with the full compliance disclosure. The Seller observes the result and derives a certificate that exposes only the certified terms.</p>
+                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Recorded on-ledger. In this demo this is a simple eligible / not-eligible check — a real deployment would run KYC and sanctions screening here. The Seller sees the result and derives a certificate that exposes only the approved terms.</p>
+                  {state.risk
+                    ? <NextStep label="Next: back to Seller to open the RFQ →" onGo={() => setRole('seller')} />
+                    : <NextStep label="Next: set the risk as Risk Assessor →" onGo={() => setRole('risk')} />}
                 </>
               : <ComplianceForm onIssue={issueCompliance} />}
         </div>
@@ -613,12 +687,12 @@ function ComplianceForm({ onIssue }: { onIssue: (sellerEligible: boolean, rfqEli
   const [eligible, setEligible] = useState(true);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
-      <Field label="Eligibility result">
+      <Field label="Is this invoice eligible for financing?">
         <Seg val={eligible ? 'yes' : 'no'} onPick={(v) => setEligible(v === 'yes')} opts={[{ label: 'Eligible', value: 'yes' }, { label: 'Not eligible', value: 'no' }]} />
       </Field>
-      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Sets both <span className="mono">sellerEligible</span> and <span className="mono">rfqEligible</span>. A not-eligible attestation blocks the Seller&apos;s certificate derivation.</p>
+      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>In a real deployment this is where KYC and sanctions checks run. Marking it not eligible stops the deal from proceeding.</p>
       <button className="btn accent block" onClick={() => onIssue(eligible, eligible)}>
-        <Icon name="check" size={15} sw={2.3} /> Issue Compliance Attestation
+        <Icon name="check" size={15} sw={2.3} /> Approve compliance
       </button>
     </div>
   );
@@ -626,24 +700,27 @@ function ComplianceForm({ onIssue }: { onIssue: (sellerEligible: boolean, rfqEli
 
 /* ============================ RISK ============================ */
 function RiskRoleView() {
-  const { state, issueRisk } = useStore();
+  const { state, issueRisk, setRole } = useStore();
   const att = state.risk;
   const rcv = state.receivable;
   return (
     <div className="grid-centered">
       <section className="panel">
-        <div className="panel-h"><h2 className="lg">Risk attestation</h2><span className="spacer" /><span className="h-tag">Risk Assessor</span></div>
+        <div className="panel-h"><h2 className="lg">Risk assessment</h2><span className="spacer" /><span className="h-tag">Risk role</span></div>
         <div style={{ padding: '6px 18px 14px' }}>
           {!rcv
-            ? <p className="t-mut" style={{ fontSize: 12.5, padding: '8px 0', lineHeight: 1.5 }}>No Receivable yet. Switch to <span className="t-accent">Seller</span> to register one, then tier it here.</p>
+            ? <p className="t-mut" style={{ fontSize: 12.5, padding: '8px 0', lineHeight: 1.5 }}>No invoice registered yet. Switch to <button className="linklike" onClick={() => setRole('seller')}>Seller</button> to register one, then rate it here.</p>
             : att
               ? <>
-                  <AttestRow party="Risk Assessor" subject="Receivable risk tier" result={TIER_LABEL[att.riskTier] ?? att.riskTier} tone="amber" />
+                  <AttestRow party="Risk role" subject="Invoice risk rating" result={TIER_LABEL[att.riskTier] ?? att.riskTier} tone="amber" />
                   <div style={{ ...attRowStyle }}>
                     <span className="t-ink3" style={{ fontSize: 12.5 }}>Risk certificate</span>
                     <span className={'chip ' + (att.certified ? 'accent' : 'ghost')}>{att.certified ? 'Derived by Seller' : 'Awaiting Seller derivation'}</span>
                   </div>
-                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Funders receive the certified <span className="t-ink3">tier</span> in their RFQRequest — never the raw Debtor records.</p>
+                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Lenders receive this certified <span className="t-ink3">rating</span> in their request — never the customer&apos;s raw records. It signals how likely the invoice is to be paid.</p>
+                  {state.compliance
+                    ? <NextStep label="Next: back to Seller to open the RFQ →" onGo={() => setRole('seller')} />
+                    : <NextStep label="Next: approve as Compliance →" onGo={() => setRole('compliance')} />}
                 </>
               : <RiskForm onIssue={issueRisk} />}
         </div>
@@ -663,11 +740,12 @@ function RiskForm({ onIssue }: { onIssue: (tier: RiskTier) => void }) {
   const [tier, setTier] = useState<RiskTier>('LowRisk');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
-      <Field label="Risk tier">
-        <Seg val={tier} onPick={(v) => setTier(v as RiskTier)} opts={[{ label: 'Low', value: 'LowRisk' }, { label: 'Medium', value: 'MediumRisk' }, { label: 'High', value: 'HighRisk' }]} />
+      <Field label="How likely is this invoice to be paid?">
+        <Seg val={tier} onPick={(v) => setTier(v as RiskTier)} opts={[{ label: 'Low risk', value: 'LowRisk' }, { label: 'Medium', value: 'MediumRisk' }, { label: 'High risk', value: 'HighRisk' }]} />
       </Field>
+      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Lenders use this rating to price their offer. Lower risk = better terms for the seller.</p>
       <button className="btn accent block" onClick={() => onIssue(tier)}>
-        <Icon name="risk" size={15} sw={2} /> Issue Risk Attestation
+        <Icon name="risk" size={15} sw={2} /> Submit risk rating
       </button>
     </div>
   );
