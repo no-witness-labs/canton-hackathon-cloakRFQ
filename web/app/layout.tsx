@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Space_Grotesk, Public_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import { StoreProvider } from '@/lib/store';
@@ -10,6 +10,11 @@ const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], 
 export const metadata: Metadata = {
   title: 'CloakRFQ Receipts · Private invoice-financing RFQs on Canton',
   description: 'A private RFQ marketplace for Receivable Sales on Canton. Funders submit proof-backed Private Quotes, the Seller selects the Best Compliant Quote, settlement is demonstrated on-ledger, and Auditors receive Scoped Compliance Receipts.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

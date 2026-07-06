@@ -112,8 +112,26 @@ svg { display: block; }
 .grid-origination { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: start; max-width: 960px; margin: 0 auto; }
 .grid-centered { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 11px; }
 @media (max-width: 900px) {
   .grid-seller, .grid-2, .grid-funder, .grid-auditor, .grid-origination { grid-template-columns: 1fr; }
+}
+/* ---------- mobile ---------- */
+@media (max-width: 640px) {
+  .topbar-row { gap: 10px 12px; padding: 11px 16px; }
+  .brand-sub { display: none; }
+  .live { display: none; }                 /* deal state is also shown in the stepper */
+  .legend { flex-direction: column; align-items: stretch; }
+  .legend-cell { gap: 7px; padding: 9px 16px; }
+  .legend-cell + .legend-cell { border-left: 0; border-top: 1px solid var(--line2); }
+  .legend-val { white-space: normal; overflow: visible; }
+  .form-grid, .form-grid-3 { grid-template-columns: 1fr; }
+  .step-dot { width: 24px; height: 24px; font-size: 11px; }
+  .step-line { top: 12px; }
+  .stepper { padding: 14px 4px 12px; }
+  .step-lab { font-size: 9.5px; }
+  .toast { flex-wrap: wrap; left: 12px; right: 12px; transform: none; max-width: none; }
 }
 
 /* ---------- panels ---------- */
