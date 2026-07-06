@@ -120,8 +120,8 @@ export default function ActivityPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 11, flexWrap: 'wrap' }}>
                 <button className="btn dark sm" onClick={() => verify(tx.updateId, tx.actAs)}>Verify on ledger</button>
                 {ex && (
-                  <a className="btn dark sm" href={ex} target="_blank" rel="noopener noreferrer"
-                    style={{ textDecoration: 'none' }} title="Open this transaction on the 5N Lighthouse explorer (Canton DevNet)">
+                  <a className="btn dark sm" href={`/tx/${tx.updateId}`} target="_blank" rel="noopener noreferrer"
+                    style={{ textDecoration: 'none' }} title="Open this transaction on the 5N Lighthouse explorer (waits for indexing)">
                     Explore on Lighthouse ↗
                   </a>
                 )}
