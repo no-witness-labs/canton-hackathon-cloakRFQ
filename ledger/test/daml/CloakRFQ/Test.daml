@@ -1,2 +1,11 @@
--- | Compatibility module for CloakRFQ test package.
+-- | Root test runner for CloakRFQ ledger scripts.
 module CloakRFQ.Test where
+
+import Daml.Script
+import CloakRFQ.Test.Phase1 qualified as Phase1
+import CloakRFQ.Test.Phase2 qualified as Phase2
+
+all : Script ()
+all = do
+  Phase1.phase1
+  Phase2.phase2PrivateQuote
