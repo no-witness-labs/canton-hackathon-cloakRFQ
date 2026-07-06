@@ -5,7 +5,7 @@
 // archived. "Verify on ledger" re-fetches the transaction by id from the JSON API,
 // proving the entry is authoritative on-chain (not a client-side fabrication).
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   loadConfig, getParties, subscribeTx, getTxLog, getTxVersion, fetchUpdateById, fetchHistory, partyLabel,
   type LedgerTx,
@@ -20,8 +20,13 @@ export default function ActivityPage() {
   const [verified, setVerified] = useState<Record<string, { offset: number; recordTime: string } | 'fail'>>({});
   const [history, setHistory] = useState<LedgerTx[]>([]);
   const [loading, setLoading] = useState(false);
+  const [focus, setFocus] = useState<string | null>(null);          // ?tx=<updateId> deep-link target
+  const focusedOnce = useRef(false);
 
   useSyncExternalStore(subscribeTx, getTxVersion, getTxVersion);
+
+  // Read the ?tx= deep-link from the URL (client-only; avoids useSearchParams Suspense).
+  useEffect(() => { setFocus(new URLSearchParams(window.location.search).get('tx')); }, []);
 
   const load = useCallback(async () => {
     const ok = await loadConfig();
@@ -40,6 +45,16 @@ export default function ActivityPage() {
   const txs = [...byId.values()].sort((a, b) => b.offset - a.offset);
 
   const copy = useCallback((s: string) => { navigator.clipboard?.writeText(s); setCopied(s); setTimeout(() => setCopied(null), 1200); }, []);
+  // When arriving via a "View transaction" deep-link, scroll to the row and verify
+  // it on-ledger automatically (once it's present in the loaded history).
+  useEffect(() => {
+    if (!focus || focusedOnce.current) return;
+    const tx = txs.find((t) => t.updateId === focus);
+    if (!tx) return;
+    focusedOnce.current = true;
+    document.getElementById('tx-' + focus)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    verify(focus, tx.actAs);
+  }, [focus, txs]);  // eslint-disable-line react-hooks/exhaustive-deps
   const verify = useCallback(async (updateId: string, actAs: string) => {
     const party = actAs || getParties().seller;  // hydrated rows have no actAs → query as the Seller (a stakeholder)
     const tx = await fetchUpdateById(updateId, party);
@@ -74,7 +89,8 @@ export default function ActivityPage() {
         {txs.map((tx) => {
           const v = verified[tx.updateId];
           return (
-            <section key={tx.updateId + tx.offset} className="panel" style={{ padding: '13px 16px' }}>
+            <section key={tx.updateId + tx.offset} id={'tx-' + tx.updateId} className="panel"
+              style={{ padding: '13px 16px', ...(focus === tx.updateId ? { border: '1px solid var(--accent)', boxShadow: '0 0 0 1px var(--accent)' } : {}) }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <span className="chip accent">{tx.label}</span>
                 {tx.actAs && <span className="chip ghost">as {partyLabel(tx.actAs)}</span>}
