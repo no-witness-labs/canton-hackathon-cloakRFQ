@@ -133,7 +133,7 @@ function quoteFromContract(c: Contract): { q: Quote; funder: string } {
       adv: cal.adv, advAmt: cal.advAmt, reserve: cal.reserve, allIn: cal.allIn, allInPct: cal.allInPct, effApr: cal.effApr,
       recourse: RECOURSE_UI[a.recourse] ?? a.recourse, settle: a.settlement,
       disclosure: dl.disclosure, dLevel: dl.dLevel, dColor: dl.dColor, dRank: dl.dRank,
-      notify: a.debtorNotification, expiry: a.quoteExpiry, eligible: a.proofOfFundsPassed === true || a.proofOfFundsPassed === 'true',
+      notify: a.debtorNotification, expiry: a.quoteExpiry, eligible: String(a.proofOfFundsPassed) === 'true',
     },
   };
 }
