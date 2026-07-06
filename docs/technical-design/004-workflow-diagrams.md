@@ -4,7 +4,7 @@
 
 Diagram the current ledger workflow at a technical level.
 
-This document reflects the implemented Phase 1 and Phase 2 scope. Phase 3 is shown only as a boundary because quote review, selection, fallback, and settlement are not implemented yet.
+This document reflects the implemented Phase 1 and Phase 2 scope only. Later workflow stages are intentionally not modeled here.
 
 ## Phase Boundary
 
@@ -12,10 +12,10 @@ This document reflects the implemented Phase 1 and Phase 2 scope. Phase 3 is sho
 flowchart LR
     P1["Phase 1<br/>Origination & Eligibility"]
     P2["Phase 2<br/>Private Quote Intake"]
-    P3["Phase 3<br/>Review, Selection & Settlement<br/>(not implemented)"]
+    End["Phase 2 closes<br/>responseDeadline reached"]
 
     P1 -->|"per-Funder RFQRequest exists"| P2
-    P2 -->|"RFQ responseDeadline reached"| P3
+    P2 -->|"late quote submission fails"| End
 ```
 
 ## Implemented Contract Flow
@@ -26,7 +26,7 @@ flowchart TD
     Compliance["Compliance Party"]
     Risk["Risk Assessor"]
     Funder["Funder"]
-    Token["CIP-56 Token Allocation"]
+    Token["External CIP-56 Token Workflow"]
 
     R["Receivable<br/>seller-owned represented receivable"]
     CA["ComplianceAttestation<br/>private detailed compliance output"]
@@ -50,7 +50,7 @@ flowchart TD
     CC -. "certificate cid" .-> RFQ
     RC -. "certificate cid" .-> RFQ
 
-    Funder -->|"obtain committed allocation"| ALLOC
+    Funder -->|"obtain committed allocation outside CloakRFQ"| ALLOC
     Token --> ALLOC
     Funder -->|"exercise SubmitPrivateQuote"| RFQ
     ALLOC -. "fundingAllocationCid" .-> RFQ
@@ -87,7 +87,7 @@ sequenceDiagram
     participant L as Ledger
     participant S as Seller
 
-    F->>T: Obtain committed AllocationV2 for RFQ context
+    F->>T: Obtain committed AllocationV2 outside CloakRFQ
     F->>L: Exercise RFQRequest.SubmitPrivateQuote
     L->>L: Check quote terms
     L->>L: Fetch and validate AllocationV2
@@ -130,9 +130,9 @@ flowchart LR
     RFQ -->|"riskCertificateCid"| RC
     RFQ -->|"packageData"| PD
 
-    CC -->|"certifiedReceivableTerms"| PD
-    RC -->|"certifiedReceivableTerms"| PD
-    RC -->|"certifiedRiskTier"| PD
+    CC -. "compare certifiedReceivableTerms" .-> PD
+    RC -. "compare certifiedReceivableTerms" .-> PD
+    RC -. "compare certifiedRiskTier" .-> PD
 
     note1["Verifier compares request fields against authority-signed certificates.<br/>The Seller-authored request is not itself an authority proof."]
     RFQ -.-> note1
@@ -157,7 +157,7 @@ flowchart TD
       PQ_F["Own PrivateQuote"]
     end
 
-    subgraph Hidden["Hidden by default"]
+    subgraph Hidden["Hidden from Funders and third parties by default"]
       OtherRFQ["Other Funders' RFQRequests"]
       OtherPQ["Other Funders' PrivateQuotes"]
       RawBalances["Raw balances and unrelated holdings"]
@@ -165,7 +165,9 @@ flowchart TD
     end
 ```
 
-## Current State Machine
+## Current Intake Lifecycle
+
+This is the implemented intake lifecycle. There is no separate on-ledger close contract in Phase 2; the `responseDeadline` is enforced by `RFQRequest.SubmitPrivateQuote`.
 
 ```mermaid
 stateDiagram-v2
@@ -174,18 +176,6 @@ stateDiagram-v2
     Certified --> RequestOpen: Seller creates per-Funder RFQRequest
     RequestOpen --> Quoted: Funder submits allocation-backed PrivateQuote
     RequestOpen --> IntakeClosed: responseDeadline reached without quote
-    Quoted --> Phase3Boundary: responseDeadline reached
-    IntakeClosed --> Phase3Boundary
-    Phase3Boundary --> [*]
-```
-
-## Phase 3 Boundary
-
-```mermaid
-flowchart LR
-    PQ["PrivateQuote(s)<br/>created before responseDeadline"]
-    Deadline["responseDeadline reached"]
-    P3["Phase 3 design<br/>review, selection, fallback, settlement"]
-
-    PQ --> Deadline --> P3
+    Quoted --> IntakeClosed: responseDeadline reached
+    IntakeClosed --> [*]
 ```
