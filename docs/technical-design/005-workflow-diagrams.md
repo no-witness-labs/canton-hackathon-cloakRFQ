@@ -4,7 +4,7 @@
 
 Diagram the current ledger workflow at a technical level.
 
-This document reflects the implemented Phase 1 and Phase 2 scope only. Later workflow stages are intentionally not modeled here.
+This document reflects the implemented Phase 1, Phase 2, and Phase 3 happy-path settlement scope. Failure recording and fallback promotion are intentionally not modeled here yet.
 
 ## Phase Boundary
 
@@ -12,10 +12,12 @@ This document reflects the implemented Phase 1 and Phase 2 scope only. Later wor
 flowchart LR
     P1["Phase 1<br/>Origination & Eligibility"]
     P2["Phase 2<br/>Private Quote Intake"]
-    End["Phase 2 closes<br/>responseDeadline reached"]
+    P3["Phase 3<br/>Quote Settlement"]
+    End["Phase 3 success<br/>settlement evidence created"]
 
     P1 -->|"per-Funder RFQRequest exists"| P2
-    P2 -->|"late quote submission fails"| End
+    P2 -->|"responseDeadline reached"| P3
+    P3 -->|"CIP-56 settlement + pending Receivable transfer"| End
 ```
 
 ## Implemented Contract Flow
@@ -35,7 +37,11 @@ flowchart TD
     RC["RiskCertificate<br/>Risk-signed package credential"]
     RFQ["RFQRequest<br/>per-Funder package and quote slot"]
     ALLOC["AllocationV2<br/>committed funding allocation"]
+    SF["SettlementFactory<br/>CIP-56 batch settlement"]
     PQ["PrivateQuote<br/>Funder-signed allocation-backed quote"]
+    RSS["ReceivableSaleSettlement<br/>Seller+Funder final evidence"]
+    RT["Receivable<br/>pending transfer to Funder"]
+    FR["Receivable<br/>Funder-owned after AcceptTransfer"]
 
     Seller -->|"create"| R
     Compliance -->|"create"| CA
@@ -55,6 +61,15 @@ flowchart TD
     Funder -->|"exercise SubmitPrivateQuote"| RFQ
     ALLOC -. "fundingAllocationCid" .-> RFQ
     RFQ -->|"consumed"| PQ
+    Token --> SF
+    Seller -->|"exercise AcceptAndSettle"| PQ
+    PQ -->|"SettlementFactory_SettleBatch"| SF
+    SF -->|"settles allocation"| ALLOC
+    PQ -->|"exercise Receivable.Transfer"| RT
+    PQ -->|"create"| RSS
+    RT -. "receivableTransferCid" .-> RSS
+    Funder -->|"later exercise AcceptTransfer"| RT
+    RT --> FR
 ```
 
 ## Phase 1 Sequence
@@ -96,6 +111,28 @@ sequenceDiagram
     L-->>S: PrivateQuote visible as observer
 ```
 
+## Phase 3 Settlement Sequence
+
+```mermaid
+sequenceDiagram
+    participant S as Seller
+    participant L as Ledger
+    participant T as CIP-56 Token Workflow
+    participant F as Funder
+    participant A as Auditor
+
+    S->>L: Exercise PrivateQuote.AcceptAndSettle
+    L->>L: Check responseDeadline passed and quote not expired
+    L->>L: Fetch Receivable and validate Seller ownership + terms
+    L->>L: Fetch AllocationV2 and SettlementFactory
+    L->>T: Exercise SettlementFactory_SettleBatch
+    T-->>L: AllocationResult_Settled
+    L->>L: Exercise Receivable.Transfer to Funder
+    L->>L: Create ReceivableSaleSettlement
+    L-->>A: Settlement evidence visible as observer
+    F->>L: Later exercise Receivable.AcceptTransfer
+```
+
 ## RFQRequest Validation Surface
 
 ```mermaid
@@ -103,8 +140,8 @@ flowchart TD
     Submit["SubmitPrivateQuote"]
 
     QT["QuoteTerms<br/>- netPurchasePrice > 0<br/>- quoteExpiresAt > responseDeadline<br/>- now <= responseDeadline<br/>- now <= quoteExpiresAt"]
-    A["AllocationV2<br/>- committed<br/>- deadline covers quote expiry<br/>- settlement cid references RFQRequest<br/>- authorizer owner is Funder"]
-    P["Payment leg<br/>- admin matches packageData.paymentInstrumentAdmin<br/>- instrument id matches packageData.paymentInstrumentId<br/>- sender-side leg pays Seller<br/>- amount covers netPurchasePrice"]
+    A["AllocationV2<br/>- committed<br/>- deadline covers quote expiry<br/>- settlement id equals packageId<br/>- authorizer owner is Funder"]
+    P["Payment leg<br/>- admin matches packageData.paymentInstrumentAdmin<br/>- instrument id matches packageData.paymentInstrumentId<br/>- sender-side leg pays Seller<br/>- amount equals netPurchasePrice"]
     Create["Create PrivateQuote<br/>Consume RFQRequest"]
 
     Submit --> QT
@@ -113,6 +150,30 @@ flowchart TD
     QT --> Create
     A --> Create
     P --> Create
+```
+
+## AcceptAndSettle Validation Surface
+
+```mermaid
+flowchart TD
+    Accept["AcceptAndSettle"]
+
+    Time["Timing<br/>- now > responseDeadline<br/>- now <= quoteExpiresAt"]
+    Rcv["Receivable<br/>- Seller still owns it<br/>- terms match packageData"]
+    Alloc["AllocationV2<br/>- committed<br/>- deadline covers quote expiry<br/>- settlement id equals packageId<br/>- authorizer owner is Funder"]
+    Factory["SettlementFactory<br/>- admin matches paymentInstrumentAdmin<br/>- SettlementFactory_SettleBatch returns settled results"]
+    Transfer["Receivable.Transfer<br/>- creates pending transfer to Funder"]
+    Evidence["ReceivableSaleSettlement<br/>- signed by Seller + Funder<br/>- auditor observes<br/>- links allocation, factory, pending transfer"]
+
+    Accept --> Time
+    Accept --> Rcv
+    Accept --> Alloc
+    Accept --> Factory
+    Time --> Transfer
+    Rcv --> Transfer
+    Alloc --> Factory
+    Factory --> Transfer
+    Transfer --> Evidence
 ```
 
 ## Authenticity Links
@@ -150,11 +211,22 @@ flowchart TD
       RC["RiskCertificate"]
       RFQ_S["RFQRequest"]
       PQ["PrivateQuote"]
+      RSS["ReceivableSaleSettlement"]
+      RT["Pending Receivable transfer"]
+      SF["SettlementFactory"]
+      ALLOC["Funding Allocation"]
     end
 
     subgraph FunderVisible["Single Funder-visible"]
       RFQ_F["Own RFQRequest"]
       PQ_F["Own PrivateQuote"]
+      RSS_F["ReceivableSaleSettlement"]
+      RT_F["Pending Receivable transfer"]
+      FR_F["Funder-owned Receivable after AcceptTransfer"]
+    end
+
+    subgraph AuditorVisible["Auditor-visible"]
+      RSS_A["ReceivableSaleSettlement"]
     end
 
     subgraph Hidden["Hidden from Funders and third parties by default"]
@@ -165,9 +237,9 @@ flowchart TD
     end
 ```
 
-## Current Intake Lifecycle
+## Current Happy-Path Lifecycle
 
-This is the implemented intake lifecycle. There is no separate on-ledger close contract in Phase 2; the `responseDeadline` is enforced by `RFQRequest.SubmitPrivateQuote`.
+This is the implemented happy-path lifecycle. There is no separate on-ledger close contract in Phase 2; the `responseDeadline` is enforced by `RFQRequest.SubmitPrivateQuote` and `PrivateQuote.AcceptAndSettle`.
 
 ```mermaid
 stateDiagram-v2
@@ -176,6 +248,10 @@ stateDiagram-v2
     Certified --> RequestOpen: Seller creates per-Funder RFQRequest
     RequestOpen --> Quoted: Funder submits allocation-backed PrivateQuote
     RequestOpen --> IntakeClosed: responseDeadline reached without quote
-    Quoted --> IntakeClosed: responseDeadline reached
     IntakeClosed --> [*]
+    Quoted --> ReadyForSettlement: responseDeadline reached
+    ReadyForSettlement --> Settled: Seller exercises AcceptAndSettle
+    Settled --> PendingReceivableTransfer: Receivable.Transfer created
+    PendingReceivableTransfer --> FunderOwnedReceivable: Funder exercises AcceptTransfer
+    FunderOwnedReceivable --> [*]
 ```
