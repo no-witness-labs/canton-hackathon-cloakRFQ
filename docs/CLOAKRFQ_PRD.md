@@ -12,9 +12,9 @@ CloakRFQ Receipts needs an MVP implementation plan that preserves real-world RFQ
 
 Build CloakRFQ Receipts as a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton.
 
-The MVP demonstrates one complete happy path and one Selected Quote failure/fallback branch. A Seller creates a Receivable, opens a Blind RFQ, receives Eligible Quotes through a Seller Quote View, selects the Best Compliant Quote, and completes On-Ledger Demo Settlement using a Demo Settlement Asset. Funders submit Private Quotes backed by funding evidence, concretely a committed CIP-56 allocation in Phase 2 and do not see each other's quotes. Compliance and optional Risk parties provide scoped attestations. If the Selected Quote fails before RFQ Finality, the Seller may promote a still-valid Eligible Quote from a Seller-Controlled Fallback Queue. If required, an Auditor or Regulator receives a Scoped Compliance Receipt rather than the full RFQ workflow.
+The MVP demonstrates one complete happy path and one Selected Quote failure/fallback branch. A Seller creates a Receivable, opens a Blind RFQ, receives Eligible Quotes through a Seller Quote View, selects the Best Compliant Quote, and completes On-Ledger Demo Settlement using a committed CIP-56 token allocation. Funders submit Private Quotes backed by funding evidence, concretely a committed CIP-56 allocation in Phase 2 and do not see each other's quotes. Compliance and optional Risk parties provide scoped attestations. If the Selected Quote fails before RFQ Finality, the Seller may promote a still-valid Eligible Quote from a Seller-Controlled Fallback Queue. If required, an Auditor or Regulator receives a Scoped Compliance Receipt rather than the full RFQ workflow.
 
-The MVP is positioned for Track 1: Private DeFi & Capital Markets, with invoice financing / Receivable Sales as the use case. It must not overclaim production payment finality, production custody, production legal assignment, Debtor enforceability, ZK proofs, cryptographic blind auction behavior, escrow, stablecoin settlement, Canton Coin/Amulet integration, or real bank settlement.
+The MVP is positioned for Track 1: Private DeFi & Capital Markets, with invoice financing / Receivable Sales as the use case. It must not overclaim production payment finality, production custody, production legal assignment, Debtor enforceability, ZK proofs, cryptographic blind auction behavior, escrow, or real bank settlement.
 
 ## Why Canton
 
@@ -32,7 +32,7 @@ The MVP is successful if:
 - Seller can select Best Compliant Quote using Selection Criteria.
 - Selected Quote can either settle or fail before RFQ Finality.
 - Seller can promote a Fallback Quote after Commitment Failure.
-- On-Ledger Demo Settlement transfers the represented Receivable and Demo Settlement Asset.
+- On-Ledger Demo Settlement transfers the represented Receivable and CIP-56 token settlement.
 - Auditor or Regulator receives a Scoped Compliance Receipt without full RFQ visibility.
 
 ## User Stories
@@ -61,8 +61,8 @@ The MVP is successful if:
 22. As a Seller, I want to define a Seller-Controlled Fallback Queue, so that fallback ordering reflects my Selection Criteria rather than highest headline price alone.
 23. As a Seller, I want to promote a Fallback Quote if the Selected Quote fails before RFQ Finality, so that the RFQ can recover from Commitment Failure.
 24. As a Seller, I want fallback rights to end after RFQ Finality, so that fallback is not confused with post-settlement Funder exit.
-25. As a Seller, I want On-Ledger Demo Settlement to assign the represented Receivable to the Winning Funder and transfer Demo Settlement Asset to me, so that the demo shows payment-versus-receivable settlement as ledger state transitions.
-26. As a Seller, I want Demo Settlement Asset to be clearly non-production, so that the demo does not claim real payment finality, real bank settlement, stablecoin settlement, Canton Coin/Amulet integration, or production custody.
+25. As a Seller, I want On-Ledger Demo Settlement to assign the represented Receivable to the Winning Funder and transfer CIP-56 token settlement to me, so that the demo shows payment-versus-receivable settlement as ledger state transitions.
+26. As a Seller, I want CIP-56 token settlement to be clearly scoped to the demo environment, so that the demo does not claim real payment finality, real bank settlement, production custody.
 27. As a Seller, I want Receivable assignment treated as an MVP workflow state transition, so that the demo does not claim production legal assignment, perfection, Debtor enforceability, or jurisdiction-specific transfer compliance.
 28. As a Funder, I want to receive only the RFQ Disclosure Package I am entitled to see, so that I can evaluate the Receivable without seeing unnecessary Seller or Debtor data.
 29. As a Funder, I want to submit a Private Quote, so that my commercial terms are not visible to competing Funders.
@@ -94,7 +94,7 @@ The MVP is successful if:
 55. As a developer, I want the implementation to distinguish Privacy Guarantees from Privacy Ambitions, so that product claims remain accurate.
 56. As a developer, I want the implementation to respect Canton stakeholder and participant trust boundaries, so that privacy is not described as full anonymity or secrecy from hosting infrastructure operators.
 57. As a developer, I want production payment integration, real KYC/AML integration, real invoice verification, production underwriting, monetary penalties, Quote Bonds, and secondary market exit excluded from the MVP, so that the MVP remains focused.
-58. As a reviewer, I want the code and demo to avoid claiming ZK proofs, cryptographic blind auction behavior, production custody, stablecoin settlement, Canton Coin/Amulet integration, or real bank settlement, so that documentation and implementation stay aligned.
+58. As a reviewer, I want the code and demo to avoid claiming ZK proofs, cryptographic blind auction behavior, production custody, real bank settlement, or production custody, so that documentation and implementation stay aligned.
 
 ## Implementation Decisions
 
@@ -114,8 +114,8 @@ The MVP is successful if:
 - Treat disclosure burden as a commercial factor in the product story, while keeping the implemented Phase 2 Quote Terms limited to Net Purchase Price, recourse model, Debtor Notification requirement, Quote Expiry, and committed allocation evidence.
 - Use Binding Quotes with Quote Expiry during the MVP, binding under demo workflow rules only.
 - Use a Seller-Controlled Fallback Queue for still-valid Eligible Quotes if the Selected Quote fails before RFQ Finality.
-- Use On-Ledger Demo Settlement with a Demo Settlement Asset to show a represented Receivable assignment and demo payment transfer as application workflow state transitions.
-- Do not claim production payment finality, production custody, real bank settlement, stablecoin settlement, Canton Coin/Amulet integration, production legal assignment, perfection, Debtor enforceability, or jurisdiction-specific receivables-transfer compliance.
+- Use On-Ledger Demo Settlement with a CIP-56 token settlement to show a represented Receivable assignment and CIP-56 token settlement as application workflow state transitions.
+- Do not claim production payment finality, production custody, real bank settlement, production legal assignment, perfection, Debtor enforceability, or jurisdiction-specific receivables-transfer compliance.
 - Create Scoped Compliance Receipts for entitled Auditors or Regulators when required.
 - Treat Canton privacy as stakeholder- and participant-based role-scoped selective disclosure, not full anonymity or secrecy from a party's own infrastructure operator.
 - Keep the MVP focused on one complete happy path and one Selected Quote failure/fallback branch.
@@ -130,7 +130,7 @@ The MVP is successful if:
 - Failure/fallback coverage should verify Selected Quote failure before RFQ Finality, scoped Commitment Failure recording, Seller-Controlled Fallback Queue promotion, fallback settlement attempt, and fallback status in the Scoped Compliance Receipt without exposing the full Quote Book by default.
 - Role-view tests should verify that competing Funders do not see each other's Private Quotes, Coordinators do not read Private Quote contents by default, Sellers see Seller Quote View and funding evidence status/attestation rather than raw proof data or balances, and Auditors/Regulators see Scoped Compliance Receipts rather than full RFQ data.
 - Negative tests should verify that expired quotes cannot be selected or promoted, ineligible quotes do not enter Seller Quote View as Eligible Quotes, fallback cannot be used after RFQ Finality, and fallback is not automatically ordered by highest headline price.
-- Claim-boundary tests or demo assertions should ensure the UI/docs do not present Demo Settlement Asset as real money, stablecoin, Canton Coin/Amulet, bank settlement, production custody, or production legal assignment.
+- Claim-boundary tests or demo assertions should ensure the UI/docs do not present CIP-56 token settlement as real bank settlement, production custody, or production legal assignment.
 - Since implementation does not yet exist, there is no code-level prior art in the repository. The documented prior art is the MVP Build Spec, Project Brief, glossary, and ADRs.
 
 ## Out of Scope
@@ -142,7 +142,7 @@ The MVP is successful if:
 - Full cryptographic blind auction.
 - ZK proofs.
 - Production payment integration.
-- Real Canton Coin/Amulet settlement.
+- Production bank or custodian settlement outside the CIP-56 token demo path.
 - Stablecoin integration.
 - Real bank or custodian settlement.
 - Production custody.
@@ -159,7 +159,7 @@ The MVP is successful if:
 ## Further Notes
 
 - The PRD is synthesized from the documented CloakRFQ Receipts glossary, project brief, MVP build spec, hackathon alignment note, manifest, and accepted ADRs.
-- The implementation should keep product language precise: Funder, not Lender; Receivable Sale, not loan; Demo Settlement Asset, not production money; Scoped Compliance Receipt, not zero-knowledge proof.
+- The implementation should keep product language precise: Funder, not Lender; Receivable Sale, not loan; CIP-56 token settlement, not production money; Scoped Compliance Receipt, not zero-knowledge proof.
 - The demo should make the Canton value proposition visible through different party views and selective disclosure.
 - The project should be presented under Track 1: Private DeFi & Capital Markets.
 - The ideal first implementation milestone is a minimal, demoable Daml/Canton workflow that supports the documented happy path and fallback branch before adding optional stronger privacy mechanisms or production integrations.

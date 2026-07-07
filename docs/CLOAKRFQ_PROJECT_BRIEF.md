@@ -57,7 +57,7 @@ It is a private RFQ flow for selling a Receivable at a discount, with privacy an
 | Fallback                 | Use a Seller-Controlled Fallback Queue, not automatic highest-price fallback.                                                                |
 | Quote validity           | For the MVP, Private Quotes are Binding Quotes during their Quote Validity Period and have Quote Expiry.                                     |
 | Penalties                | Monetary penalties are not in the MVP. Quote Bonds are a future option.                                                                      |
-| Settlement model         | Use On-Ledger Demo Settlement with a Demo Settlement Asset.                                                                                  |
+| Settlement model         | Use On-Ledger Demo Settlement with a committed CIP-56 token allocation.                                                                                  |
 | Compliance receipt       | Use Scoped Compliance Receipts for audit and regulatory disclosure.                                                                          |
 
 ## Main roles
@@ -88,7 +88,7 @@ It is a private RFQ flow for selling a Receivable at a discount, with privacy an
 10. Seller selects the Best Compliant Quote as the Selected Quote for attempted settlement.
 11. Seller may define a Seller-Controlled Fallback Queue from other still-valid Eligible Quotes.
 12. The Selected Quote enters the Settlement Window: the Selected Quote attempts to fund and settle while Pending Quotes may remain available as Fallback Quotes.
-13. If settlement succeeds, On-Ledger Demo Settlement assigns the Receivable to the Winning Funder and transfers Demo Settlement Asset to the Seller.
+13. If settlement succeeds, On-Ledger Demo Settlement assigns the Receivable to the Winning Funder and settles the committed CIP-56 token allocation to the Seller.
 14. If settlement fails before RFQ Finality, the Seller may promote a Fallback Quote from the Fallback Queue.
 15. After RFQ Finality, pending fallback rights end.
 16. Auditor or Regulator receives a Scoped Compliance Receipt if required.
@@ -193,9 +193,9 @@ In the MVP, "Binding Quote" means binding under the demo workflow rules during t
 
 The MVP uses On-Ledger Demo Settlement.
 
-A tokenized or represented Receivable is assigned to the Winning Funder, and Demo Settlement Asset transfers to the Seller. This demonstrates payment-versus-receivable settlement as Canton/Daml ledger state transitions.
+A tokenized or represented Receivable is assigned to the Winning Funder, and CIP-56 token allocation settles to the Seller. This demonstrates payment-versus-receivable settlement as Canton/Daml ledger state transitions.
 
-The Demo Settlement Asset is non-production. The MVP must not claim real payment finality, bank settlement, stablecoin settlement, Canton Coin/Amulet integration, or production custody.
+The CIP-56 token settlement path is scoped to the demo environment. The MVP must not claim bank settlement, production custody, production legal assignment, or jurisdiction-specific payment finality.
 
 The MVP also does not claim production legal assignment, perfection of ownership or security rights, enforceability against the Debtor, or jurisdiction-specific receivables-transfer compliance. The on-ledger Receivable assignment demonstrates the application workflow state transition only, unless legal documentation, Debtor notification, transfer restrictions, or jurisdiction-specific assignment workflows are explicitly added later.
 
@@ -289,7 +289,7 @@ Current boundary: Phase 2 uses committed CIP-56 allocation evidence for quote fu
 
 ### Resolved product decisions
 
-Settlement model is resolved as On-Ledger Demo Settlement with a Demo Settlement Asset.
+Settlement model is resolved as On-Ledger Demo Settlement with a committed CIP-56 token allocation.
 
 Compliance Receipt product shape is resolved as Scoped Compliance Receipt.
 
@@ -313,7 +313,7 @@ Current boundary: this should be treated as a new transaction, not fallback. Exa
 
 Will a later version add production payment integration?
 
-Current boundary: the MVP uses a Demo Settlement Asset only.
+Current boundary: the MVP uses a committed CIP-56 token allocation for settlement evidence; it does not claim bank settlement or production custody.
 
 ### 7. Quote penalties and reputation
 

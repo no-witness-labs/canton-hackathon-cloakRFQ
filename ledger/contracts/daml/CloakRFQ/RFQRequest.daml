@@ -7,6 +7,7 @@ import CloakRFQ.Risk
 import CloakRFQ.Receivable
 import CloakRFQ.Settlement
 import Splice.Api.Token.AllocationV2 qualified as Token
+import Splice.Api.Token.HoldingV2 qualified as Holding
 import Splice.Api.Token.MetadataV1
 
 -- | Per-Funder Seller-authored RFQ request. Funder-interested business data
@@ -28,10 +29,26 @@ isAllocationSettled result =
     Token.AllocationResult_Settled _ -> True
     _ -> False
 
+allAllocationResultsSettled : [Token.AllocationResult] -> Bool
+allAllocationResultsSettled results =
+  all isAllocationSettled results
+
 emptyExtraArgs : ExtraArgs
 emptyExtraArgs = ExtraArgs with
   context = emptyChoiceContext
   meta = emptyMetadata
+
+matchingPaymentTransferLegs : Holding.Account -> Party -> Text -> Decimal -> [Token.TransferLegSide] -> [Token.TransferLeg]
+matchingPaymentTransferLegs sender seller paymentInstrumentId amount legs =
+  map
+    (\leg -> Token.TransferLeg with
+      transferLegId = leg.transferLegId
+      sender
+      receiver = leg.otherside
+      amount
+      instrumentId = leg.instrumentId
+      meta = leg.meta)
+    (filter (matchesPaymentLeg seller paymentInstrumentId amount) legs)
 
 matchesPaymentLeg : Party -> Text -> Decimal -> Token.TransferLegSide -> Bool
 matchesPaymentLeg seller paymentInstrumentId amount leg =
@@ -39,7 +56,7 @@ matchesPaymentLeg seller paymentInstrumentId amount leg =
     Token.SenderSide ->
       leg.otherside.owner == Some seller
         && leg.instrumentId == paymentInstrumentId
-        && leg.amount >= amount
+        && leg.amount == amount
     Token.ReceiverSide -> False
 
 template RFQRequest
@@ -75,8 +92,8 @@ template RFQRequest
         assertMsg "allocation must be committed" allocationSpec.committed
         assertMsg "allocation deadline must cover quote expiry"
           (allocationDeadlineCoversQuote allocationSpec.settlementDeadline quoteTerms.quoteExpiresAt)
-        assertMsg "allocation must reference this RFQ request"
-          (allocationView.settlement.cid == Some (coerceContractId self))
+        assertMsg "allocation must reference this RFQ package"
+          (allocationView.settlement.id == packageId)
         assertMsg "allocation authorizer must be the Funder"
           (allocationSpec.authorizer.owner == Some funder)
         assertMsg "allocation admin must match expected payment instrument admin"
@@ -113,6 +130,7 @@ template PrivateQuote
     choice AcceptAndSettle : ContractId ReceivableSaleSettlement
       with
         auditor : Party
+        settlementFactoryCid : ContractId Token.SettlementFactory
       controller seller
       do
         now <- getTime
@@ -120,13 +138,6 @@ template PrivateQuote
         assertMsg "quote expired" (now <= quoteTerms.quoteExpiresAt)
         assertMsg "quote terms must be valid for this request" (hasValidQuoteForRequest packageData quoteTerms)
         assertMsg "package receivable terms must be valid" (hasValidReceivableTerms packageData.receivableTerms)
-
-        request <- fetch rfqRequestCid
-        assertMsg "quote request seller mismatch" (request.seller == seller)
-        assertMsg "quote request funder mismatch" (request.funder == funder)
-        assertMsg "quote request receivable mismatch" (request.receivableCid == receivableCid)
-        assertMsg "quote request package id mismatch" (request.packageId == packageId)
-        assertMsg "quote request package data mismatch" (request.packageData == packageData)
 
         receivable <- fetch receivableCid
         assertMsg "Seller no longer owns receivable" (receivable.owner == seller)
@@ -138,38 +149,42 @@ template PrivateQuote
         assertMsg "allocation must be committed" allocationSpec.committed
         assertMsg "allocation deadline must cover quote expiry"
           (allocationDeadlineCoversQuote allocationSpec.settlementDeadline quoteTerms.quoteExpiresAt)
-        assertMsg "allocation must reference this RFQ request"
-          (allocationView.settlement.cid == Some (coerceContractId rfqRequestCid))
+        assertMsg "allocation must reference this RFQ package"
+          (allocationView.settlement.id == packageId)
         assertMsg "allocation authorizer must be the Funder"
           (allocationSpec.authorizer.owner == Some funder)
         assertMsg "allocation admin must match expected payment instrument admin"
           (allocationSpec.admin == packageData.paymentInstrumentAdmin)
+        settlementFactory <- fetch @Token.SettlementFactory settlementFactoryCid
+        let settlementFactoryView = view @Token.SettlementFactory settlementFactory
+        assertMsg "settlement factory admin must match expected payment instrument admin"
+          (settlementFactoryView.admin == packageData.paymentInstrumentAdmin)
+        let paymentTransferLegs = matchingPaymentTransferLegs allocationSpec.authorizer seller packageData.paymentInstrumentId quoteTerms.netPurchasePrice allocationSpec.transferLegSides
         assertMsg "allocation must contain a matching sender-side payment leg"
-          (any (matchesPaymentLeg seller packageData.paymentInstrumentId quoteTerms.netPurchasePrice)
-            allocationSpec.transferLegSides)
+          (length paymentTransferLegs == 1)
 
-        settlementResult <- exercise fundingAllocationCid Token.Allocation_Settle with
+        settlementBatchResult <- exercise settlementFactoryCid Token.SettlementFactory_SettleBatch with
+          settlement = allocationView.settlement
+          transferLegs = paymentTransferLegs
+          allocations = [Token.FinalizedAllocation with
+            allocationCid = fundingAllocationCid
+            extraTransferLegSides = []
+            nextIterationFunding = None]
           actors = allocationSettleActors allocationView
-          extraTransferLegSides = []
-          nextIterationFunding = None
           extraArgs = emptyExtraArgs
-        assertMsg "allocation settlement did not settle" (isAllocationSettled settlementResult)
+        assertMsg "allocation settlement did not settle"
+          (allAllocationResultsSettled settlementBatchResult.allocationSettleResults)
 
-        archive receivableCid
-        transferredReceivableCid <- create Receivable with
-          registrar = receivable.registrar
-          owner = funder
-          newOwner = funder
-          metadata = receivable.metadata
-          debtorName = receivable.debtorName
-          terms = receivable.terms
+        receivableTransferCid <- exercise receivableCid Transfer with
+          proposedNewOwner = funder
         create ReceivableSaleSettlement with
           seller
           funder
           auditor
           originalReceivableCid = receivableCid
-          transferredReceivableCid
+          receivableTransferCid
           packageId
           quoteTerms
           fundingAllocationCid
+          settlementFactoryCid
           settledAt = now

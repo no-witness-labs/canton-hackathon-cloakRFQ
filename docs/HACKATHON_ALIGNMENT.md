@@ -83,7 +83,7 @@ CloakRFQ uses Canton for concrete product benefits, not generic chain branding.
 |---|---|
 | **Selective disclosure** | Sellers, Funders, Coordinators, Compliance, Risk, Auditors, and Regulators each receive only the records relevant to their role. |
 | **Private RFQs** | Funders do not see competing Private Quotes, and Coordinators do not receive quote contents by default. |
-| **Atomic multi-party settlement** | Receivable assignment and Demo Settlement Asset transfer can be demonstrated as one coordinated settlement outcome. |
+| **Atomic multi-party settlement** | Receivable assignment and CIP-56 token settlement can be demonstrated as one coordinated settlement outcome. |
 | **Institutional decentralisation** | The workflow does not require a quote-visible marketplace operator that controls and reads the full Quote Book by default. |
 | **Workflow speed** | Quote submission, selection, settlement status, fallback, and compliance receipt generation can happen in one coordinated workflow instead of across disconnected manual processes. |
 | **Efficiency** | Unrelated parties do not need to process or store the full marketplace, quote book, or compliance record. |
@@ -116,7 +116,7 @@ Show a working multi-party Canton/Daml workflow:
 2. Funders receive RFQ Disclosure Packages.
 3. Funders submit Private Quotes backed by scoped funding evidence, concretely committed CIP-56 allocation evidence in Phase 2.
 4. Seller sees a Seller Quote View and selects the Best Compliant Quote.
-5. Settlement is demonstrated with a Demo Settlement Asset.
+5. Settlement is demonstrated with a committed CIP-56 token allocation.
 6. Auditor or Regulator receives a Scoped Compliance Receipt.
 
 The demo should clearly show that different parties see different ledger views.
@@ -165,7 +165,7 @@ Do not claim that CloakRFQ is:
 - a zero-knowledge proof system;
 - a production payment network;
 - a production legal receivables-assignment system;
-- Canton Coin, stablecoin, bank, or custodian settlement.
+- Bank or custodian settlement outside the CIP-56 token demo path.
 
 The correct claim is narrower and stronger:
 

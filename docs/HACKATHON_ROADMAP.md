@@ -67,7 +67,7 @@ The roadmap is intentionally compact. It exists to keep implementation focused o
 
 **Done when:**
 
-- Happy path settles with represented Receivable assignment and Demo Settlement Asset transfer.
+- Happy path settles with represented Receivable assignment and CIP-56 token settlement.
 - Failure branch promotes a still-valid Fallback Quote.
 - The product does not claim real payment finality, production legal assignment, Funding Locks, or settlement guarantees.
 

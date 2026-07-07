@@ -121,10 +121,16 @@ phase3AcceptAndSettle = do
       seller
       tokenAdmin
       rfqRequestCid = request
-      amount = 470000.0
+      packageId = package
+      amount = 465000.0
       instrumentId = "USD"
       settlementDeadline = quoteExpiresAt
       createdAt = time (date 2030 Jun 1) 12 0 0
+
+  settlementFactory <- submit tokenAdmin do
+    createCmd MockSettlementFactory with
+      tokenAdmin
+      seller
 
   privateQuote <- submit funder do
     exerciseCmd request SubmitPrivateQuote with
@@ -134,12 +140,14 @@ phase3AcceptAndSettle = do
   submitMustFail seller do
     exerciseCmd privateQuote AcceptAndSettle with
       auditor = auditParty
+      settlementFactoryCid = toInterfaceContractId @Token.SettlementFactory settlementFactory
 
   setTime (time (date 2030 Jul 1) 13 0 0)
 
   settlement <- submit seller do
     exerciseCmd privateQuote AcceptAndSettle with
       auditor = auditParty
+      settlementFactoryCid = toInterfaceContractId @Token.SettlementFactory settlementFactory
 
   Some settlementView <- queryContractId auditParty settlement
   settlementView.seller === seller
@@ -148,7 +156,18 @@ phase3AcceptAndSettle = do
   settlementView.originalReceivableCid === rcv
   settlementView.quoteTerms.netPurchasePrice === 465000.0
 
-  Some transferredReceivable <- queryContractId funder settlementView.transferredReceivableCid
+  let receivableTransferCid : ContractId Receivable = settlementView.receivableTransferCid
+
+  Some pendingTransfer <- queryContractId funder receivableTransferCid
+  pendingTransfer.registrar === seller
+  pendingTransfer.owner === seller
+  pendingTransfer.newOwner === funder
+  pendingTransfer.terms === terms
+
+  transferredReceivableCid <- submit funder do
+    exerciseCmd receivableTransferCid AcceptTransfer
+
+  Some transferredReceivable <- queryContractId funder transferredReceivableCid
   transferredReceivable.registrar === seller
   transferredReceivable.owner === funder
   transferredReceivable.newOwner === funder

@@ -10,7 +10,7 @@ production custody · real bank / stablecoin / Canton Coin / Amulet settlement �
 production legal assignment / perfection / Debtor enforceability · escrow ·
 full anonymity · guaranteed settlement.
 
-Allowed framing: **On-Ledger Demo Settlement** with a **Demo Settlement Asset
+Allowed framing: **On-Ledger Demo Settlement** with a **committed CIP-56 token allocation
 (non-production)**; **committed CIP-56 allocation evidence = scoped quote
 funding evidence that allocates funds for the RFQ context, not escrow, custody,
 bank settlement, production payment finality, or guaranteed settlement**; privacy

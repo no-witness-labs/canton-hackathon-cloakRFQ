@@ -11,10 +11,11 @@ template ReceivableSaleSettlement
     funder : Party
     auditor : Party
     originalReceivableCid : ContractId Receivable
-    transferredReceivableCid : ContractId Receivable
+    receivableTransferCid : ContractId Receivable
     packageId : Text
     quoteTerms : QuoteTerms
     fundingAllocationCid : ContractId Token.Allocation
+    settlementFactoryCid : ContractId Token.SettlementFactory
     settledAt : Time
   where
     signatory seller, funder
