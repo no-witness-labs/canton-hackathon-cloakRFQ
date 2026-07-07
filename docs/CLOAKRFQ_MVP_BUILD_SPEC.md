@@ -4,7 +4,7 @@ Last updated: 2026-06-20
 
 ## Purpose
 
-CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. The MVP demonstrates private quotes, scoped attestations, proof-of-funds eligibility, Seller quote comparison, fallback, on-ledger demo settlement, and scoped compliance receipts.
+CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. The MVP demonstrates private quotes, scoped attestations, committed allocation-backed quote eligibility, Seller quote comparison, fallback, on-ledger demo settlement, and scoped compliance receipts.
 
 ## MVP scope
 
@@ -17,7 +17,7 @@ Build one complete happy path and one failure/fallback branch.
 3. Risk Assessor may issue a Risk Attestation.
 4. Compliance Party issues eligibility attestations.
 5. Funders receive RFQ Disclosure Packages.
-6. Funders submit Private Quotes with Proof-of-Funds status.
+6. Funders submit Private Quotes backed by scoped funding evidence, concretely committed CIP-56 allocation evidence in Phase 2.
 7. Seller receives Seller Quote View.
 8. Seller selects the Best Compliant Quote.
 9. Selected Quote enters Settlement Window.
@@ -42,7 +42,7 @@ These are implementation candidates, not final law:
 - ComplianceAttestation
 - RiskAttestation
 - PrivateQuote
-- ProofOfFundsStatus
+- FundingAllocationEvidence
 - SellerQuoteView
 - SelectedQuote
 - FallbackQueue
@@ -53,7 +53,7 @@ These are implementation candidates, not final law:
 ## Party views
 
 - Seller View: create Receivable, open RFQ, review Seller Quote View, select quote, define fallback, see settlement status.
-- Funder View: view RFQ Disclosure Package, submit Private Quote, attach/record Proof-of-Funds status, see own quote outcome.
+- Funder View: view RFQ Disclosure Package, submit Private Quote, attach/reference committed CIP-56 allocation evidence, see own quote outcome.
 - Compliance View: issue eligibility attestations.
 - Risk Assessor View: issue risk attestations.
 - Coordinator View: route workflow status and invitations; no quote contents by default.
@@ -63,7 +63,7 @@ These are implementation candidates, not final law:
 
 - Competing Funders do not see each other's Private Quotes.
 - Coordinator does not read Private Quote contents by default.
-- Seller sees Seller Quote View and Proof-of-Funds status or attestation, not raw Proof-of-Funds evidence, Funder balances, funding sources, or unrelated financial positions.
+- Seller sees Seller Quote View and scoped allocation reference/status, not raw Funder balances, funding sources, or unrelated financial positions.
 - Funder identity is hidden by default unless required.
 - Auditor/Regulator receives Scoped Compliance Receipt, not full RFQ data.
 - Outsiders see nothing useful.
@@ -79,7 +79,7 @@ Do not claim these unless implemented:
 - Unselected Funders always hidden from Seller.
 - Quote selection without any single non-essential party seeing full Quote Book.
 - A Proof-of-Funds mechanism that verifies funding capacity without revealing raw balances, funding sources, or unrelated financial positions to any non-essential verifier.
-- Funding Locks, escrow, Quote Bonds, or production payment finality.
+- Production payment finality, production custody, escrow, or Quote Bonds. Phase 2 committed CIP-56 allocations are scoped quote funding evidence, not production settlement finality.
 
 ## Non-goals
 
@@ -98,7 +98,7 @@ Do not claim these unless implemented:
 
 ## Implementation notes
 
-- Keep Proof of Funds as eligibility evidence, not a lock.
+- Keep committed CIP-56 allocation evidence scoped to the RFQ; do not describe it as escrow, custody, bank settlement, production payment finality, or guaranteed settlement completion.
 - Keep Demo Settlement Asset clearly non-production.
 - Treat Receivable assignment as an MVP workflow state transition. Do not claim production legal assignment, perfection, enforceability against the Debtor, or jurisdiction-specific receivables-transfer compliance unless those workflows are explicitly added.
 - Treat Binding Quotes as workflow-binding for the MVP, not as externally legally enforceable commitments unless legal-enforcement workflows are explicitly added.

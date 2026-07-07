@@ -1,0 +1,51 @@
+-- | Phase 1 compliance attestation and certificate templates.
+module CloakRFQ.Compliance where
+
+import CloakRFQ.Lib
+import CloakRFQ.Receivable
+
+-- | Detailed Compliance Party output for the Seller package workflow.
+-- Includes the Seller-disclosed compliance information and the result.
+template ComplianceAttestation
+  with
+    complianceParty : Party
+    seller : Party
+    packageId : Text
+    receivableCid : ContractId Receivable
+    complianceDisclosure : ComplianceDisclosure
+    complianceResult : ComplianceResult
+  where
+    signatory complianceParty
+    observer seller
+
+    nonconsuming choice CreateComplianceCertificate : ContractId ComplianceCertificate
+      with
+        policyVersion : Text
+        certificationScope : Text
+      controller seller
+      do
+        assertMsg "Seller is not compliance eligible" complianceResult.sellerEligible
+        assertMsg "RFQ is not compliance eligible" complianceResult.rfqEligible
+        create ComplianceCertificate with
+          complianceParty
+          seller
+          packageId
+          receivableCid
+          certifiedReceivableTerms = complianceDisclosure.receivableTerms
+          policyVersion
+          certificationScope
+
+-- | Compliance Party credential for package use. It exposes only the
+-- Funder-visible terms Compliance reviewed, not the full disclosure.
+template ComplianceCertificate
+  with
+    complianceParty : Party
+    seller : Party
+    packageId : Text
+    receivableCid : ContractId Receivable
+    certifiedReceivableTerms : ReceivableTerms
+    policyVersion : Text
+    certificationScope : Text
+  where
+    signatory complianceParty
+    observer seller

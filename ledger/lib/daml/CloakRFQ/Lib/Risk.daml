@@ -1,0 +1,17 @@
+-- | Risk disclosure and result data types.
+module CloakRFQ.Lib.Risk where
+
+import CloakRFQ.Lib.Receivable
+
+data RiskTier = LowRisk | MediumRisk | HighRisk
+  deriving (Eq, Show)
+
+data RiskDisclosure = RiskDisclosure
+  with
+    receivableTerms : ReceivableTerms  -- Funder-visible receivable terms used for risk tiering.
+  deriving (Eq, Show)
+
+data RiskResult = RiskResult
+  with
+    riskTier : RiskTier
+  deriving (Eq, Show)

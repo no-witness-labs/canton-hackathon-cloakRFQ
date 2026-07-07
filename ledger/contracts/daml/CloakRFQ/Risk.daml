@@ -1,0 +1,50 @@
+-- | Phase 1 risk assessment, attestation, and certificate templates.
+module CloakRFQ.Risk where
+
+import CloakRFQ.Lib
+import CloakRFQ.Receivable
+
+-- | Detailed Risk Assessor output for the Seller package workflow.
+template RiskAttestation
+  with
+    riskAssessor : Party
+    seller : Party
+    packageId : Text
+    receivableCid : ContractId Receivable
+    riskDisclosure : RiskDisclosure
+    riskResult : RiskResult
+  where
+    signatory riskAssessor
+    observer seller
+
+    nonconsuming choice CreateRiskCertificate : ContractId RiskCertificate
+      with
+        riskPolicyVersion : Text
+        certificationScope : Text
+      controller seller
+      do
+        create RiskCertificate with
+          riskAssessor
+          seller
+          packageId
+          receivableCid
+          certifiedReceivableTerms = riskDisclosure.receivableTerms
+          certifiedRiskTier = riskResult.riskTier
+          riskPolicyVersion
+          certificationScope
+
+-- | Risk Assessor credential for package use. It exposes the Funder-visible
+-- terms used for tiering and the resulting certified tier.
+template RiskCertificate
+  with
+    riskAssessor : Party
+    seller : Party
+    packageId : Text
+    receivableCid : ContractId Receivable
+    certifiedReceivableTerms : ReceivableTerms
+    certifiedRiskTier : RiskTier
+    riskPolicyVersion : Text
+    certificationScope : Text
+  where
+    signatory riskAssessor
+    observer seller

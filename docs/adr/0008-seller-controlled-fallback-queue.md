@@ -12,7 +12,7 @@ Accepted
 
 CloakRFQ Receipts needs a fallback model for cases where the Selected Quote fails to fund or settle before RFQ Finality.
 
-A simple fallback model could automatically promote the quote with the highest Net Purchase Price. That is easy to explain, but it does not preserve real RFQ decision-making. The Seller may prefer a lower-price quote because it settles faster, requires less disclosure, has a better recourse model, avoids Debtor Notification, satisfies identity constraints, has a more reliable Proof-of-Funds status, or better matches compliance requirements.
+A simple fallback model could automatically promote the quote with the highest Net Purchase Price. That is easy to explain, but it does not preserve real RFQ decision-making. The Seller may prefer a lower-price quote because it settles faster, requires less disclosure, has a better recourse model, avoids Debtor Notification, satisfies identity constraints, has stronger funding evidence, or better matches compliance requirements.
 
 The product also wants to preserve privacy for Unselected Funders and Unselected Quotes where practical. A fallback model should not require the Coordinator or competing Funders to see the fallback order or quote contents.
 

@@ -1,0 +1,19 @@
+-- | Umbrella module for shared CloakRFQ data and pure helpers.
+--
+-- This package intentionally contains no templates, choices, or party
+-- authorization rules. Deployable ledger behavior lives in cloakrfq-contracts.
+module CloakRFQ.Lib
+  ( module CloakRFQ.Lib.Common
+  , module CloakRFQ.Lib.Receivable
+  , module CloakRFQ.Lib.Compliance
+  , module CloakRFQ.Lib.Risk
+  , module CloakRFQ.Lib.Package
+  , module CloakRFQ.Lib.Quote
+  ) where
+
+import CloakRFQ.Lib.Common
+import CloakRFQ.Lib.Receivable
+import CloakRFQ.Lib.Compliance
+import CloakRFQ.Lib.Risk
+import CloakRFQ.Lib.Package
+import CloakRFQ.Lib.Quote
