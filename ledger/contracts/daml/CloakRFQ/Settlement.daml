@@ -36,15 +36,14 @@ template ReceivableSaleSettlement
     seller : Party
     funder : Party
     outcomeObserver : Party
-    policyVersion : Text
+    settlementDisclosurePolicyCid : ContractId SettlementDisclosurePolicy
     originalReceivableCid : ContractId Receivable
     transferredReceivableCid : ContractId Receivable
     packageId : Text
-    packageData : RFQPackageData
     quoteTerms : QuoteTerms
     fundingAllocationCid : ContractId Token.Allocation
     settledAt : Time
   where
     signatory seller, funder
     observer outcomeObserver
-    ensure hasValidQuoteTerms quoteTerms && hasValidReceivableTerms packageData.receivableTerms
+    ensure hasValidQuoteTerms quoteTerms

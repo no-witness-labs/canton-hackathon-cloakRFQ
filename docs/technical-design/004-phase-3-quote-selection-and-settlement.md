@@ -99,8 +99,9 @@ Confirmed properties:
 
 - signed by `seller, funder`;
 - records completed MVP demo settlement;
-- links the Seller, winning Funder, `PrivateQuote`, original/transferred Receivable reference, quote terms, settlement time, and settlement disclosure policy;
-- is useful for audit, regulatory, and compliance evidence, but is not itself a compliance certificate.
+- links the Seller, winning Funder, original/transferred Receivable reference, compact package id, accepted quote terms, funding allocation, settlement time, and settlement disclosure policy;
+- is useful for audit, regulatory, and compliance evidence, but is not itself a compliance certificate;
+- intentionally avoids duplicating heavy package data already represented by the settled Receivable and quote terms.
 
 The registrar is not a signatory on `ReceivableSaleSettlement`. The registrar remains represented through the transferred `Receivable`.
 
