@@ -1,0 +1,50 @@
+-- | Phase 3 settlement policy and final settlement evidence.
+module CloakRFQ.Settlement where
+
+import CloakRFQ.Lib
+import CloakRFQ.Receivable
+import Splice.Api.Token.AllocationV2 qualified as Token
+import Splice.Api.Token.MetadataV1
+
+allocationSettleActors : Token.AllocationView -> [Party]
+allocationSettleActors allocationView =
+  allocationView.settlement.executors
+
+isAllocationSettled : Token.AllocationResult -> Bool
+isAllocationSettled result =
+  case result.output of
+    Token.AllocationResult_Settled _ -> True
+    _ -> False
+
+emptyExtraArgs : ExtraArgs
+emptyExtraArgs = ExtraArgs with
+  context = emptyChoiceContext
+  meta = emptyMetadata
+
+template SettlementDisclosurePolicy
+  with
+    policyAuthority : Party
+    outcomeObserver : Party
+    policyVersion : Text
+    policyUsers : [Party]
+  where
+    signatory policyAuthority
+    observer outcomeObserver, policyUsers
+
+template ReceivableSaleSettlement
+  with
+    seller : Party
+    funder : Party
+    outcomeObserver : Party
+    policyVersion : Text
+    originalReceivableCid : ContractId Receivable
+    transferredReceivableCid : ContractId Receivable
+    packageId : Text
+    packageData : RFQPackageData
+    quoteTerms : QuoteTerms
+    fundingAllocationCid : ContractId Token.Allocation
+    settledAt : Time
+  where
+    signatory seller, funder
+    observer outcomeObserver
+    ensure hasValidQuoteTerms quoteTerms && hasValidReceivableTerms packageData.receivableTerms

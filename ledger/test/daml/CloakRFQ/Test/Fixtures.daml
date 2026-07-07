@@ -20,6 +20,7 @@ template MockFundingAllocation
     createdAt : Time
   where
     signatory funder
+    observer seller
 
     interface instance Token.Allocation for MockFundingAllocation where
       view = Token.AllocationView with
@@ -51,7 +52,13 @@ template MockFundingAllocation
         expiresAt = Some settlementDeadline
         availableActions = Map.empty
         meta = emptyMetadata
-      allocation_settleImpl _ _ = abort "mock allocation cannot settle"
+      allocation_settleImpl allocationCid arg = do
+        assertMsg "mock allocation settlement must be executed by Seller only" (arg.actors == [seller])
+        archive allocationCid
+        pure Token.AllocationResult with
+          output = Token.AllocationResult_Settled with nextIterationAllocationCid = None
+          authorizerHoldingCids = mempty
+          meta = emptyMetadata
       allocation_cancelImpl _ _ = abort "mock allocation cannot cancel"
       allocation_withdrawImpl _ _ = abort "mock allocation cannot withdraw"
       allocation_settleExtraObservers _ = []

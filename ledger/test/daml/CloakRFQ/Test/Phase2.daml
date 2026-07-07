@@ -37,6 +37,7 @@ phase2PrivateQuote = do
     createCmd Receivable with
       registrar = seller
       owner = seller
+      newOwner = seller
       metadata = ReceivableMetadata with
         invoiceId
         buyerReference = Some "AP-DEPT-42"

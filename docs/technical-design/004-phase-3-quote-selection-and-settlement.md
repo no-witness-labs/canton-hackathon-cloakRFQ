@@ -21,13 +21,15 @@ The on-ledger action records the consequence of the Seller's off-ledger decision
 
 ## Common Path
 
-The common Phase 3 path is a Seller-controlled consuming choice on `PrivateQuote`, expected to be named:
+The common Phase 3 path starts from the Seller's off-ledger decision to act on a chosen `PrivateQuote`. The on-ledger success action is a Seller-controlled consuming choice on the Funder-signed `PrivateQuote`:
 
 ```daml
 AcceptAndSettle : ContractId ReceivableSaleSettlement
 ```
 
-The choice must re-check all conditions that still matter at settlement time. These checks are mandatory when omitting them would allow fake settlement evidence, wrong-party transfer, underpayment, policy bypass, or privacy leakage.
+Because the action is inside `PrivateQuote`, the Funder's contract authority is available. The RFQ settlement path must therefore transfer the Receivable by directly archiving the old `Receivable` and creating the transferred `Receivable` inside `AcceptAndSettle`. It must not call the generic `Receivable.Transfer` sub-choice for RFQ settlement, because that sub-choice does not carry the Funder authority needed to create the new Funder-owned `Receivable`.
+
+`AcceptAndSettle` must re-check all conditions that still matter at settlement time. These checks are mandatory when omitting them would allow fake settlement evidence, wrong-party transfer, underpayment, policy bypass, or privacy leakage.
 
 ### Mandatory Checks
 
@@ -39,7 +41,7 @@ The choice must re-check all conditions that still matter at settlement time. Th
 | `hasValidReceivableTerms packageData.receivableTerms` | Prevents settlement against malformed package terms. |
 | fetch `receivableCid` and assert `receivable.owner == seller` | Prevents settling or recording sale of a Receivable the Seller no longer owns. |
 | assert `receivable.terms == packageData.receivableTerms` | Prevents transferring a Receivable whose actual terms differ from the terms disclosed to the Funder. |
-| fetch `fundingAllocationCid` and assert `allocationSpec.committed` | Prevents settlement against non-committed funding evidence. |
+| fetch `fundingAllocationCid` and assert `allocationSpec.committed` | Prevents settlement against non-committed funding evidence. The allocation must be visible to the Seller or settlement executor. |
 | assert `allocationView.settlement.cid == Some (coerceContractId rfqRequestCid)` | Prevents reusing an allocation reserved for a different RFQ request. |
 | assert `allocationSpec.authorizer.owner == Some funder` | Prevents using another party's allocation as this Funder's funding. |
 | assert `allocationSpec.admin == packageData.paymentInstrumentAdmin` | Prevents payment through the wrong token registry/admin. |
@@ -48,21 +50,22 @@ The choice must re-check all conditions that still matter at settlement time. Th
 | assert the payment leg amount covers `quoteTerms.netPurchasePrice` | Prevents underpayment. |
 | assert the allocation deadline still covers the quote expiry or settlement requirement | Prevents relying on funding evidence that can expire before the quote obligation. |
 | exercise CIP-56 `Allocation_Settle` and require `AllocationResult_Settled` | Prevents creating final settlement evidence if token settlement returned pending, cancelled, or withdrawn. |
-| fetch `SettlementDisclosurePolicy` and use `policy.outcomeObserver` on `ReceivableSaleSettlement` | Prevents the Seller from bypassing the required auditor/regulator/evidence recipient. |
+| fetch `SettlementDisclosurePolicy`, assert Seller is a policy user, and use `policy.outcomeObserver` on `ReceivableSaleSettlement` | Prevents the Seller from bypassing the required auditor/regulator/evidence recipient. |
 
-The choice is consuming so the same `PrivateQuote` cannot be settled twice.
+`AcceptAndSettle` is consuming so the same `PrivateQuote` cannot be settled twice.
 
 ### Deferred Binding Gap
 
-For the strongest design, `SettlementDisclosurePolicy` should be bound into the RFQ flow before quote submission and carried into `PrivateQuote`. This pass does not modify Phase 1 or Phase 2. Therefore `AcceptAndSettle` may take `settlementDisclosurePolicyCid` as an argument for the success-branch implementation, and the missing pre-quote policy binding remains a documented gap to fix later.
+For the strongest design, `SettlementDisclosurePolicy` should be bound into the RFQ flow before quote submission and carried into `PrivateQuote`. This pass does not modify Phase 1 or Phase 2. Therefore the success-branch implementation may take `settlementDisclosurePolicyCid` as a settlement argument, and the missing pre-quote policy binding remains a documented gap to fix later.
 
 ## Success Branch
 
 On success, `AcceptAndSettle` must atomically:
 
 1. exercise CIP-56 `Allocation_Settle` so the Seller receives the committed allocated funds;
-2. transfer the represented `Receivable` to the Funder;
-3. create `ReceivableSaleSettlement` as durable post-settlement evidence.
+2. archive the original Seller-owned `Receivable`;
+3. create the transferred `Receivable` with the same `registrar` and `owner = funder`;
+4. create `ReceivableSaleSettlement` as durable post-settlement evidence.
 
 `ReceivableSaleSettlement` is not the swap engine itself. It is the durable record created after the MVP demo settlement succeeds.
 
@@ -80,13 +83,13 @@ Confirmed transfer design:
 
 Initial creation may normally have `registrar == owner`, because the Seller self-registers the represented Receivable in the MVP, but this must not be enforced forever with template-level `ensure` because later transfers change `owner`.
 
-A generic `AcceptTransfer` flow is still needed for a complete standalone Receivable workflow. For this RFQ settlement path, the Funder's submitted `PrivateQuote` is treated as consent to receive the Receivable if the Seller accepts and settles that quote. A separate transfer-acceptance UI step is not part of the current Phase 3 success branch.
+The generic transfer flow is two-step: current owner starts `Transfer`, then the proposed new owner completes `AcceptTransfer`. For RFQ settlement, the Funder's submitted `PrivateQuote` is commercial consent to receive the Receivable, and the `AcceptAndSettle` choice on that Funder-signed contract provides the Funder authorization needed to create the transferred `Receivable`.
 
-A generic `ProposeTransfer` path may be left as an implementation TODO if it is not needed for the success branch.
+`Transfer` and `AcceptTransfer` are implemented as generic Receivable primitives, not RFQ-specific choices. The RFQ settlement path uses direct archive/create inside `PrivateQuote.AcceptAndSettle`, not the generic transfer sub-choice.
 
 ## Settlement Record
 
-The settlement evidence template is:
+The settlement evidence template is defined in `CloakRFQ.Settlement`:
 
 ```daml
 template ReceivableSaleSettlement
@@ -115,23 +118,33 @@ template SettlementDisclosurePolicy
     policyAuthority : Party
     outcomeObserver : Party
     policyVersion : Text
+    policyUsers : [Party]
 ```
 
 Meaning:
 
 - `policyAuthority`: legal or institutional authority defining the required final-outcome observer;
 - `outcomeObserver`: auditor, regulator, or evidence recipient entitled to observe settlement outcome;
-- `policyVersion`: version or reference for the disclosure policy.
+- `policyVersion`: version or reference for the disclosure policy;
+- `policyUsers`: parties, such as Sellers, allowed to see and use this policy in settlement.
 
 `SettlementDisclosurePolicy` should be known before quote submission and referenced by the RFQ flow before `PrivateQuote` creation. The policy CID should be carried forward into `PrivateQuote`, and `AcceptAndSettle` should use that already-bound policy rather than allowing the Seller to supply a new observer at settlement time.
 
-Funders are not required to see `SettlementDisclosurePolicy` for the current MVP scope. Making policy visibility verifiable by Funders is a more involved feature and is out of scope for this success-branch implementation.
+Funders are not required to see `SettlementDisclosurePolicy` for the current MVP scope. Sellers must be policy users so they can fetch the policy during settlement. Making policy visibility verifiable by Funders is a more involved feature and is out of scope for this success-branch implementation.
 
 ## CIP-56 Settlement Actor Constraint
 
 CIP-56 `Allocation_Settle` takes `actors : [Party]`. The interface comments say implementations must check these actors to avoid unauthorized settlement execution. By default, implementations should require the actors to equal the allocation `admin` and the allocation `executors`, and the comments state this authorization is typically provided through `SettlementFactory_SettleBatch`, used by the executors to settle V2 allocations.
 
-Implication for Phase 3: a production-grade implementation should not assume a Seller-only direct `Allocation_Settle` call is sufficient. The MVP implementation must either use a settle-capable test allocation whose actor rules are explicit, or implement the CIP-56 settlement-factory path. This decision remains open before coding the settlement call.
+Implication for Phase 3: a production-grade implementation should not assume a Seller-only direct `Allocation_Settle` call is sufficient. The allocation must also be visible to the party executing settlement. The MVP implementation uses a settle-capable test allocation with explicit Seller visibility and Seller-as-executor actor rules; a production-grade path should use the CIP-56 settlement-factory flow or equivalent token-provider workflow.
+
+## Authorization Finding: Avoid Generic Transfer Sub-Choice in RFQ Settlement
+
+Implementation testing showed that calling the generic `Receivable.Transfer` sub-choice from `PrivateQuote.AcceptAndSettle` cannot create a transferred `Receivable` with `owner = funder` when `Receivable` has `signatory registrar, owner`. The sub-choice is authorized by the current Receivable owner path, but it does not provide the Funder authority needed to create the new Funder-owned Receivable.
+
+Security implication: this is correct behavior. It prevents generic transfer from forcing a party into Receivable ownership without that party's authority.
+
+Design implication: RFQ settlement must not call `Receivable.Transfer`. It must perform the transfer directly inside the Funder-signed `PrivateQuote.AcceptAndSettle` action, where Seller control and Funder contract authority are both present.
 
 ## Deferred
 

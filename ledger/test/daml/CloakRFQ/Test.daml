@@ -4,8 +4,10 @@ module CloakRFQ.Test where
 import Daml.Script
 import CloakRFQ.Test.Phase1 qualified as Phase1
 import CloakRFQ.Test.Phase2 qualified as Phase2
+import CloakRFQ.Test.Phase3 qualified as Phase3
 
 all : Script ()
 all = do
   Phase1.phase1
   Phase2.phase2PrivateQuote
+  Phase3.phase3AcceptAndSettle
