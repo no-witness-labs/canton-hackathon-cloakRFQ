@@ -27,11 +27,13 @@ SCOPE     = os.environ.get("CLOAKRFQ_OIDC_SCOPE", "daml_ledger_api")
 USER_ID   = os.environ.get("CLOAKRFQ_LEDGER_USER_ID", "6")  # the Daml user the token maps to
 ROOT      = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DAR       = os.path.join(ROOT, "ledger", "contracts", ".daml", "dist", "cloakrfq-contracts-0.1.0.dar")
+TEST_DAR  = os.path.join(ROOT, "ledger", "test", ".daml", "dist", "cloakrfq-test-0.1.0.dar")  # CIP-56 token mocks (Phase 2/3)
 
 ROLES = {
     "seller": "cloakrfqSeller", "funderA": "cloakrfqFunderA", "funderB": "cloakrfqFunderB",
     "funderC": "cloakrfqFunderC", "compliance": "cloakrfqCompliance", "risk": "cloakrfqRisk",
     "coordinator": "cloakrfqCoordinator", "auditor": "cloakrfqAuditor", "outsider": "cloakrfqOutsider",
+    "tokenAdmin": "cloakrfqTokenAdmin",
 }
 
 
@@ -73,7 +75,9 @@ def main():
     print("✓ token acquired")
 
     code, _ = api(tok, "POST", "/v2/packages", open(DAR, "rb").read(), "application/octet-stream")
-    print(f"{'✓' if code == 200 else '✗'} DAR upload (HTTP {code})")
+    print(f"{'✓' if code == 200 else '✗'} contracts DAR upload (HTTP {code})")
+    code, _ = api(tok, "POST", "/v2/packages", open(TEST_DAR, "rb").read(), "application/octet-stream")
+    print(f"{'✓' if code == 200 else '✗'} test (token mocks) DAR upload (HTTP {code})")
 
     parties, pending, ns = {}, [], None
     for role, base in ROLES.items():

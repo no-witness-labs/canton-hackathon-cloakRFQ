@@ -27,7 +27,7 @@ const OIDC = {
 };
 const ROLES: Record<string, string> = {
   seller: 'cloakrfqSeller', funderA: 'cloakrfqFunderA', funderB: 'cloakrfqFunderB', funderC: 'cloakrfqFunderC',
-  compliance: 'cloakrfqCompliance', risk: 'cloakrfqRisk', coordinator: 'cloakrfqCoordinator', auditor: 'cloakrfqAuditor', outsider: 'cloakrfqOutsider',
+  compliance: 'cloakrfqCompliance', risk: 'cloakrfqRisk', coordinator: 'cloakrfqCoordinator', auditor: 'cloakrfqAuditor', outsider: 'cloakrfqOutsider', tokenAdmin: 'cloakrfqTokenAdmin',
 };
 
 let tokenCache: { value: string; exp: number } | null = null;
