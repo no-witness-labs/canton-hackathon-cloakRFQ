@@ -27,20 +27,34 @@ The common Phase 3 path is a Seller-controlled consuming choice on `PrivateQuote
 AcceptAndSettle : ContractId ReceivableSaleSettlement
 ```
 
-The choice must re-check all conditions that still matter at settlement time:
+The choice must re-check all conditions that still matter at settlement time. These checks are mandatory when omitting them would allow fake settlement evidence, wrong-party transfer, underpayment, policy bypass, or privacy leakage.
 
-- the current time is after `packageData.responseDeadline`;
-- the current time is before or equal to `quoteTerms.quoteExpiresAt`;
-- the referenced `Receivable` is still owned by the Seller;
-- the quote's package data and quote terms are still valid;
-- the referenced CIP-56 allocation is still committed;
-- the allocation still references the RFQ context;
-- the allocation authorizer is the Funder;
-- the allocation payment leg pays the Seller;
-- the allocation amount covers `quoteTerms.netPurchasePrice`;
-- the allocation deadline still covers the quote expiry or settlement requirement.
+### Mandatory Checks
+
+| Check | Security reason |
+| ----- | --------------- |
+| `now > packageData.responseDeadline` | Prevents the Seller from settling before all invited Funders had the agreed quote window. |
+| `now <= quoteTerms.quoteExpiresAt` | Prevents accepting an expired price/funding commitment. |
+| `hasValidQuoteTerms quoteTerms` and `hasValidQuoteForRequest packageData quoteTerms` | Prevents invalid quote terms from becoming settlement evidence. |
+| `hasValidReceivableTerms packageData.receivableTerms` | Prevents settlement against malformed package terms. |
+| fetch `receivableCid` and assert `receivable.owner == seller` | Prevents settling or recording sale of a Receivable the Seller no longer owns. |
+| assert `receivable.terms == packageData.receivableTerms` | Prevents transferring a Receivable whose actual terms differ from the terms disclosed to the Funder. |
+| fetch `fundingAllocationCid` and assert `allocationSpec.committed` | Prevents settlement against non-committed funding evidence. |
+| assert `allocationView.settlement.cid == Some (coerceContractId rfqRequestCid)` | Prevents reusing an allocation reserved for a different RFQ request. |
+| assert `allocationSpec.authorizer.owner == Some funder` | Prevents using another party's allocation as this Funder's funding. |
+| assert `allocationSpec.admin == packageData.paymentInstrumentAdmin` | Prevents payment through the wrong token registry/admin. |
+| assert a matching sender-side payment leg pays `seller` | Prevents final evidence when funds are routed to the wrong party. |
+| assert the payment leg `instrumentId == packageData.paymentInstrumentId` | Prevents paying with the wrong asset or currency instrument. |
+| assert the payment leg amount covers `quoteTerms.netPurchasePrice` | Prevents underpayment. |
+| assert the allocation deadline still covers the quote expiry or settlement requirement | Prevents relying on funding evidence that can expire before the quote obligation. |
+| exercise CIP-56 `Allocation_Settle` and require `AllocationResult_Settled` | Prevents creating final settlement evidence if token settlement returned pending, cancelled, or withdrawn. |
+| fetch `SettlementDisclosurePolicy` and use `policy.outcomeObserver` on `ReceivableSaleSettlement` | Prevents the Seller from bypassing the required auditor/regulator/evidence recipient. |
 
 The choice is consuming so the same `PrivateQuote` cannot be settled twice.
+
+### Deferred Binding Gap
+
+For the strongest design, `SettlementDisclosurePolicy` should be bound into the RFQ flow before quote submission and carried into `PrivateQuote`. This pass does not modify Phase 1 or Phase 2. Therefore `AcceptAndSettle` may take `settlementDisclosurePolicyCid` as an argument for the success-branch implementation, and the missing pre-quote policy binding remains a documented gap to fix later.
 
 ## Success Branch
 
