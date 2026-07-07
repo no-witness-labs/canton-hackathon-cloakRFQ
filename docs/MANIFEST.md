@@ -1,10 +1,10 @@
 # CloakRFQ Receipts — Package Manifest
 
-Updated: 2026-07-06
+Updated: 2026-07-07
 
 ## Completeness status
 
-This repository now contains both the product/design documentation and the Daml ledger implementation for Phase 1 plus the first Phase 2 Private Quote workflow. It is no longer only a domain-discovery documentation bundle.
+This repository now contains both the product/design documentation and the Daml ledger implementation for Phase 1, Phase 2 Private Quote intake, and the Phase 3 happy-path settlement workflow. It is no longer only a domain-discovery documentation bundle.
 
 It contains:
 
@@ -15,16 +15,16 @@ It contains:
 - the hackathon roadmap (`docs/HACKATHON_ROADMAP.md`), documenting the compact completion plan for the MVP and submission package;
 - the root agent instructions (`AGENTS.md`) and detailed agent workflow (`docs/AGENT_WORKFLOW.md`);
 - the MVP implementation handoff spec (`docs/CLOAKRFQ_MVP_BUILD_SPEC.md`);
-- the high-level, Phase 1, and Phase 2 technical design notes under `docs/technical-design/`;
+- the high-level, Phase 1, Phase 2, Phase 3, workflow diagram, and UI integration technical design notes under `docs/technical-design/`;
 - the accepted ADRs created so far (`docs/adr/0001` through `docs/adr/0012`);
-- the Phase 1 and early Phase 2 Daml ledger packages under `ledger/`;
+- the Phase 1, Phase 2, and Phase 3 happy-path Daml ledger packages under `ledger/`;
 - a README describing the repository.
 
 This repository is not complete as production implementation. The following implementation and design details are intentionally still open:
 
 - hardening whether `RFQRequest` itself should become authority-signed or certificate-created rather than Seller-signatory only;
-- production-grade payment/custody integration beyond CIP-56 allocation-backed quote evidence;
-- quote-selection protocol details;
+- production-grade payment/custody integration beyond CIP-56 allocation-backed quote evidence and demo settlement;
+- fallback quote-selection and failed-settlement protocol details;
 - exact API endpoints and frontend screen layouts;
 - Debtor identity disclosure rules;
 - post-settlement Funder exit model;
@@ -49,8 +49,9 @@ This repository is not complete as production implementation. The following impl
 | `docs/technical-design/002-phase-1-origination-eligibility.md`       | Phase 1 ledger design and current implementation notes. |
 | `docs/technical-design/003-phase-2-private-quote-intake.md`      | Phase 2 Private Quote intake and CIP-56 allocation design notes. |
 | `docs/technical-design/004-phase-3-quote-selection-and-settlement.md` | Phase 3 quote selection and settlement design notes. |
-| `docs/technical-design/005-workflow-diagrams.md`                     | Diagram-first technical workflow summary for Phase 1 and Phase 2. |
-| `ledger/`                                                            | Daml multi-package ledger model and tests for Phase 1 and early Phase 2. |
+| `docs/technical-design/005-workflow-diagrams.md`                     | Diagram-first technical workflow summary for Phase 1, Phase 2, and Phase 3. |
+| `docs/technical-design/006-ui-integration-and-demo-flow.md`           | UI and demo integration checklist for party roles, visible CIDs, timing, and CIP-56 settlement inputs. |
+| `ledger/`                                                            | Daml multi-package ledger model and tests for Phase 1, Phase 2, and Phase 3 happy path. |
 | `docs/adr/0001-receivable-sale-rfq-mvp.md`                          | Receivable Sale instead of secured loan.              |
 | `docs/adr/0002-maximum-practical-privacy-for-rfqs.md`               | Maximum Practical Privacy.                            |
 | `docs/adr/0003-functionality-preserving-privacy.md`                 | Functionality-Preserving Privacy.                     |

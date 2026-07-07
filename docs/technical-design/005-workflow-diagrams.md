@@ -125,7 +125,7 @@ sequenceDiagram
     L->>L: Check responseDeadline passed and quote not expired
     L->>L: Fetch Receivable and validate Seller ownership + terms
     L->>L: Fetch AllocationV2 and SettlementFactory
-    L->>T: Exercise SettlementFactory_SettleBatch
+    L->>T: Exercise SettlementFactory_SettleBatch with required funding allocation and optional extras
     T-->>L: AllocationResult_Settled
     L->>L: Exercise Receivable.Transfer to Funder
     L->>L: Create ReceivableSaleSettlement
@@ -161,7 +161,7 @@ flowchart TD
     Time["Timing<br/>- now > responseDeadline<br/>- now <= quoteExpiresAt"]
     Rcv["Receivable<br/>- Seller still owns it<br/>- terms match packageData"]
     Alloc["AllocationV2<br/>- committed<br/>- deadline covers quote expiry<br/>- settlement id equals packageId<br/>- authorizer owner is Funder"]
-    Factory["SettlementFactory<br/>- admin matches paymentInstrumentAdmin<br/>- SettlementFactory_SettleBatch returns settled results"]
+    Factory["SettlementFactory<br/>- admin matches paymentInstrumentAdmin<br/>- settles required funding allocation<br/>- may include optional extra finalized allocations<br/>- SettlementFactory_SettleBatch returns settled results"]
     Transfer["Receivable.Transfer<br/>- creates pending transfer to Funder"]
     Evidence["ReceivableSaleSettlement<br/>- signed by Seller + Funder<br/>- auditor observes<br/>- links allocation, factory, pending transfer"]
 

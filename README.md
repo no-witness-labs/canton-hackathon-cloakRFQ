@@ -7,7 +7,7 @@ holds both the planning documentation and the first implementation.
 
 ```
 docs/    Planning documentation — product brief, PRD, ADRs, technical design, roadmap.
-ledger/  Daml multi-package ledger model and script tests for Phase 1 and early Phase 2.
+ledger/  Daml multi-package ledger model and script tests for Phase 1, Phase 2, and Phase 3 happy path.
 web/     Next.js 14 (App Router + TypeScript) UI prototype of the MVP. See web/README.md.
 ```
 
@@ -43,7 +43,8 @@ npm run dev   # http://localhost:3000
 - `docs/technical-design/002-phase-1-origination-eligibility.md` — Phase 1 ledger design and implementation notes.
 - `docs/technical-design/003-phase-2-private-quote-intake.md` — Phase 2 Private Quote intake and CIP-56 allocation design notes.
 - `docs/technical-design/004-phase-3-quote-selection-and-settlement.md` — Phase 3 quote selection and settlement design notes.
-- `docs/technical-design/005-workflow-diagrams.md` — diagram-first technical workflow summary for the implemented Phase 1 and Phase 2 ledger flow.
+- `docs/technical-design/005-workflow-diagrams.md` — diagram-first technical workflow summary for the implemented Phase 1, Phase 2, and Phase 3 happy-path ledger flow.
+- `docs/technical-design/006-ui-integration-and-demo-flow.md` — UI and demo integration checklist for party roles, visible CIDs, timing, and CIP-56 settlement inputs.
 - `docs/adr/0001-receivable-sale-rfq-mvp.md` — model the MVP as a Receivable Sale, not a secured loan.
 - `docs/adr/0002-maximum-practical-privacy-for-rfqs.md` — target Maximum Practical Privacy for RFQs.
 - `docs/adr/0003-functionality-preserving-privacy.md` — preserve real-world RFQ functionality before optimizing privacy.
@@ -55,14 +56,15 @@ npm run dev   # http://localhost:3000
 - `docs/adr/0009-binding-quotes-with-expiry.md` — use Binding Quotes with Quote Expiry for the MVP.
 - `docs/adr/0010-on-ledger-demo-settlement.md` — use On-Ledger Demo Settlement for the MVP.
 - `docs/adr/0011-scoped-compliance-receipts.md` — use Scoped Compliance Receipts for audit and regulatory disclosure.
+- `docs/adr/0012-cip56-committed-allocations-for-private-quotes.md` — use CIP-56 committed allocations for Private Quote funding evidence.
 
 ## Status
 
-Phase 1 ledger implementation is working, and Phase 2 Private Quote submission is now started as of 2026-07-06.
+Phase 1, Phase 2, and the Phase 3 happy-path settlement flow are implemented on the ledger branch as of 2026-07-07.
 
-Implemented ledger scope currently covers represented Receivable registration, Compliance/Risk attestations and certificates, `RFQPackageData`, per-Funder `RFQRequest` bridge contracts, and allocation-backed `PrivateQuote` submission.
+Implemented ledger scope currently covers represented Receivable registration, Compliance/Risk attestations and certificates, `RFQPackageData`, per-Funder `RFQRequest` bridge contracts, allocation-backed `PrivateQuote` submission, CIP-56 settlement factory integration, pending Receivable transfer, and `ReceivableSaleSettlement` evidence.
 
-Not complete as production implementation. Later RFQ discovery, package access policy, quote-selection protocol details, settlement, receipts, and production payment/custody integration remain open.
+Not complete as production implementation. Later RFQ discovery, package access policy, fallback settlement paths, receipts beyond current settlement evidence, and production payment/custody integration remain open.
 
 Settlement product decision is resolved as On-Ledger Demo Settlement. Compliance Receipt product decision is resolved as Scoped Compliance Receipt.
 

@@ -129,6 +129,7 @@ template PrivateQuote
       with
         auditor : Party
         settlementFactoryCid : ContractId Token.SettlementFactory
+        extraSettlementAllocations : [Token.FinalizedAllocation]
       controller seller
       do
         now <- getTime
@@ -164,10 +165,10 @@ template PrivateQuote
         settlementBatchResult <- exercise settlementFactoryCid Token.SettlementFactory_SettleBatch with
           settlement = allocationView.settlement
           transferLegs = paymentTransferLegs
-          allocations = [Token.FinalizedAllocation with
+          allocations = (Token.FinalizedAllocation with
             allocationCid = fundingAllocationCid
             extraTransferLegSides = []
-            nextIterationFunding = None]
+            nextIterationFunding = None) :: extraSettlementAllocations
           actors = allocationSettleActors allocationView
           extraArgs = emptyExtraArgs
         assertMsg "allocation settlement did not settle"

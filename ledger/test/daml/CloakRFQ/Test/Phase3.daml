@@ -140,6 +140,7 @@ phase3AcceptAndSettle = do
     exerciseCmd privateQuote AcceptAndSettle with
       auditor = auditParty
       settlementFactoryCid = toInterfaceContractId @Token.SettlementFactory settlementFactory
+      extraSettlementAllocations = []
 
   setTime (time (date 2030 Jul 1) 13 0 0)
 
@@ -147,6 +148,7 @@ phase3AcceptAndSettle = do
     exerciseCmd privateQuote AcceptAndSettle with
       auditor = auditParty
       settlementFactoryCid = toInterfaceContractId @Token.SettlementFactory settlementFactory
+      extraSettlementAllocations = []
 
   Some settlementView <- queryContractId auditParty settlement
   settlementView.seller === seller

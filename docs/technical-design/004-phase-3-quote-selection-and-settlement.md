@@ -110,7 +110,7 @@ For the MVP, there is no separate `SettlementDisclosurePolicy` template. `Privat
 
 ## CIP-56 Settlement Factory
 
-Phase 3 uses CIP-56 `SettlementFactory_SettleBatch`, not a direct app-level `Allocation_Settle` call. `AcceptAndSettle` fetches the settlement factory, checks that its `admin` matches the expected payment instrument admin, submits one transfer leg and one finalized allocation, and requires the returned allocation result to be settled.
+Phase 3 uses CIP-56 `SettlementFactory_SettleBatch`, not a direct app-level `Allocation_Settle` call. `AcceptAndSettle` fetches the settlement factory, checks that its `admin` matches the expected payment instrument admin, submits the required Funder funding allocation plus optional extra finalized allocations supplied for the token workflow, and requires the returned allocation results to be settled.
 
 The real Canton Coin/Amulet demo path therefore requires a visible CIP-56 allocation and compatible settlement factory from the token provider. The local tests use `MockSettlementFactory` and `MockFundingAllocation` fixtures that implement the same CIP-56 interfaces for regression coverage.
 
