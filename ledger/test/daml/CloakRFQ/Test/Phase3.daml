@@ -12,7 +12,6 @@ import CloakRFQ.Compliance
 import CloakRFQ.Risk
 import CloakRFQ.RFQRequest
 import CloakRFQ.Receivable
-import CloakRFQ.Settlement
 import CloakRFQ.Test.Fixtures
 
 phase3AcceptAndSettle : Script ()
@@ -22,8 +21,7 @@ phase3AcceptAndSettle = do
   risk            <- allocateParty "Risk"
   funder          <- allocateParty "Funder"
   tokenAdmin      <- allocateParty "USDTokenAdmin"
-  policyAuthority <- allocateParty "SettlementPolicyAuthority"
-  auditor         <- allocateParty "Auditor"
+  auditParty      <- allocateParty "Auditor"
 
   setTime (time (date 2030 Jun 1) 12 0 0)
 
@@ -133,28 +131,20 @@ phase3AcceptAndSettle = do
       quoteTerms
       fundingAllocationCid = toInterfaceContractId @Token.Allocation fundingAllocation
 
-  policy <- submit policyAuthority do
-    createCmd SettlementDisclosurePolicy with
-      policyAuthority
-      outcomeObserver = auditor
-      policyVersion = "MVP-SETTLEMENT-DISCLOSURE-v1"
-      policyUsers = [seller]
-
   submitMustFail seller do
     exerciseCmd privateQuote AcceptAndSettle with
-      settlementDisclosurePolicyCid = policy
+      auditor = auditParty
 
   setTime (time (date 2030 Jul 1) 13 0 0)
 
   settlement <- submit seller do
     exerciseCmd privateQuote AcceptAndSettle with
-      settlementDisclosurePolicyCid = policy
+      auditor = auditParty
 
-  Some settlementView <- queryContractId auditor settlement
+  Some settlementView <- queryContractId auditParty settlement
   settlementView.seller === seller
   settlementView.funder === funder
-  settlementView.outcomeObserver === auditor
-  settlementView.settlementDisclosurePolicyCid === policy
+  settlementView.auditor === auditParty
   settlementView.originalReceivableCid === rcv
   settlementView.quoteTerms.netPurchasePrice === 465000.0
 

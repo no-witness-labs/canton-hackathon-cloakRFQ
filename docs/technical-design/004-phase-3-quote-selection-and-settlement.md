@@ -37,7 +37,8 @@ Because the action is inside `PrivateQuote`, the Funder's contract authority is 
 | ----- | --------------- |
 | `now > packageData.responseDeadline` | Prevents the Seller from settling before all invited Funders had the agreed quote window. |
 | `now <= quoteTerms.quoteExpiresAt` | Prevents accepting an expired price/funding commitment. |
-| `hasValidQuoteTerms quoteTerms` and `hasValidQuoteForRequest packageData quoteTerms` | Prevents invalid quote terms from becoming settlement evidence. |
+| `hasValidQuoteForRequest packageData quoteTerms` | Prevents invalid or request-incompatible quote terms from becoming settlement evidence. |
+| fetch `rfqRequestCid` and assert Seller, Funder, Receivable, package id, and package data match `PrivateQuote` | Prevents settling a directly created or mismatched `PrivateQuote` outside the official request context. |
 | `hasValidReceivableTerms packageData.receivableTerms` | Prevents settlement against malformed package terms. |
 | fetch `receivableCid` and assert `receivable.owner == seller` | Prevents settling or recording sale of a Receivable the Seller no longer owns. |
 | assert `receivable.terms == packageData.receivableTerms` | Prevents transferring a Receivable whose actual terms differ from the terms disclosed to the Funder. |
@@ -50,13 +51,9 @@ Because the action is inside `PrivateQuote`, the Funder's contract authority is 
 | assert the payment leg amount covers `quoteTerms.netPurchasePrice` | Prevents underpayment. |
 | assert the allocation deadline still covers the quote expiry or settlement requirement | Prevents relying on funding evidence that can expire before the quote obligation. |
 | exercise CIP-56 `Allocation_Settle` and require `AllocationResult_Settled` | Prevents creating final settlement evidence if token settlement returned pending, cancelled, or withdrawn. |
-| fetch `SettlementDisclosurePolicy`, assert Seller is a policy user, and use `policy.outcomeObserver` on `ReceivableSaleSettlement` | Prevents the Seller from bypassing the required auditor/regulator/evidence recipient. |
+| require an `auditor` party on `AcceptAndSettle` and copy it to `ReceivableSaleSettlement` | Ensures the final settlement evidence has a mandatory auditor/regulator in the MVP. |
 
 `AcceptAndSettle` is consuming so the same `PrivateQuote` cannot be settled twice.
-
-### Deferred Binding Gap
-
-For the strongest design, `SettlementDisclosurePolicy` should be bound into the RFQ flow before quote submission and carried into `PrivateQuote`. This pass does not modify Phase 1 or Phase 2. Therefore the success-branch implementation may take `settlementDisclosurePolicyCid` as a settlement argument, and the missing pre-quote policy binding remains a documented gap to fix later.
 
 ## Success Branch
 
@@ -99,39 +96,19 @@ Confirmed properties:
 
 - signed by `seller, funder`;
 - records completed MVP demo settlement;
-- links the Seller, winning Funder, original/transferred Receivable reference, compact package id, accepted quote terms, funding allocation, settlement time, and settlement disclosure policy;
+- links the Seller, winning Funder, auditor/regulator, original/transferred Receivable reference, compact package id, accepted quote terms, funding allocation, and settlement time;
 - is useful for audit, regulatory, and compliance evidence, but is not itself a compliance certificate;
 - intentionally avoids duplicating heavy package data already represented by the settled Receivable and quote terms.
 
 The registrar is not a signatory on `ReceivableSaleSettlement`. The registrar remains represented through the transferred `Receivable`.
 
-## Outcome Observer Policy
+## Auditor
 
-The final settlement record must have a mandatory outcome observer representing the auditor, regulator, or evidence recipient entitled to final outcome visibility.
+The final settlement record must have a mandatory `auditor : Party`. In regulatory scenarios, this party can represent the regulator or regulatory delegate entitled to final settlement evidence.
 
-This observer is not automatically the Compliance Party. The Compliance Party issued or authorized compliance evidence earlier in the workflow; the final outcome observer is the party legally or institutionally entitled to settlement outcome evidence.
+This party is not automatically the Compliance Party. The Compliance Party issued or authorized compliance evidence earlier in the workflow; the auditor is the party entitled to final settlement evidence.
 
-Use:
-
-```daml
-template SettlementDisclosurePolicy
-  with
-    policyAuthority : Party
-    outcomeObserver : Party
-    policyVersion : Text
-    policyUsers : [Party]
-```
-
-Meaning:
-
-- `policyAuthority`: legal or institutional authority defining the required final-outcome observer;
-- `outcomeObserver`: auditor, regulator, or evidence recipient entitled to observe settlement outcome;
-- `policyVersion`: version or reference for the disclosure policy;
-- `policyUsers`: parties, such as Sellers, allowed to see and use this policy in settlement.
-
-`SettlementDisclosurePolicy` should be known before quote submission and referenced by the RFQ flow before `PrivateQuote` creation. The policy CID should be carried forward into `PrivateQuote`, and `AcceptAndSettle` should use that already-bound policy rather than allowing the Seller to supply a new observer at settlement time.
-
-Funders are not required to see `SettlementDisclosurePolicy` for the current MVP scope. Sellers must be policy users so they can fetch the policy during settlement. Making policy visibility verifiable by Funders is a more involved feature and is out of scope for this success-branch implementation.
+For the MVP, there is no separate `SettlementDisclosurePolicy` template. `PrivateQuote.AcceptAndSettle` takes `auditor : Party` directly and copies it into `ReceivableSaleSettlement`, where it becomes an observer of the final evidence contract.
 
 ## CIP-56 Settlement Actor Constraint
 
