@@ -8,6 +8,7 @@ import {
   useStore, ROLES, LEGEND, BOUNDARY, truncParty, usd, FUNDER_PARTY_NAMES,
   type ReceivableForm, type RiskTier, type ComplianceView, type RiskView, type RFQRequestView,
 } from '@/lib/store';
+import { Term } from './Term';
 
 const TIER_LABEL: Record<string, string> = { LowRisk: 'Low risk', MediumRisk: 'Medium risk', HighRisk: 'High risk' };
 const fmtAmount = (n: number, ccy: string) => `${usd(n)} ${ccy}`;
@@ -73,7 +74,7 @@ export default function Workspace() {
             <span className="brand-mark"><Icon name="lock" size={17} /></span>
             <div>
               <div className="brand-name">Cloak<span>RFQ</span> <span className="rec">Receipts</span></div>
-              <div className="brand-sub">Private invoice financing · Canton</div>
+              <div className="brand-sub">Private invoice financing · <Term id="canton">Canton</Term></div>
             </div>
           </div>
           <span className="demo-badge" title="Interactive demo — no wallet, sign-up, or real money needed">Demo · no real funds</span>
@@ -387,9 +388,9 @@ function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; r
   const ready = eligible && !!risk && funders.length > 0;
   return (
     <section className="panel">
-      <div className="panel-h"><h2 className="lg">Open RFQ</h2><span className="spacer" /><span className="chip ghost">certificate-backed</span></div>
+      <div className="panel-h"><h2 className="lg">Open <Term id="rfq">RFQ</Term></h2><span className="spacer" /><span className="chip ghost">certificate-backed</span></div>
       <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-        <p className="t-ink3" style={{ fontSize: 12.5, lineHeight: 1.5 }}>Opening the RFQ derives a <b>Compliance Certificate</b> and <b>Risk Certificate</b> from the attestations, then creates one private <b>RFQRequest</b> per invited Funder — each Funder sees only its own.</p>
+        <p className="t-ink3" style={{ fontSize: 12.5, lineHeight: 1.5 }}>Opening the RFQ derives a <b>Compliance Certificate</b> and <b>Risk Certificate</b> from the <Term id="attestation">attestations</Term>, then creates one private request per invited <Term id="funder">Funder</Term> — each Funder sees only its own.</p>
         <Field label="Invite Funders">
           <div style={{ display: 'flex', gap: 8 }}>
             {['A', 'B', 'C'].map((k) => (
@@ -445,7 +446,7 @@ function SellerView() {
 
   const receivableCard = (
     <section className="panel">
-      <div className="panel-h"><h2>Receivable</h2><span className="spacer" /><span className="h-tag">{rcv.invoiceId}</span></div>
+      <div className="panel-h"><h2><Term id="receivable">Receivable</Term></h2><span className="spacer" /><span className="h-tag">{rcv.invoiceId}</span></div>
       <div className="panel-b">
         <div className="face">{usd(rcv.payableAmount)}</div>
         <div className="t-ink3" style={{ fontSize: 12.5, marginTop: 3 }}>Payable · {rcv.currency} · {rcv.paymentTerms}</div>
@@ -461,7 +462,7 @@ function SellerView() {
 
   const debtorCard = (
     <section className="panel">
-      <div className="panel-h"><h2>Debtor</h2></div>
+      <div className="panel-h"><h2><Term id="debtor">Debtor</Term></h2></div>
       <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Identity (to you)</span><span style={{ fontSize: 13, fontWeight: 600 }}>{rcv.debtorName}</span></div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span>{risk ? <span className="chip accent">{TIER_LABEL[risk.riskTier] ?? risk.riskTier}</span> : <span className="chip ghost">pending</span>}</div>
@@ -507,7 +508,7 @@ function SellerView() {
         </div>
 
         <section className="panel">
-          <div className="panel-h"><h2 className="lg">Certificates</h2><span className="spacer" /><span className="chip ghost">Seller-derived</span></div>
+          <div className="panel-h"><h2 className="lg"><Term id="certificate">Certificates</Term></h2><span className="spacer" /><span className="chip ghost">Seller-derived</span></div>
           <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <StatusRow k="Compliance certificate" v={comp?.certified ? 'Derived' : 'Pending'} ok={!!comp?.certified} />
             <StatusRow k="Risk certificate" v={risk?.certified ? 'Derived' : 'Pending'} ok={!!risk?.certified} />
@@ -717,7 +718,7 @@ function RiskRoleView() {
                     <span className="t-ink3" style={{ fontSize: 12.5 }}>Risk certificate</span>
                     <span className={'chip ' + (att.certified ? 'accent' : 'ghost')}>{att.certified ? 'Derived by Seller' : 'Awaiting Seller derivation'}</span>
                   </div>
-                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Lenders receive this certified <span className="t-ink3">rating</span> in their request — never the customer&apos;s raw records. It signals how likely the invoice is to be paid.</p>
+                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Lenders receive this certified <Term id="risktier">rating</Term> in their request — never the customer&apos;s raw records. It signals how likely the invoice is to be paid.</p>
                   {state.compliance
                     ? <NextStep label="Next: back to Seller to open the RFQ →" onGo={() => setRole('seller')} />
                     : <NextStep label="Next: approve as Compliance →" onGo={() => setRole('compliance')} />}
