@@ -105,7 +105,6 @@ template RFQRequest
         create PrivateQuote with
           seller
           funder
-          rfqRequestCid = self
           packageId
           receivableCid
           packageData
@@ -116,7 +115,6 @@ template PrivateQuote
   with
     seller : Party
     funder : Party
-    rfqRequestCid : ContractId RFQRequest
     packageId : Text
     receivableCid : ContractId Receivable
     packageData : RFQPackageData

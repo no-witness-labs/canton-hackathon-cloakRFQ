@@ -120,7 +120,6 @@ phase3AcceptAndSettle = do
       funder
       seller
       tokenAdmin
-      rfqRequestCid = request
       packageId = package
       amount = 465000.0
       instrumentId = "USD"

@@ -132,7 +132,6 @@ phase2PrivateQuote = do
       funder = funderB
       seller
       tokenAdmin
-      rfqRequestCid = requestB
       packageId
       amount = 465000.0
       instrumentId = "USD"
@@ -153,7 +152,6 @@ phase2PrivateQuote = do
       funder = funderB
       seller
       tokenAdmin
-      rfqRequestCid = requestB
       packageId
       amount = 400000.0
       instrumentId = "USD"
@@ -170,7 +168,6 @@ phase2PrivateQuote = do
       funder = funderA
       seller
       tokenAdmin
-      rfqRequestCid = requestA
       packageId
       amount = 465000.0
       instrumentId = "USD"
@@ -185,7 +182,6 @@ phase2PrivateQuote = do
   Some privateQuoteView <- queryContractId seller privateQuote
   privateQuoteView.seller === seller
   privateQuoteView.funder === funderA
-  privateQuoteView.rfqRequestCid === requestA
   privateQuoteView.packageId === packageId
   privateQuoteView.receivableCid === rcv
   privateQuoteView.quoteTerms.netPurchasePrice === 465000.0

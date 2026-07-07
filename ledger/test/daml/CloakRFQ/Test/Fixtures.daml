@@ -6,8 +6,6 @@ import Splice.Api.Token.AllocationV2 qualified as Token
 import Splice.Api.Token.HoldingV2 qualified as Holding
 import Splice.Api.Token.MetadataV1
 
-import CloakRFQ.RFQRequest
-
 template MockSettlementFactory
   with
     tokenAdmin : Party
@@ -45,7 +43,6 @@ template MockFundingAllocation
     funder : Party
     seller : Party
     tokenAdmin : Party
-    rfqRequestCid : ContractId RFQRequest
     packageId : Text
     amount : Decimal
     instrumentId : Text
