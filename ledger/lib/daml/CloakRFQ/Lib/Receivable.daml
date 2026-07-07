@@ -1,0 +1,25 @@
+-- | Receivable data types and validation helpers.
+module CloakRFQ.Lib.Receivable where
+
+import CloakRFQ.Lib.Common
+
+data ReceivableTerms = ReceivableTerms
+  with
+    payableAmount : Decimal  -- Amount due from the Debtor under the invoice.
+    currency : Text          -- Invoice currency code, e.g. USD or EUR.
+    issueDate : Date         -- Date the invoice was issued.
+    dueDate : Date           -- Date payment is due from the Debtor.
+    paymentTerms : Text      -- Human-readable terms, e.g. Net 45.
+  deriving (Eq, Show)
+
+data ReceivableMetadata = ReceivableMetadata
+  with
+    invoiceId : Text                         -- Seller invoice number, e.g. INV-4471.
+    buyerReference : Optional Text           -- Optional buyer/AP routing reference.
+    purchaseOrderReference : Optional Text   -- Optional buyer-issued purchase order reference.
+    sourceSystemReference : Optional Text    -- Optional ERP/platform source reference.
+  deriving (Eq, Show)
+
+hasValidReceivableTerms : ReceivableTerms -> Bool
+hasValidReceivableTerms terms =
+  isPositiveAmount terms.payableAmount

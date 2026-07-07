@@ -100,7 +100,7 @@ This section names the first likely Daml templates and data types. It is still a
 | `RiskTier` | Closed MVP risk tier: `LowRisk`, `MediumRisk`, or `HighRisk`. |
 | `RiskDisclosure` | Minimal Funder-visible input disclosed to the Risk Assessor for risk tiering, currently receivable terms. |
 | `RiskResult` | Risk output returned to the Seller, currently the mandatory `riskTier`. |
-| `RFQPackageData` | Confirmed Phase 1 package-safe Funder-interested disclosure: receivable terms, risk tier, and shared response deadline. |
+| `RFQPackageData` | Confirmed package-safe Funder-interested disclosure: receivable terms, risk tier, shared response deadline, and expected CIP-56 payment instrument. |
 
 ### Templates
 
@@ -110,7 +110,7 @@ This section names the first likely Daml templates and data types. It is still a
 | `ComplianceAttestation` | Compliance Party signatory, Seller observer | Records Compliance Party authority over the detailed compliance result and the disclosed information it evaluated. |
 | `ComplianceCertificate` | Compliance Party signatory, observers TBD | Minimal certificate derived from `ComplianceAttestation`; intended to support package authenticity while preserving privacy, with room to become a reusable formal credential later. |
 | `RiskCertificate` | Risk Assessor signatory, observers TBD | Minimal certificate derived from `RiskAttestation`; intended to support package authenticity while preserving privacy, with room to become a reusable formal credential later. |
-| `RFQRequest` | Seller signatory, Funder observer | Minimal bridge from Phase 1 to Phase 2. It is per Funder request and means ready to open, not public/open market discovery. |
+| `RFQRequest` | Seller signatory, Funder observer; `SubmitPrivateQuote` controlled by Funder in Phase 2 | Minimal bridge from Phase 1 to Phase 2. It is per Funder request and means ready to open, not public/open market discovery. |
 
 ### Choice Sketch
 
@@ -250,7 +250,7 @@ Certificate visibility is still a Phase 2 concern. Today the certificates are Se
 
 For Phase 1, `RFQRequest` means ready to open, not already open to the market. Phase 2 decides how it becomes visible to Funders and how package access works.
 
-All Funder-interested disclosed business information should live inside `RFQPackageData`; fields outside it should exist only for technical linking, authorization, and validation. The Phase 1 `RFQPackageData` baseline is `receivableTerms`, `riskTier`, and `responseDeadline`. Do not include a Seller-authored `complianceOk` boolean; compliance readiness is validated on-ledger by fetching and checking `ComplianceCertificate`.
+All Funder-interested disclosed business information should live inside `RFQPackageData`; fields outside it should exist only for technical linking, authorization, and validation. The current `RFQPackageData` baseline is `receivableTerms`, `riskTier`, `responseDeadline`, `paymentInstrumentAdmin`, and `paymentInstrumentId`. Do not include a Seller-authored `complianceOk` boolean; compliance readiness is validated on-ledger by fetching and checking `ComplianceCertificate`.
 
 Funder discovery and routing are out of scope for the MVP ledger model. In a production or later-branch design, Funders may arrive through a public platform, private Seller invitation, broker/third-party workflow, or another off-ledger channel. For the local MVP, parties are simulated locally, so per-Funder request instances can be tested without deciding the off-ledger sourcing path.
 
