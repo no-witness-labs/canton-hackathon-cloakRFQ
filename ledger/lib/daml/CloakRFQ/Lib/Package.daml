@@ -1,0 +1,14 @@
+-- | Funder-visible RFQ package data.
+module CloakRFQ.Lib.Package where
+
+import CloakRFQ.Lib.Receivable
+import CloakRFQ.Lib.Risk
+
+data RFQPackageData = RFQPackageData
+  with
+    receivableTerms : ReceivableTerms  -- Receivable terms disclosed as part of the package.
+    riskTier : RiskTier                -- Risk tier certified by the Risk Assessor for this package.
+    responseDeadline : Time            -- Shared quote response deadline for this RFQ event.
+    paymentInstrumentAdmin : Party     -- CIP-56 token registry/admin expected for quote funding.
+    paymentInstrumentId : Text         -- CIP-56 instrument id expected for quote funding, e.g. USD.
+  deriving (Eq, Show)

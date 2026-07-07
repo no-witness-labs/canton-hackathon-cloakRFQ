@@ -1,0 +1,5 @@
+-- | Shared pure helpers used by CloakRFQ data modules.
+module CloakRFQ.Lib.Common where
+
+isPositiveAmount : Decimal -> Bool
+isPositiveAmount amount = amount > 0.0

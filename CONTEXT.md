@@ -4,7 +4,7 @@
 
 ### CloakRFQ Receipts
 
-A private, functionality-preserving RFQ marketplace for Receivable Sales on Canton, where Funders submit Private Quotes, Sellers select the Best Compliant Quote through a minimal Seller Quote View, scoped parties provide attestations, and Auditors or Regulators receive selective compliance evidence without unnecessary disclosure.
+A private, functionality-preserving RFQ marketplace for Receivable Sales on Canton, where Funders submit allocation-backed Private Quotes, Sellers select the Best Compliant Quote through a minimal Seller Quote View, scoped parties provide attestations, and Auditors or Regulators receive selective compliance evidence without unnecessary disclosure.
 
 ### Receivable
 
@@ -144,15 +144,15 @@ The set of Private Quotes submitted for a Blind RFQ.
 
 ### Quote Terms
 
-The commercial, operational, and disclosure terms contained in a Private Quote, such as purchase price, fees, reserve or holdback, settlement timing, recourse, Required Disclosure, Debtor Notification requirement, Quote Expiry, and Proof-of-Funds status.
+The implemented Phase 2 commercial terms contained in a Private Quote: Net Purchase Price, recourse model, Debtor Notification requirement, and Quote Expiry. The quote also references committed CIP-56 allocation evidence. Broader receivables-finance terms such as fees, reserves, holdbacks, settlement windows, and extra disclosure burden remain product context but are not separate Phase 2 Quote Terms fields.
 
 ### Net Purchase Price
 
 The amount of money the Seller expects to receive from a Private Quote after applying the quote's discount, fees, reserves, and other economic terms.
 
-### Required Disclosure
+### Disclosure Burden
 
-The information a Funder requires the Seller or workflow to disclose as a condition of making or completing a Private Quote. Required Disclosure is part of the quote's terms and can affect whether the Seller considers that quote the Best Compliant Quote.
+The commercial and privacy cost of disclosing additional information during an RFQ, such as extra diligence documents, debtor details, or operational confirmations. In real receivables-finance workflows, disclosure burden can affect quote attractiveness. The MVP keeps this as product context and does not model a separate Funder-requested disclosure workflow.
 
 ### Best Compliant Quote
 
@@ -248,7 +248,7 @@ Optional non-core information that may matter in some receivables-finance scenar
 
 ### Proof of Funds
 
-Evidence that a Funder has enough liquid or committed funding capacity to support a Private Quote at a relevant verification point.
+Evidence that a Funder has enough liquid or committed funding capacity to support a Private Quote. In Phase 2, the concrete evidence is a committed CIP-56 allocation for the RFQ context.
 
 ### Proof-of-Funds Gate
 
@@ -256,7 +256,7 @@ The requirement that a Funder provide acceptable quote-scoped Proof of Funds bef
 
 ### Proof-Backed Private Quote
 
-A Private Quote that has passed the Proof-of-Funds Gate. This does not mean funds are locked, reserved, escrowed, or guaranteed through settlement.
+A Private Quote that has satisfied the funding-evidence requirement. In the Phase 2 CIP-56 path, this means the quote references a validated committed allocation; it still does not mean production payment finality or bank settlement.
 
 ### Funding Capacity Attestation
 
@@ -264,11 +264,11 @@ A possible form of quote-scoped Proof of Funds stating that a Funder can support
 
 ### Reusable Funds Caveat
 
-The accepted limitation that Proof of Funds may show funds existed at a verification point while not preventing the same funds from supporting multiple bids or being spent later unless a stronger mechanism is added.
+The limitation of point-in-time Proof of Funds that it may show funds existed at a verification point while not preventing the same funds from supporting multiple bids or being spent later. Phase 2 uses committed CIP-56 allocations instead of relying only on this weaker model.
 
 ### Funding Lock
 
-A stronger future mechanism that reserves or locks funds for a Private Quote. The MVP should not claim Funding Lock behavior unless it is explicitly implemented.
+A stronger mechanism that reserves or locks funds for a Private Quote. In Phase 2, CloakRFQ uses committed CIP-56 allocation evidence for quote funding; this must not be overstated as production payment finality, bank settlement, or custody integration.
 
 ### Quote Bond
 

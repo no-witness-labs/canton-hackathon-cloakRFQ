@@ -1,0 +1,25 @@
+-- | Private Quote data types and validation helpers.
+module CloakRFQ.Lib.Quote where
+
+import CloakRFQ.Lib.Common
+import CloakRFQ.Lib.Package
+
+data RecourseModel = WithRecourse | WithoutRecourse
+  deriving (Eq, Show)
+
+data QuoteTerms = QuoteTerms
+  with
+    netPurchasePrice : Decimal         -- Amount the Funder offers to pay the Seller.
+    recourseModel : RecourseModel      -- Whether debtor non-payment leaves the Seller with recourse exposure.
+    debtorNotificationRequired : Bool  -- Whether this quote requires Debtor notification.
+    quoteExpiresAt : Time              -- Time after which the quote and its funding lock are no longer binding.
+  deriving (Eq, Show)
+
+hasValidQuoteTerms : QuoteTerms -> Bool
+hasValidQuoteTerms terms =
+  isPositiveAmount terms.netPurchasePrice
+
+hasValidQuoteForRequest : RFQPackageData -> QuoteTerms -> Bool
+hasValidQuoteForRequest packageData terms =
+  hasValidQuoteTerms terms
+    && terms.quoteExpiresAt > packageData.responseDeadline

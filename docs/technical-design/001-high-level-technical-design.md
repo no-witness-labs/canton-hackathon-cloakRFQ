@@ -11,10 +11,10 @@ This document sits below the PRD and project brief. It does not define exact Dam
 The MVP workflow has three phases:
 
 1. **RFQ Origination & Eligibility**
-2. **Private Quoting & Selection**
+2. **Private Quote Intake**
 3. **Settlement & Finality**
 
-Use **Private Quoting** and **Private Quote** in technical design. Avoid **Bidding** unless referencing an accepted ADR title or legacy product wording. In implementation-facing text, Proof of Funds gates quote eligibility.
+Use **Private Quoting** and **Private Quote** in technical design. Avoid **Bidding** unless referencing an accepted ADR title or legacy product wording. In implementation-facing text, committed allocation evidence gates Phase 2 quote eligibility.
 
 ## Disclosure Layers
 
@@ -74,11 +74,11 @@ There is no ledger-level Coordinator in the current Phase 1 MVP implementation.
 - optional `RiskAttestation`s and `RiskCertificate`s
 - `RFQPackageData`
 
-## Phase 2 — Private Quoting & Selection
+## Phase 2 — Private Quote Intake
 
 ### Boundary
 
-Starts when Funders can discover the RFQ or receive invitations. Ends when a quote is selected for attempted settlement.
+Starts when Funders have per-Funder RFQ requests. Ends at the RFQ response deadline.
 
 ### Actors
 
@@ -86,41 +86,31 @@ Starts when Funders can discover the RFQ or receive invitations. Ends when a quo
 - Funders
 - Coordinator
 - Compliance Party
-- optional Funding Evidence Provider or Proof-of-Funds mechanism
+- CIP-56 token registry/admin
+- optional wallet or custody provider for creating token allocations
 
 ### Actions
 
-- Funders inspect `RFQDiscoveryListing`s.
-- Funder requests access or accepts an invitation.
-- Workflow checks entitlement to the RFQ package.
-- Seller or workflow issues a Funder-specific `RFQDisclosurePackage`.
-- Funder submits `PrivateQuote`.
-- `PrivateQuote` carries Quote Terms, including Net Purchase Price, settlement timing, recourse model, fees, reserve or holdback, Required Disclosure, Debtor Notification requirement, Quote Expiry, and Proof-of-Funds status.
-- Proof-of-Funds Gate checks quote eligibility. It is not a Funding Lock, escrow, reserve, Quote Bond, or settlement guarantee.
-- Eligible and still-valid quotes become `EligibleQuote`s or `PendingQuote`s, depending on lifecycle state.
-- Seller selection mechanism produces enough information for the Seller to select the Best Compliant Quote.
-- Seller selects `SelectedQuote`.
-- Seller may define `SellerControlledFallbackQueue` from still-valid Eligible Quotes.
+- Funder submits `PrivateQuote` through its per-Funder `RFQRequest`.
+- `PrivateQuote` carries Quote Terms: Net Purchase Price, recourse model, Debtor Notification requirement, and Quote Expiry.
+- In the concrete Phase 2 direction, funding evidence is a committed CIP-56 `AllocationV2` rather than a Seller-trusted `proofOfFundsPassed` boolean.
+- `RFQRequest.SubmitPrivateQuote` is a consuming Funder-controlled choice. It fetches the referenced CIP-56 allocation and checks that it is committed, authorizes the Funder as sender, references the RFQ request as settlement context, matches the package's expected payment instrument, and covers the quote price until quote expiry.
+- This is stronger than point-in-time Proof of Funds, but it is still scoped funding allocation rather than a claim about production custody, bank settlement, or legal payment finality.
 
-Regulatory rules may constrain Phase 2 access, package issuance, quote eligibility, and disclosure. In the preferred MVP mode, the Regulator does not view live quoting by default.
+Regulatory rules may constrain package access, quote eligibility, and disclosure. In the preferred MVP mode, the Regulator does not view live quoting by default.
 
-### Open Technical Question
+### CIP-56 Allocation Notes
 
-The exact Seller quote-selection visibility model is not final.
+CIP-56 defines standard token APIs for holdings, transfer instructions, allocation requests, allocation instructions, and allocations. CloakRFQ's Phase 2 design uses `AllocationV2` as the concrete funding-evidence primitive because committed allocations reserve assets for a settlement context until settlement, cancellation, expiry, or the allocation deadline.
 
-The MVP must preserve real RFQ selection. It may use a multi-row `SellerQuoteView`, a stronger Winning-Only Disclosure protocol, or another mechanism if implementation can support Best Compliant Quote selection without exposing unnecessary quote data.
+The RFQ package must disclose the expected payment instrument using the CIP-56 registry/admin party plus instrument id. The allocation check then compares the quote's `netPurchasePrice` against a sender-side allocation leg from the Funder account to the Seller account for that exact instrument.
 
-Until the mechanism is chosen, do not document Seller visibility as necessarily limited to only the Winning Quote or necessarily exposing all Eligible Quotes.
+Privacy boundary: the Seller should not receive the Funder's full wallet balance or unrelated holdings. The quote workflow only needs the allocation reference and enough allocation view data to validate amount, instrument, deadline, commitment, and RFQ linkage.
 
 ### Outputs
 
-- issued `RFQDisclosurePackage`s
 - submitted `PrivateQuote`s
-- Proof-of-Funds status or attestation
-- `EligibleQuote`s / `PendingQuote`s
-- selection view or selection protocol output
-- `SelectedQuote`
-- optional `SellerControlledFallbackQueue`
+- committed CIP-56 funding allocation reference
 
 ## Phase 3 — Settlement & Finality
 
@@ -169,7 +159,7 @@ Regulator receipt visibility is usually post-finality. If a selected regulation 
 | Compliance | Compliance applies selected policy assumptions to Seller eligibility, RFQ eligibility, disclosure constraints, and package access. |
 | Risk | Risk Assessor acts before package issuance and produces Debtor or Receivable Risk Attestations; Funders price risk themselves. |
 | Regulator risk visibility | Regulator usually needs risk outcomes, references, threshold status, or risk tier when required, not raw underwriting data or raw debtor credit files by default. |
-| Proof of Funds | Gates quote eligibility only; does not imply locked, reserved, escrowed, single-use, or guaranteed funds. |
+| Funding evidence | Phase 2 uses committed CIP-56 allocations as scoped quote funding evidence; this is not a claim about production custody, bank settlement, or legal payment finality. |
 | Quote privacy | Competing Funders do not see competing Private Quotes. |
 | Coordinator visibility | Coordinator routes workflow state and invitations without Private Quote contents by default. |
 | Funder identity | Identity disclosure is staged and purpose-bound; stronger Unselected Funder hiding remains implementation-dependent. |
@@ -185,9 +175,8 @@ Phase 1: RFQ Origination & Eligibility
   Receivable + attestations/certificates + RFQPackageData
   -> per-Funder RFQRequest bridges
 
-Phase 2: Private Quoting & Selection
-  Entitled Funders receive scoped packages and submit Private Quotes
-  -> selection mechanism chooses SelectedQuote and optional fallback queue
+Phase 2: Private Quote Intake
+  Funders submit allocation-backed Private Quotes until the response deadline
 
 Phase 3: Settlement & Finality
   SelectedQuote attempts On-Ledger Demo Settlement

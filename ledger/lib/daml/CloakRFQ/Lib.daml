@@ -1,74 +1,19 @@
--- | Shared data and pure helpers for CloakRFQ.
+-- | Umbrella module for shared CloakRFQ data and pure helpers.
 --
 -- This package intentionally contains no templates, choices, or party
 -- authorization rules. Deployable ledger behavior lives in cloakrfq-contracts.
-module CloakRFQ.Lib where
+module CloakRFQ.Lib
+  ( module CloakRFQ.Lib.Common
+  , module CloakRFQ.Lib.Receivable
+  , module CloakRFQ.Lib.Compliance
+  , module CloakRFQ.Lib.Risk
+  , module CloakRFQ.Lib.Package
+  , module CloakRFQ.Lib.Quote
+  ) where
 
-data ReceivableTerms = ReceivableTerms
-  with
-    payableAmount : Decimal  -- Amount due from the Debtor under the invoice.
-    currency : Text          -- Invoice currency code, e.g. USD or EUR.
-    issueDate : Date         -- Date the invoice was issued.
-    dueDate : Date           -- Date payment is due from the Debtor.
-    paymentTerms : Text      -- Human-readable terms, e.g. Net 45.
-  deriving (Eq, Show)
-
-data ReceivableMetadata = ReceivableMetadata
-  with
-    invoiceId : Text                         -- Seller invoice number, e.g. INV-4471.
-    buyerReference : Optional Text           -- Optional buyer/AP routing reference.
-    purchaseOrderReference : Optional Text   -- Optional buyer-issued purchase order reference.
-    sourceSystemReference : Optional Text    -- Optional ERP/platform source reference.
-  deriving (Eq, Show)
-
-data IdentityDisclosure = IdentityDisclosure
-  with
-    legalName : Text       -- Legal/business name of the disclosed entity.
-    jurisdiction : Text    -- Country or legal jurisdiction relevant to compliance.
-    entityType : Text      -- Legal form, e.g. company, sole proprietor, or government entity.
-  deriving (Eq, Show)
-
-data ComplianceDisclosure = ComplianceDisclosure
-  with
-    sellerIdentity : IdentityDisclosure      -- Seller legal identity disclosed for compliance review.
-    debtorIdentity : IdentityDisclosure      -- Debtor legal identity disclosed for compliance review.
-    receivableTerms : ReceivableTerms        -- Commercial terms of the receivable being checked.
-    transactionPurpose : Text                -- Why the Seller is preparing this RFQ package.
-    disclosureRestrictions : Text            -- Business/legal constraints on later package disclosure.
-  deriving (Eq, Show)
-
-data ComplianceResult = ComplianceResult
-  with
-    sellerEligible : Bool
-    rfqEligible : Bool
-  deriving (Eq, Show)
-
-isComplianceOk : ComplianceResult -> Bool
-isComplianceOk result = result.sellerEligible && result.rfqEligible
-
-data RiskTier = LowRisk | MediumRisk | HighRisk
-  deriving (Eq, Show)
-
-data RiskDisclosure = RiskDisclosure
-  with
-    receivableTerms : ReceivableTerms  -- Funder-visible receivable terms used for risk tiering.
-  deriving (Eq, Show)
-
-data RiskResult = RiskResult
-  with
-    riskTier : RiskTier
-  deriving (Eq, Show)
-
-data RFQPackageData = RFQPackageData
-  with
-    receivableTerms : ReceivableTerms  -- Receivable terms disclosed as part of the package.
-    riskTier : RiskTier                -- Risk tier certified by the Risk Assessor for this package.
-    responseDeadline : Time            -- Shared quote response deadline for this RFQ event.
-  deriving (Eq, Show)
-
-isPositiveAmount : Decimal -> Bool
-isPositiveAmount amount = amount > 0.0
-
-hasValidReceivableTerms : ReceivableTerms -> Bool
-hasValidReceivableTerms terms =
-  isPositiveAmount terms.payableAmount
+import CloakRFQ.Lib.Common
+import CloakRFQ.Lib.Receivable
+import CloakRFQ.Lib.Compliance
+import CloakRFQ.Lib.Risk
+import CloakRFQ.Lib.Package
+import CloakRFQ.Lib.Quote
