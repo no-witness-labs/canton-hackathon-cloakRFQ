@@ -1,9 +1,7 @@
 -- | NFT-like represented Receivable used as the Phase 1 source asset.
 --
--- The real-world receivable is assumed to exist before the MVP workflow. This
--- module models the Seller's simplified self-registration step: registrar and
--- owner must be the same party, and later workflow attestations record
--- eligibility or verification conclusions.
+-- The real-world receivable is assumed to exist before the MVP workflow. The
+-- registrar records the represented receivable, while owner is transferable.
 module CloakRFQ.Receivable where
 
 import CloakRFQ.Lib
@@ -12,9 +10,27 @@ template Receivable
   with
     registrar : Party
     owner : Party
+    newOwner : Party
     metadata : ReceivableMetadata
     debtorName : Text            -- raw Debtor identity - Seller-only by default
     terms : ReceivableTerms
   where
-    signatory registrar
-    ensure registrar == owner && hasValidReceivableTerms terms
+    signatory registrar, owner
+    observer newOwner
+    ensure hasValidReceivableTerms terms
+
+    -- Initiates a generic receivable transfer. The current owner stays owner
+    -- until the proposed new owner accepts the transfer.
+    choice Transfer : ContractId Receivable
+      with
+        proposedNewOwner : Party
+      controller owner
+      do
+        assertMsg "transfer already pending" (owner == newOwner)
+        create this with newOwner = proposedNewOwner
+
+    choice AcceptTransfer : ContractId Receivable
+      controller newOwner
+      do
+        assertMsg "no pending transfer" (owner /= newOwner)
+        create this with owner = newOwner

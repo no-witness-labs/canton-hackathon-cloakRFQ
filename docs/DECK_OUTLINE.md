@@ -22,7 +22,7 @@ content plan; producing the designed slides is the remaining step for #18.
 8. **Architecture** — Daml templates enforce party-scoped visibility on-ledger;
    JSON Ledger API; Next.js UI per-party views. (Today UI is mocked; ledger in
    progress — be honest.)
-9. **Claim boundaries** — Demo Settlement Asset (non-production); PoF =
+9. **Claim boundaries** — CIP-56 token settlement scoped to the demo environment; PoF =
    eligibility evidence only; no ZK / production settlement / custody.
 10. **Roadmap + team** — what's built (UI, scaffold), what's next (Daml phases),
     and who.

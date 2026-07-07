@@ -21,7 +21,7 @@ Build one complete happy path and one failure/fallback branch.
 7. Seller receives Seller Quote View.
 8. Seller selects the Best Compliant Quote.
 9. Selected Quote enters Settlement Window.
-10. On-Ledger Demo Settlement assigns Receivable to Winning Funder and transfers Demo Settlement Asset to Seller.
+10. On-Ledger Demo Settlement assigns Receivable to Winning Funder and settles the committed CIP-56 token allocation to Seller.
 11. Scoped Compliance Receipt is created for Auditor/Regulator if required.
 
 ### Failure/fallback branch
@@ -84,7 +84,7 @@ Do not claim these unless implemented:
 ## Non-goals
 
 - Production payment integration.
-- Real Canton Coin/Amulet settlement.
+- Production bank or custodian settlement outside the CIP-56 token demo path.
 - Real bank/custodian settlement.
 - Stablecoin integration.
 - ZK proofs.
@@ -99,7 +99,7 @@ Do not claim these unless implemented:
 ## Implementation notes
 
 - Keep committed CIP-56 allocation evidence scoped to the RFQ; do not describe it as escrow, custody, bank settlement, production payment finality, or guaranteed settlement completion.
-- Keep Demo Settlement Asset clearly non-production.
+- Keep CIP-56 token settlement clearly scoped to the demo environment.
 - Treat Receivable assignment as an MVP workflow state transition. Do not claim production legal assignment, perfection, enforceability against the Debtor, or jurisdiction-specific receivables-transfer compliance unless those workflows are explicitly added.
 - Treat Binding Quotes as workflow-binding for the MVP, not as externally legally enforceable commitments unless legal-enforcement workflows are explicitly added.
 - Keep Scoped Compliance Receipt as selective disclosure, not a zero-knowledge proof.

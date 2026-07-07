@@ -6,28 +6,59 @@ import Splice.Api.Token.AllocationV2 qualified as Token
 import Splice.Api.Token.HoldingV2 qualified as Holding
 import Splice.Api.Token.MetadataV1
 
-import CloakRFQ.RFQRequest
+template MockSettlementFactory
+  with
+    tokenAdmin : Party
+    seller : Party
+  where
+    signatory tokenAdmin
+    observer seller
+
+    interface instance Token.SettlementFactory for MockSettlementFactory where
+      view = Token.SettlementFactoryView with
+        admin = tokenAdmin
+        meta = emptyMetadata
+      settlementFactory_publicFetchImpl _ _ = pure Token.SettlementFactoryView with
+        admin = tokenAdmin
+        meta = emptyMetadata
+      settlementFactory_settleBatchImpl _ arg = do
+        assertMsg "mock settlement factory must be executed by Seller only" (arg.actors == [seller])
+        assertMsg "mock settlement factory expects one transfer leg" (length arg.transferLegs == 1)
+        assertMsg "mock settlement factory expects one allocation" (length arg.allocations == 1)
+        allocationResults <- mapA
+          (\allocation -> exercise allocation.allocationCid Token.Allocation_Settle with
+            actors = arg.actors
+            extraTransferLegSides = allocation.extraTransferLegSides
+            nextIterationFunding = allocation.nextIterationFunding
+            extraArgs = arg.extraArgs)
+          arg.allocations
+        pure Token.SettlementFactory_SettleBatchResult with
+          allocationSettleResults = allocationResults
+          meta = emptyMetadata
+      settlementFactory_settleBatchExtraObservers _ = []
+
 
 template MockFundingAllocation
   with
     funder : Party
     seller : Party
     tokenAdmin : Party
-    rfqRequestCid : ContractId RFQRequest
+    packageId : Text
     amount : Decimal
     instrumentId : Text
     settlementDeadline : Time
     createdAt : Time
   where
     signatory funder
+    observer seller
 
     interface instance Token.Allocation for MockFundingAllocation where
       view = Token.AllocationView with
         originalAllocationCid = None
         settlement = Token.SettlementInfo with
           executors = [seller]
-          id = "cloakrfq-phase2-test"
-          cid = Some (coerceContractId rfqRequestCid)
+          id = packageId
+          cid = None
           meta = emptyMetadata
         allocation = Token.AllocationSpecification with
           admin = tokenAdmin
@@ -51,7 +82,13 @@ template MockFundingAllocation
         expiresAt = Some settlementDeadline
         availableActions = Map.empty
         meta = emptyMetadata
-      allocation_settleImpl _ _ = abort "mock allocation cannot settle"
+      allocation_settleImpl allocationCid arg = do
+        assertMsg "mock allocation settlement must be executed by Seller only" (arg.actors == [seller])
+        archive allocationCid
+        pure Token.AllocationResult with
+          output = Token.AllocationResult_Settled with nextIterationAllocationCid = None
+          authorizerHoldingCids = mempty
+          meta = emptyMetadata
       allocation_cancelImpl _ _ = abort "mock allocation cannot cancel"
       allocation_withdrawImpl _ _ = abort "mock allocation cannot withdraw"
       allocation_settleExtraObservers _ = []

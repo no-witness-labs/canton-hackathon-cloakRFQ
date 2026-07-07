@@ -55,6 +55,7 @@ phase1 = do
     createCmd Receivable with
       registrar = seller
       owner = seller
+      newOwner = seller
       metadata
       debtorName = "Meridian Retail Group"
       terms

@@ -10,6 +10,10 @@ build/
 .vscode/
 **/.vscode/
 
+# Local agent skills
+.agents/
+skills-lock.json
+
 # Misc
 .DS_Store
 *.pem

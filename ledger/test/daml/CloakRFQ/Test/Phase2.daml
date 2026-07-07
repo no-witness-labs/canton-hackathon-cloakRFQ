@@ -37,6 +37,7 @@ phase2PrivateQuote = do
     createCmd Receivable with
       registrar = seller
       owner = seller
+      newOwner = seller
       metadata = ReceivableMetadata with
         invoiceId
         buyerReference = Some "AP-DEPT-42"
@@ -131,8 +132,8 @@ phase2PrivateQuote = do
       funder = funderB
       seller
       tokenAdmin
-      rfqRequestCid = requestB
-      amount = 470000.0
+      packageId
+      amount = 465000.0
       instrumentId = "USD"
       settlementDeadline = packageData.responseDeadline
       createdAt = time (date 2030 Jun 1) 12 0 0
@@ -151,7 +152,7 @@ phase2PrivateQuote = do
       funder = funderB
       seller
       tokenAdmin
-      rfqRequestCid = requestB
+      packageId
       amount = 400000.0
       instrumentId = "USD"
       settlementDeadline = quoteExpiresAt
@@ -167,8 +168,8 @@ phase2PrivateQuote = do
       funder = funderA
       seller
       tokenAdmin
-      rfqRequestCid = requestA
-      amount = 470000.0
+      packageId
+      amount = 465000.0
       instrumentId = "USD"
       settlementDeadline = quoteExpiresAt
       createdAt = time (date 2030 Jun 1) 12 0 0
@@ -181,7 +182,6 @@ phase2PrivateQuote = do
   Some privateQuoteView <- queryContractId seller privateQuote
   privateQuoteView.seller === seller
   privateQuoteView.funder === funderA
-  privateQuoteView.rfqRequestCid === requestA
   privateQuoteView.packageId === packageId
   privateQuoteView.receivableCid === rcv
   privateQuoteView.quoteTerms.netPurchasePrice === 465000.0

@@ -1,0 +1,181 @@
+-- | Phase 3 regression tests for quote acceptance and successful settlement.
+module CloakRFQ.Test.Phase3 where
+
+import Daml.Script
+import DA.Assert ((===))
+import DA.Date
+import DA.Time
+import Splice.Api.Token.AllocationV2 qualified as Token
+
+import CloakRFQ.Lib
+import CloakRFQ.Compliance
+import CloakRFQ.Risk
+import CloakRFQ.RFQRequest
+import CloakRFQ.Receivable
+import CloakRFQ.Test.Fixtures
+
+phase3AcceptAndSettle : Script ()
+phase3AcceptAndSettle = do
+  seller          <- allocateParty "Seller"
+  compliance      <- allocateParty "Compliance"
+  risk            <- allocateParty "Risk"
+  funder          <- allocateParty "Funder"
+  tokenAdmin      <- allocateParty "USDTokenAdmin"
+  auditParty      <- allocateParty "Auditor"
+
+  setTime (time (date 2030 Jun 1) 12 0 0)
+
+  let package = "PKG-INV-4471"
+  let invoiceId = "INV-4471"
+
+  let terms = ReceivableTerms
+        with payableAmount = 480000.0
+             currency = "USD"
+             issueDate = date 2026 Jan 1
+             dueDate = date 2026 Feb 15
+             paymentTerms = "Net 45"
+
+  rcv <- submit seller do
+    createCmd Receivable with
+      registrar = seller
+      owner = seller
+      newOwner = seller
+      metadata = ReceivableMetadata
+        with invoiceId
+             buyerReference = Some "AP-DEPT-42"
+             purchaseOrderReference = Some "PO-98776"
+             sourceSystemReference = Some "NETSUITE-AR-10031"
+      debtorName = "Meridian Retail Group"
+      terms
+
+  complianceAttestation <- submit compliance do
+    createCmd ComplianceAttestation with
+      complianceParty = compliance
+      seller
+      packageId = package
+      receivableCid = rcv
+      complianceDisclosure = ComplianceDisclosure
+        with sellerIdentity = IdentityDisclosure
+               with legalName = "Aster Components LLC"
+                    jurisdiction = "US-DE"
+                    entityType = "Limited liability company"
+             debtorIdentity = IdentityDisclosure
+               with legalName = "Meridian Retail Group"
+                    jurisdiction = "US-NY"
+                    entityType = "Corporation"
+             receivableTerms = terms
+             transactionPurpose = "Receivable sale RFQ for working capital"
+             disclosureRestrictions = "Package disclosure limited to eligible funders in later phases"
+      complianceResult = ComplianceResult
+        with sellerEligible = True
+             rfqEligible = True
+
+  complianceCertificate <- submit seller do
+    exerciseCmd complianceAttestation CreateComplianceCertificate with
+      policyVersion = "MVP-COMPLIANCE-v1"
+      certificationScope = "Phase 1 RFQ package eligibility"
+
+  riskAttestation <- submit risk do
+    createCmd RiskAttestation with
+      riskAssessor = risk
+      seller
+      packageId = package
+      receivableCid = rcv
+      riskDisclosure = RiskDisclosure with receivableTerms = terms
+      riskResult = RiskResult with riskTier = LowRisk
+
+  riskCertificate <- submit seller do
+    exerciseCmd riskAttestation CreateRiskCertificate with
+      riskPolicyVersion = "MVP-RISK-v1"
+      certificationScope = "Phase 1 receivable risk"
+
+  let packageData = RFQPackageData
+        with receivableTerms = terms
+             riskTier = LowRisk
+             responseDeadline = time (date 2030 Jul 1) 12 0 0
+             paymentInstrumentAdmin = tokenAdmin
+             paymentInstrumentId = "USD"
+
+  request <- submit seller do
+    createCmd RFQRequest with
+      seller
+      funder
+      complianceParty = compliance
+      riskAssessor = risk
+      packageId = package
+      receivableCid = rcv
+      packageData
+      complianceCertificateCid = complianceCertificate
+      riskCertificateCid = riskCertificate
+
+  let quoteExpiresAt = time (date 2030 Jul 2) 12 0 0
+  let quoteTerms = QuoteTerms
+        with netPurchasePrice = 465000.0
+             recourseModel = WithoutRecourse
+             debtorNotificationRequired = False
+             quoteExpiresAt
+
+  fundingAllocation <- submit funder do
+    createCmd MockFundingAllocation with
+      funder
+      seller
+      tokenAdmin
+      packageId = package
+      amount = 465000.0
+      instrumentId = "USD"
+      settlementDeadline = quoteExpiresAt
+      createdAt = time (date 2030 Jun 1) 12 0 0
+
+  settlementFactory <- submit tokenAdmin do
+    createCmd MockSettlementFactory with
+      tokenAdmin
+      seller
+
+  privateQuote <- submit funder do
+    exerciseCmd request SubmitPrivateQuote with
+      quoteTerms
+      fundingAllocationCid = toInterfaceContractId @Token.Allocation fundingAllocation
+
+  submitMustFail seller do
+    exerciseCmd privateQuote AcceptAndSettle with
+      auditor = auditParty
+      settlementFactoryCid = toInterfaceContractId @Token.SettlementFactory settlementFactory
+      extraSettlementAllocations = []
+
+  setTime (time (date 2030 Jul 1) 13 0 0)
+
+  settlement <- submit seller do
+    exerciseCmd privateQuote AcceptAndSettle with
+      auditor = auditParty
+      settlementFactoryCid = toInterfaceContractId @Token.SettlementFactory settlementFactory
+      extraSettlementAllocations = []
+
+  Some settlementView <- queryContractId auditParty settlement
+  settlementView.seller === seller
+  settlementView.funder === funder
+  settlementView.auditor === auditParty
+  settlementView.originalReceivableCid === rcv
+  settlementView.quoteTerms.netPurchasePrice === 465000.0
+
+  let receivableTransferCid : ContractId Receivable = settlementView.receivableTransferCid
+
+  Some pendingTransfer <- queryContractId funder receivableTransferCid
+  pendingTransfer.registrar === seller
+  pendingTransfer.owner === seller
+  pendingTransfer.newOwner === funder
+  pendingTransfer.terms === terms
+
+  transferredReceivableCid <- submit funder do
+    exerciseCmd receivableTransferCid AcceptTransfer
+
+  Some transferredReceivable <- queryContractId funder transferredReceivableCid
+  transferredReceivable.registrar === seller
+  transferredReceivable.owner === funder
+  transferredReceivable.newOwner === funder
+  transferredReceivable.terms === terms
+
+  None <- queryContractId seller privateQuote
+  None <- queryContractId seller rcv
+  None <- queryContractId funder fundingAllocation
+
+  pure ()

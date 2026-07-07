@@ -46,7 +46,7 @@ the JSON Ledger API and allocates the demo parties.
 ## Claim boundaries
 
 This is a demo. It does **not** use ZK proofs, production payment finality,
-custody, real bank/stablecoin/Canton Coin settlement, production legal
+custody, real bank settlement or production custody, production legal
 assignment, Funding Locks, or escrow. Settlement uses a non-production **Demo
 Settlement Asset**; Proof-of-Funds is **bid-eligibility evidence only**. See
 [`CLAIM_BOUNDARY_REVIEW.md`](CLAIM_BOUNDARY_REVIEW.md).

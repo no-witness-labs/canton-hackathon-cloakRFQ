@@ -1,0 +1,22 @@
+-- | Phase 3 final settlement evidence.
+module CloakRFQ.Settlement where
+
+import CloakRFQ.Lib
+import CloakRFQ.Receivable
+import Splice.Api.Token.AllocationV2 qualified as Token
+
+template ReceivableSaleSettlement
+  with
+    seller : Party
+    funder : Party
+    auditor : Party
+    originalReceivableCid : ContractId Receivable
+    receivableTransferCid : ContractId Receivable
+    packageId : Text
+    quoteTerms : QuoteTerms
+    fundingAllocationCid : ContractId Token.Allocation
+    settlementFactoryCid : ContractId Token.SettlementFactory
+    settledAt : Time
+  where
+    signatory seller, funder
+    observer auditor
