@@ -13,8 +13,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASE="${1:-http://127.0.0.1:6864}"
-DAR="$ROOT/ledger/contracts/.daml/dist/cloakrfq-contracts-0.1.0.dar"
-TEST_DAR="$ROOT/ledger/test/.daml/dist/cloakrfq-test-0.1.0.dar"   # CIP-56 token mocks for Phase 2/3
+DAR="$ROOT/ledger/contracts/.daml/dist/cloakrfq-contracts-v2-0.2.0.dar"
+TEST_DAR="$ROOT/ledger/test/.daml/dist/cloakrfq-test-v2-0.2.0.dar"   # CIP-56 token mocks for Phase 2/3
 CONFIG="$ROOT/web/public/ledger-config.json"
 USER_ID="cloakrfq"
 
@@ -73,7 +73,7 @@ mkdir -p "$(dirname "$CONFIG")"
 cat > "$CONFIG" <<JSON
 {
   "jsonApiUrl": "$BASE",
-  "packageRef": "#cloakrfq-contracts",
+  "packageRef": "#cloakrfq-contracts-v2",
   "userId": "$USER_ID",
   "parties": {
     "seller": "${PARTY[Seller]}",

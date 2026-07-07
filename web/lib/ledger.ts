@@ -24,7 +24,7 @@ const EMPTY_PARTIES: Record<Role, string> = {
   compliance: '', risk: '', coordinator: '', auditor: '', outsider: '', tokenAdmin: '',
 };
 
-let cfg: LedgerConfig = { jsonApiUrl: '', packageRef: '#cloakrfq-contracts', userId: 'cloakrfq', parties: EMPTY_PARTIES };
+let cfg: LedgerConfig = { jsonApiUrl: '', packageRef: '#cloakrfq-contracts-v2', userId: 'cloakrfq', parties: EMPTY_PARTIES };
 
 /** Stable per-browser session id (for self-service per-visitor parties on the deploy). */
 function sessionId(): string {
@@ -92,7 +92,7 @@ const MODULE: Record<string, string> = {
   ReceivableSaleSettlement: 'Settlement',
 };
 // The CIP-56 token mocks live in a separate package (cloakrfq-test).
-const TEST_PACKAGE_REF = '#cloakrfq-test';
+const TEST_PACKAGE_REF = '#cloakrfq-test-v2';
 const TEST_TEMPLATES = new Set(['MockFundingAllocation', 'MockSettlementFactory']);
 const tpl = (name: string) => TEST_TEMPLATES.has(name)
   ? `${TEST_PACKAGE_REF}:CloakRFQ.Test.Fixtures:${name}`
