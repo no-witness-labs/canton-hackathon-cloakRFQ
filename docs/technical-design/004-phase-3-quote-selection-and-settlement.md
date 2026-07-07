@@ -113,6 +113,12 @@ Meaning:
 
 Funders are not required to see `SettlementDisclosurePolicy` for the current MVP scope. Making policy visibility verifiable by Funders is a more involved feature and is out of scope for this success-branch implementation.
 
+## CIP-56 Settlement Actor Constraint
+
+CIP-56 `Allocation_Settle` takes `actors : [Party]`. The interface comments say implementations must check these actors to avoid unauthorized settlement execution. By default, implementations should require the actors to equal the allocation `admin` and the allocation `executors`, and the comments state this authorization is typically provided through `SettlementFactory_SettleBatch`, used by the executors to settle V2 allocations.
+
+Implication for Phase 3: a production-grade implementation should not assume a Seller-only direct `Allocation_Settle` call is sufficient. The MVP implementation must either use a settle-capable test allocation whose actor rules are explicit, or implement the CIP-56 settlement-factory path. This decision remains open before coding the settlement call.
+
 ## Deferred
 
 The following are intentionally deferred until the next grilling step:
