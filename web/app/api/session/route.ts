@@ -16,7 +16,7 @@ export const maxDuration = 30;   // provisioning does ~9 sequential DevNet alloc
 const ENABLED = process.env.CLOAKRFQ_SESSION_PROVISIONING === '1';
 const TARGET = (process.env.CLOAKRFQ_LEDGER_TARGET ?? '').replace(/\/$/, '');
 const USER_ID = process.env.CLOAKRFQ_LEDGER_USER_ID ?? '6';
-const PKG = process.env.CLOAKRFQ_PACKAGE_REF ?? '#cloakrfq-contracts';
+const PKG = process.env.CLOAKRFQ_PACKAGE_REF ?? '#cloakrfq-contracts-v2';
 const NS = process.env.CLOAKRFQ_PARTY_NAMESPACE ?? '';   // participant namespace; else derived from an allocation
 const OIDC = {
   tokenUrl: process.env.CLOAKRFQ_OIDC_TOKEN_URL,
@@ -27,7 +27,7 @@ const OIDC = {
 };
 const ROLES: Record<string, string> = {
   seller: 'cloakrfqSeller', funderA: 'cloakrfqFunderA', funderB: 'cloakrfqFunderB', funderC: 'cloakrfqFunderC',
-  compliance: 'cloakrfqCompliance', risk: 'cloakrfqRisk', coordinator: 'cloakrfqCoordinator', auditor: 'cloakrfqAuditor', outsider: 'cloakrfqOutsider',
+  compliance: 'cloakrfqCompliance', risk: 'cloakrfqRisk', coordinator: 'cloakrfqCoordinator', auditor: 'cloakrfqAuditor', outsider: 'cloakrfqOutsider', tokenAdmin: 'cloakrfqTokenAdmin',
 };
 
 let tokenCache: { value: string; exp: number } | null = null;
