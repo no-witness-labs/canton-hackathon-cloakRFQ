@@ -321,12 +321,13 @@ function WalletConnector() {
   );
 }
 
-function Seg({ opts, val, onPick }: { opts: { label: string; value: string | number }[]; val: string | number; onPick: (v: string | number) => void }) {
+function Seg({ opts, val, onPick }: { opts: { label: string; value: string | number; danger?: boolean }[]; val: string | number; onPick: (v: string | number) => void }) {
   return (
     <div className="seg">
-      {opts.map((o) => (
-        <button key={String(o.value)} className={o.value === val ? 'on' : ''} onClick={() => onPick(o.value)}>{o.label}</button>
-      ))}
+      {opts.map((o) => {
+        const selected = o.value === val;
+        return <button key={String(o.value)} className={selected ? (o.danger ? 'on danger' : 'on') : ''} onClick={() => onPick(o.value)}>{o.label}</button>;
+      })}
     </div>
   );
 }
@@ -401,7 +402,12 @@ function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; r
   const [funders, setFunders] = useState<string[]>(['A', 'B', 'C']);
   const toggle = (k: string) => setFunders((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
   const eligible = !!comp && comp.sellerEligible && comp.rfqEligible;
-  const ready = eligible && !!risk && funders.length > 0;
+  const missing = [
+    !comp ? 'Compliance attestation' : !eligible ? 'Eligible compliance result' : null,
+    !risk ? 'Risk attestation' : null,
+    funders.length === 0 ? 'At least one invited Funder' : null,
+  ].filter((x): x is string => !!x);
+  const ready = missing.length === 0;
   return (
     <section className="panel">
       <div className="panel-h"><h2 className="lg">Open <Term id="rfq">RFQ</Term></h2><span className="spacer" /><span className="chip ghost">certificate-backed</span></div>
@@ -426,9 +432,20 @@ function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; r
             </div>
           </div>
         )}
-        <button className="btn accent block" disabled={!ready} onClick={() => onOpen(funders)}>
-          <Icon name="send" size={16} sw={2.4} /> Open RFQ to {funders.length} Funder{funders.length === 1 ? '' : 's'}
-        </button>
+        <div className="action-tip-wrap" tabIndex={ready ? undefined : 0}>
+          <button className="btn accent block" disabled={!ready} onClick={() => onOpen(funders)} aria-describedby={ready ? undefined : 'open-rfq-missing'}>
+            <Icon name="send" size={16} sw={2.4} /> Open RFQ to {funders.length} Funder{funders.length === 1 ? '' : 's'}
+          </button>
+          {!ready && (
+            <div id="open-rfq-missing" className="action-tip" role="tooltip">
+              <div className="action-tip-title">Missing before Open RFQ</div>
+              <ul>
+                {missing.map((m) => <li key={m}>{m}</li>)}
+              </ul>
+              <div className="action-tip-note">Certificates are derived automatically when the RFQ opens.</div>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -825,15 +842,20 @@ function ComplianceRoleView() {
 }
 
 function ComplianceForm({ onIssue }: { onIssue: (sellerEligible: boolean, rfqEligible: boolean) => void }) {
-  const [eligible, setEligible] = useState(true);
+  const [sellerEligible, setSellerEligible] = useState(true);
+  const [rfqEligible, setRfqEligible] = useState(true);
+  const passed = sellerEligible && rfqEligible;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
-      <Field label="Is this invoice eligible for financing?">
-        <Seg val={eligible ? 'yes' : 'no'} onPick={(v) => setEligible(v === 'yes')} opts={[{ label: 'Eligible', value: 'yes' }, { label: 'Not eligible', value: 'no' }]} />
+      <Field label="Seller eligibility">
+        <Seg val={sellerEligible ? 'yes' : 'no'} onPick={(v) => setSellerEligible(v === 'yes')} opts={[{ label: 'Eligible', value: 'yes' }, { label: 'Not eligible', value: 'no', danger: true }]} />
       </Field>
-      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>In a real deployment this is where KYC and sanctions checks run. Marking it not eligible stops the deal from proceeding.</p>
-      <button className="btn accent block" onClick={() => onIssue(eligible, eligible)}>
-        <Icon name="check" size={15} sw={2.3} /> Approve compliance
+      <Field label="RFQ package eligibility">
+        <Seg val={rfqEligible ? 'yes' : 'no'} onPick={(v) => setRfqEligible(v === 'yes')} opts={[{ label: 'Eligible', value: 'yes' }, { label: 'Not eligible', value: 'no', danger: true }]} />
+      </Field>
+      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>In a real deployment this is where KYC, sanctions, and package-scope checks run. A negative result records the attestation but prevents certificate creation and RFQ opening.</p>
+      <button className="btn accent block" onClick={() => onIssue(sellerEligible, rfqEligible)}>
+        <Icon name="check" size={15} sw={2.3} /> {passed ? 'Approve compliance' : 'Record not eligible'}
       </button>
     </div>
   );

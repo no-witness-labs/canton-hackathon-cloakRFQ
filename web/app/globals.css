@@ -178,10 +178,19 @@ svg { display: block; }
 .btn.ghost-red { background: transparent; color: var(--red); border: 1px solid rgba(240, 121, 95, 0.4); }
 .btn.sm { padding: 9px 15px; font-size: 12.5px; border-radius: 9px; }
 .btn.block { width: 100%; padding: 13px; }
+.action-tip-wrap { position: relative; width: 100%; outline: none; }
+.action-tip-wrap .btn:disabled { pointer-events: none; }
+.action-tip { position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); z-index: 30; opacity: 0; transform: translateY(4px); pointer-events: none; transition: opacity .12s, transform .12s; background: #10151c; border: 1px solid var(--line5); border-radius: 10px; padding: 10px 12px; box-shadow: 0 16px 40px rgba(0, 0, 0, .35); color: var(--ink2); }
+.action-tip-wrap:hover .action-tip, .action-tip-wrap:focus-within .action-tip { opacity: 1; transform: translateY(0); }
+.action-tip-title { font-size: 11px; font-family: var(--font-mono); color: var(--amber); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.action-tip ul { margin: 0; padding-left: 17px; display: flex; flex-direction: column; gap: 3px; }
+.action-tip li { font-size: 12px; line-height: 1.35; }
+.action-tip-note { margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--line3); color: var(--mut); font-size: 11px; line-height: 1.35; }
 
 .seg { display: flex; flex-wrap: wrap; gap: 6px; }
 .seg button { padding: 7px 12px; border-radius: 8px; cursor: pointer; font-family: var(--font-display); font-weight: 600; font-size: 12px; border: 1px solid var(--line5); background: var(--sunken); color: var(--ink3); transition: all .12s; }
 .seg button.on { border-color: transparent; background: var(--accent); color: var(--accent-ink); }
+.seg button.on.danger { background: #e5484d; color: var(--accent-ink); border-color: transparent; box-shadow: none; }
 
 .kvrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line3); }
 .kvrow:last-child { border-bottom: 0; }
