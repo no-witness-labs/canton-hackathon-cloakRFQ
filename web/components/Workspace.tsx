@@ -414,7 +414,7 @@ function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; r
   const toggle = (k: string) => setFunders((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
   const eligible = !!comp && comp.sellerEligible && comp.rfqEligible;
   const missing = [
-    !comp ? 'Compliance attestation' : !eligible ? 'Eligible compliance result' : null,
+    !comp ? 'Compliance attestation' : !eligible ? 'Compliance marked not eligible' : null,
     !risk ? 'Risk attestation' : null,
     funders.length === 0 ? 'At least one invited Funder' : null,
   ].filter((x): x is string => !!x);
@@ -432,7 +432,7 @@ function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; r
           </div>
         </Field>
         <AttestStatus risk={risk} comp={comp} />
-        {!eligible && comp && <p className="t-red" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Compliance marked the package not eligible — the certificate choice will reject. Re-issue an eligible attestation to proceed.</p>}
+        {!eligible && comp && <p className="t-red" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Compliance marked the package not eligible. Open RFQ is blocked in this MVP demo.</p>}
         {(!comp || !risk) && (
           <div style={{ background: 'rgba(232,193,95,0.08)', border: '1px solid var(--amber-line)', borderRadius: 10, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 9 }}>
             <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--amber)' }}>Next step: get this approved</div>

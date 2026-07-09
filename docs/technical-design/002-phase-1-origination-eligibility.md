@@ -204,6 +204,8 @@ Confirmed: do not include `compliancePassed : Bool` on `ComplianceCertificate`. 
 
 `CreateComplianceCertificate` should be a Seller-controlled, nonconsuming choice on `ComplianceAttestation`. The Seller controls certificate creation as part of package preparation, while authenticity still comes from the Compliance Party-signed attestation and resulting certificate. The certificate copies `certifiedReceivableTerms` from `complianceDisclosure.receivableTerms`. The attestation remains active as the detailed private source record.
 
+For MVP simplicity, the UI does not support re-issuing or superseding a negative `ComplianceAttestation`. A real-world workflow should add an explicit Compliance Party-controlled re-review or supersede choice so corrected disclosure can produce a new current attestation while preserving the old failed decision as audit evidence.
+
 Do not enforce `ComplianceCertificate` uniqueness on-ledger in Phase 1. Duplicate certificates for the same package are redundant, but not a core security failure because each certificate must still be Compliance Party-authorized. Add contract-key uniqueness later only if duplicate certificates create real workflow or verifier ambiguity.
 
 ## Risk Certificate Direction
