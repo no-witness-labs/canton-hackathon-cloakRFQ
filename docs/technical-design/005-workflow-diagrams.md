@@ -4,7 +4,7 @@
 
 Diagram the current ledger workflow at a technical level.
 
-This document reflects the implemented Phase 1, Phase 2, and Phase 3 happy-path settlement scope. Failure recording and fallback promotion are intentionally not modeled here yet.
+This document reflects the implemented Phase 1, Phase 2, Phase 3 happy-path settlement scope, and the MVP failed/fallback handling model. Failed settlement attempts roll back; the UI surfaces the error, and the Seller may retry or choose another still-valid `PrivateQuote` off-ledger.
 
 ## Phase Boundary
 
@@ -14,10 +14,13 @@ flowchart LR
     P2["Phase 2<br/>Private Quote Intake"]
     P3["Phase 3<br/>Quote Settlement"]
     End["Phase 3 success<br/>settlement evidence created"]
+    Fail["Failed attempt<br/>transaction rolls back"]
 
     P1 -->|"per-Funder RFQRequest exists"| P2
     P2 -->|"responseDeadline reached"| P3
     P3 -->|"CIP-56 settlement + pending Receivable transfer"| End
+    P3 -->|"failed check or token settlement error"| Fail
+    Fail -->|"retry or choose another visible quote"| P3
 ```
 
 ## Implemented Contract Flow
@@ -126,11 +129,16 @@ sequenceDiagram
     L->>L: Fetch Receivable and validate Seller ownership + terms
     L->>L: Fetch AllocationV2 and SettlementFactory
     L->>T: Exercise SettlementFactory_SettleBatch with required funding allocation and optional extras
-    T-->>L: AllocationResult_Settled
-    L->>L: Exercise Receivable.Transfer to Funder
-    L->>L: Create ReceivableSaleSettlement
-    L-->>A: Settlement evidence visible as observer
-    F->>L: Later exercise Receivable.AcceptTransfer
+    alt settlement succeeds
+      T-->>L: AllocationResult_Settled
+      L->>L: Exercise Receivable.Transfer to Funder
+      L->>L: Create ReceivableSaleSettlement
+      L-->>A: Settlement evidence visible as observer
+      F->>L: Later exercise Receivable.AcceptTransfer
+    else settlement fails
+      L-->>S: Transaction aborts with ledger error
+      S->>S: Retry or choose another visible PrivateQuote off-ledger
+    end
 ```
 
 ## RFQRequest Validation Surface
@@ -162,6 +170,7 @@ flowchart TD
     Rcv["Receivable<br/>- Seller still owns it<br/>- terms match packageData"]
     Alloc["AllocationV2<br/>- committed<br/>- deadline covers quote expiry<br/>- settlement id equals packageId<br/>- authorizer owner is Funder"]
     Factory["SettlementFactory<br/>- admin matches paymentInstrumentAdmin<br/>- settles required funding allocation<br/>- may include optional extra finalized allocations<br/>- SettlementFactory_SettleBatch returns settled results"]
+    Rollback["Failed attempt<br/>- transaction aborts<br/>- quote remains active<br/>- no settlement evidence"]
     Transfer["Receivable.Transfer<br/>- creates pending transfer to Funder"]
     Evidence["ReceivableSaleSettlement<br/>- signed by Seller + Funder<br/>- auditor observes<br/>- links allocation, factory, pending transfer"]
 
@@ -173,6 +182,8 @@ flowchart TD
     Rcv --> Transfer
     Alloc --> Factory
     Factory --> Transfer
+    Factory -. failed check or settlement error .-> Rollback
+    Rollback -. UI retry or fallback selection .-> Accept
     Transfer --> Evidence
 ```
 
@@ -237,9 +248,9 @@ flowchart TD
     end
 ```
 
-## Current Happy-Path Lifecycle
+## Current Lifecycle
 
-This is the implemented happy-path lifecycle. There is no separate on-ledger close contract in Phase 2; the `responseDeadline` is enforced by `RFQRequest.SubmitPrivateQuote` and `PrivateQuote.AcceptAndSettle`.
+This is the implemented lifecycle. There is no separate on-ledger close contract in Phase 2; the `responseDeadline` is enforced by `RFQRequest.SubmitPrivateQuote` and `PrivateQuote.AcceptAndSettle`. Failed settlement attempts roll back and are handled by UI error surfacing plus retry or off-ledger fallback quote selection.
 
 ```mermaid
 stateDiagram-v2
@@ -250,7 +261,8 @@ stateDiagram-v2
     RequestOpen --> IntakeClosed: responseDeadline reached without quote
     IntakeClosed --> [*]
     Quoted --> ReadyForSettlement: responseDeadline reached
-    ReadyForSettlement --> Settled: Seller exercises AcceptAndSettle
+    ReadyForSettlement --> ReadyForSettlement: AcceptAndSettle fails; transaction rolls back
+    ReadyForSettlement --> Settled: Seller exercises AcceptAndSettle successfully
     Settled --> PendingReceivableTransfer: Receivable.Transfer created
     PendingReceivableTransfer --> FunderOwnedReceivable: Funder exercises AcceptTransfer
     FunderOwnedReceivable --> [*]

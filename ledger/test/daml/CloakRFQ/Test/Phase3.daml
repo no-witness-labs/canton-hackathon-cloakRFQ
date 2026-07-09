@@ -12,6 +12,7 @@ import CloakRFQ.Compliance
 import CloakRFQ.Risk
 import CloakRFQ.RFQRequest
 import CloakRFQ.Receivable
+import CloakRFQ.Settlement
 import CloakRFQ.Test.Fixtures
 
 phase3AcceptAndSettle : Script ()
@@ -20,7 +21,9 @@ phase3AcceptAndSettle = do
   compliance      <- allocateParty "Compliance"
   risk            <- allocateParty "Risk"
   funder          <- allocateParty "Funder"
+  fallbackFunder  <- allocateParty "FallbackFunder"
   tokenAdmin      <- allocateParty "USDTokenAdmin"
+  wrongTokenAdmin <- allocateParty "WrongTokenAdmin"
   auditParty      <- allocateParty "Auditor"
 
   setTime (time (date 2030 Jun 1) 12 0 0)
@@ -108,6 +111,18 @@ phase3AcceptAndSettle = do
       complianceCertificateCid = complianceCertificate
       riskCertificateCid = riskCertificate
 
+  fallbackRequest <- submit seller do
+    createCmd RFQRequest with
+      seller
+      funder = fallbackFunder
+      complianceParty = compliance
+      riskAssessor = risk
+      packageId = package
+      receivableCid = rcv
+      packageData
+      complianceCertificateCid = complianceCertificate
+      riskCertificateCid = riskCertificate
+
   let quoteExpiresAt = time (date 2030 Jul 2) 12 0 0
   let quoteTerms = QuoteTerms
         with netPurchasePrice = 465000.0
@@ -126,15 +141,36 @@ phase3AcceptAndSettle = do
       settlementDeadline = quoteExpiresAt
       createdAt = time (date 2030 Jun 1) 12 0 0
 
+  fallbackFundingAllocation <- submit fallbackFunder do
+    createCmd MockFundingAllocation with
+      funder = fallbackFunder
+      seller
+      tokenAdmin
+      packageId = package
+      amount = 465000.0
+      instrumentId = "USD"
+      settlementDeadline = quoteExpiresAt
+      createdAt = time (date 2030 Jun 1) 12 0 0
+
   settlementFactory <- submit tokenAdmin do
     createCmd MockSettlementFactory with
       tokenAdmin
+      seller
+
+  wrongSettlementFactory <- submit wrongTokenAdmin do
+    createCmd MockSettlementFactory with
+      tokenAdmin = wrongTokenAdmin
       seller
 
   privateQuote <- submit funder do
     exerciseCmd request SubmitPrivateQuote with
       quoteTerms
       fundingAllocationCid = toInterfaceContractId @Token.Allocation fundingAllocation
+
+  fallbackPrivateQuote <- submit fallbackFunder do
+    exerciseCmd fallbackRequest SubmitPrivateQuote with
+      quoteTerms
+      fundingAllocationCid = toInterfaceContractId @Token.Allocation fallbackFundingAllocation
 
   submitMustFail seller do
     exerciseCmd privateQuote AcceptAndSettle with
@@ -144,38 +180,55 @@ phase3AcceptAndSettle = do
 
   setTime (time (date 2030 Jul 1) 13 0 0)
 
-  settlement <- submit seller do
+  submitMustFail seller do
     exerciseCmd privateQuote AcceptAndSettle with
+      auditor = auditParty
+      settlementFactoryCid = toInterfaceContractId @Token.SettlementFactory wrongSettlementFactory
+      extraSettlementAllocations = []
+
+  Some failedQuoteView <- queryContractId seller privateQuote
+  failedQuoteView.funder === funder
+
+  settlementsAfterFailedAttempt <- query @ReceivableSaleSettlement auditParty
+  length settlementsAfterFailedAttempt === 0
+
+  settlement <- submit seller do
+    exerciseCmd fallbackPrivateQuote AcceptAndSettle with
       auditor = auditParty
       settlementFactoryCid = toInterfaceContractId @Token.SettlementFactory settlementFactory
       extraSettlementAllocations = []
 
   Some settlementView <- queryContractId auditParty settlement
   settlementView.seller === seller
-  settlementView.funder === funder
+  settlementView.funder === fallbackFunder
   settlementView.auditor === auditParty
   settlementView.originalReceivableCid === rcv
   settlementView.quoteTerms.netPurchasePrice === 465000.0
 
   let receivableTransferCid : ContractId Receivable = settlementView.receivableTransferCid
 
-  Some pendingTransfer <- queryContractId funder receivableTransferCid
+  Some pendingTransfer <- queryContractId fallbackFunder receivableTransferCid
   pendingTransfer.registrar === seller
   pendingTransfer.owner === seller
-  pendingTransfer.newOwner === funder
+  pendingTransfer.newOwner === fallbackFunder
   pendingTransfer.terms === terms
 
-  transferredReceivableCid <- submit funder do
+  transferredReceivableCid <- submit fallbackFunder do
     exerciseCmd receivableTransferCid AcceptTransfer
 
-  Some transferredReceivable <- queryContractId funder transferredReceivableCid
+  Some transferredReceivable <- queryContractId fallbackFunder transferredReceivableCid
   transferredReceivable.registrar === seller
-  transferredReceivable.owner === funder
-  transferredReceivable.newOwner === funder
+  transferredReceivable.owner === fallbackFunder
+  transferredReceivable.newOwner === fallbackFunder
   transferredReceivable.terms === terms
 
-  None <- queryContractId seller privateQuote
+  Some stillActiveFailedQuote <- queryContractId seller privateQuote
+  stillActiveFailedQuote.funder === funder
+
+  None <- queryContractId seller fallbackPrivateQuote
   None <- queryContractId seller rcv
-  None <- queryContractId funder fundingAllocation
+  Some originalAllocation <- queryContractId funder fundingAllocation
+  originalAllocation.packageId === package
+  None <- queryContractId fallbackFunder fallbackFundingAllocation
 
   pure ()

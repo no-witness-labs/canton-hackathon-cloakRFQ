@@ -57,7 +57,8 @@ The selected allocation must be visible to the submitting Funder and later visib
    - `auditor`
    - `settlementFactoryCid`
    - `extraSettlementAllocations`
-4. Funder later exercises `Receivable.AcceptTransfer` on the pending transfer created by settlement.
+4. If settlement fails, the UI surfaces the ledger error and lets the Seller retry or select another visible, still-valid `PrivateQuote` off-ledger.
+5. Funder later exercises `Receivable.AcceptTransfer` on the pending transfer created by successful settlement.
 
 For the simple local path, `extraSettlementAllocations = []`.
 
@@ -104,6 +105,14 @@ The Seller sees submitted `PrivateQuote`s and performs off-ledger quote review. 
 
 The Auditor sees `ReceivableSaleSettlement` as final evidence. The Auditor does not need to see full compliance disclosure or all quotes.
 
+## Failed Settlement And Fallback UI
+
+A failed `AcceptAndSettle` transaction rolls back. The UI should keep the attempted `PrivateQuote` visible as active, show the ledger error to the Seller, and allow the Seller to retry that quote if still valid.
+
+If the Seller chooses not to retry, fallback selection is off-ledger: the Seller selects another visible, still-valid `PrivateQuote` and calls the same `AcceptAndSettle` action on that quote. There is no on-ledger fallback queue or failure record in the MVP failed path.
+
+The UI must not show failed attempts as settlement evidence. `ReceivableSaleSettlement` exists only after successful settlement.
+
 ## Demo Failure Points To Surface Clearly
 
 The UI should show explicit messages for these likely demo problems:
@@ -124,6 +133,6 @@ The UI should show explicit messages for these likely demo problems:
 
 - final visual design and screen layout;
 - wallet connector implementation details;
-- fallback quote promotion after failed settlement;
+- formal on-ledger fallback queue or ranking evidence;
 - production custody, reconciliation, and reporting;
 - regulatory filing workflow beyond final settlement evidence visibility.
