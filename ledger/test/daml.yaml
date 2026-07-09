@@ -1,17 +1,17 @@
 sdk-version: 3.5.1
-name: cloakrfq-test
+name: cloakrfq-test-v2
 source: daml
-version: 0.1.0
+version: 0.2.0
 dependencies:
   - daml-prim
   - daml-stdlib
   - daml-script
 data-dependencies:
-  - ../lib/.daml/dist/cloakrfq-lib-0.1.0.dar
+  - ../lib/.daml/dist/cloakrfq-lib-v2-0.2.0.dar
   - ../vendor/splice-token-standard/splice-api-token-metadata-v1-1.0.0.dar
   - ../vendor/splice-token-standard/splice-api-token-holding-v2-1.0.0.dar
   - ../vendor/splice-token-standard/splice-api-token-allocation-v2-1.0.0.dar
-  - ../contracts/.daml/dist/cloakrfq-contracts-0.1.0.dar
+  - ../contracts/.daml/dist/cloakrfq-contracts-v2-0.2.0.dar
 build-options:
   - --target=2.3
   - -Wno-template-interface-depends-on-daml-script

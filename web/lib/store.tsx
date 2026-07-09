@@ -22,13 +22,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { PartyRole } from './types';
 import {
   loadConfig, getParties, listActive, createAs, exerciseAs, getTxLog, type Contract,
-  SCENARIO, type Phase1Scenario, type RiskTier,
+  SCENARIO, type Phase1Scenario, type RiskTier, type QuoteTerms, type RecourseModel,
   complianceAttestationArgs, riskAttestationArgs, rfqRequestArgs,
+  mockFundingAllocationArgs, mockSettlementFactoryArgs, isoFromNow, QUOTE_WINDOW_SECONDS,
 } from './ledger';
 
 export type Role = PartyRole;
 export type { RiskTier };
-export type Phase = 'origination' | 'preRfq' | 'rfqOpen';
+export type Phase = 'origination' | 'preRfq' | 'rfqOpen' | 'settled';
 
 export const ROLES: { id: Role; label: string; sub: string }[] = [
   { id: 'seller', label: 'Seller', sub: 'originator' },
@@ -97,6 +98,17 @@ export interface RFQRequestView {
   payableAmount: number; currency: string; issueDate: string; dueDate: string; paymentTerms: string;
   riskTier: RiskTier; responseDeadline: string;
 }
+// A Funder-submitted private quote (Phase 2), seen by the Seller.
+export interface QuoteView {
+  cid: string; funderParty: string; funderKey: string;
+  netPurchasePrice: number; recourseModel: RecourseModel; debtorNotificationRequired: boolean; quoteExpiresAt: string;
+}
+// The recorded receivable sale (Phase 3).
+export interface SettlementView {
+  cid: string; funderParty: string; funderKey: string; netPurchasePrice: number; settledAt: string;
+}
+// What the Funder chooses when quoting.
+export interface QuoteForm { netPurchasePrice: number; recourseModel: RecourseModel; debtorNotificationRequired: boolean }
 
 const funderRole = (k: string) => ('funder' + k) as 'funderA' | 'funderB' | 'funderC';
 
@@ -126,6 +138,9 @@ interface State {
   compliance: ComplianceView | null;
   risk: RiskView | null;
   requests: RFQRequestView[];
+  quotes: QuoteView[];
+  settlement: SettlementView | null;
+  responseDeadline: string | null;   // ISO — quotes close at, settlement opens after
   rfqOpen: boolean;
 }
 
@@ -133,12 +148,15 @@ interface StoreCtx {
   state: State;
   invitedFunders: string[];
   requestFor: (key: string) => RFQRequestView | undefined;
+  quoteFor: (key: string) => QuoteView | undefined;
   setRole: (id: Role) => void;
   setFunderTab: (k: string) => void;
   createReceivable: (r: ReceivableForm) => void;
   issueCompliance: (sellerEligible: boolean, rfqEligible: boolean) => void;
   issueRisk: (riskTier: RiskTier) => void;
   openRFQ: (funderKeys: string[]) => void;
+  submitQuote: (funderKey: string, form: QuoteForm) => void;
+  acceptAndSettle: (funderKey: string) => void;
   onReset: () => void;
   walletParty: (role: Role) => WalletParty | null;
   toggleWalletMenu: () => void;
@@ -158,7 +176,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>({
     role: 'seller', phase: 'origination', funderTab: 'A', toast: null, toastColor: '#57e3a0', toastTx: null,
     walletState: 'disconnected', walletMenuOpen: false, ready: null,
-    receivable: null, compliance: null, risk: null, requests: [], rfqOpen: false,
+    receivable: null, compliance: null, risk: null, requests: [], quotes: [], settlement: null, responseDeadline: null, rfqOpen: false,
   });
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const patch = useCallback((p: Partial<State>) => setState((s) => ({ ...s, ...p })), []);
@@ -183,6 +201,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     let risk: RiskView | null = null;
     let hasComplianceCert = false, hasRiskCert = false;
     const requests: RFQRequestView[] = [];
+    const quotes: QuoteView[] = [];
+    let settlement: SettlementView | null = null;
+    let responseDeadline: string | null = null;
     for (const c of cs) {
       const a = c.args as Record<string, any>;
       if (c.template === 'Receivable') {
@@ -211,18 +232,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           issueDate: String(t.issueDate ?? ''), dueDate: String(t.dueDate ?? ''), paymentTerms: String(t.paymentTerms ?? ''),
           riskTier: (pd.riskTier ?? 'LowRisk') as RiskTier, responseDeadline: String(pd.responseDeadline ?? ''),
         });
+        responseDeadline = responseDeadline ?? String(pd.responseDeadline ?? '');
+      } else if (c.template === 'PrivateQuote') {
+        const qt = a.quoteTerms ?? {}, fp = String(a.funder ?? '');
+        quotes.push({
+          cid: c.contractId, funderParty: fp, funderKey: funderKeyByParty[fp] ?? '?',
+          netPurchasePrice: num(qt.netPurchasePrice), recourseModel: (qt.recourseModel ?? 'WithoutRecourse') as RecourseModel,
+          debtorNotificationRequired: !!qt.debtorNotificationRequired, quoteExpiresAt: String(qt.quoteExpiresAt ?? ''),
+        });
+        responseDeadline = responseDeadline ?? String((a.packageData ?? {}).responseDeadline ?? '');
+      } else if (c.template === 'ReceivableSaleSettlement') {
+        const fp = String(a.funder ?? '');
+        settlement = {
+          cid: c.contractId, funderParty: fp, funderKey: funderKeyByParty[fp] ?? '?',
+          netPurchasePrice: num((a.quoteTerms ?? {}).netPurchasePrice), settledAt: String(a.settledAt ?? ''),
+        };
       }
     }
     if (compliance) compliance.certified = hasComplianceCert;
     if (risk) risk.certified = hasRiskCert;
     requests.sort((x, y) => x.funderKey.localeCompare(y.funderKey));
-    const rfqOpen = requests.length > 0;
-    setState((s) => ({ ...s, receivable, compliance, risk, requests, rfqOpen }));
-    return { hasReceivable: !!receivable, rfqOpen };
+    quotes.sort((x, y) => x.funderKey.localeCompare(y.funderKey));
+    const rfqOpen = requests.length > 0 || quotes.length > 0;
+    setState((s) => ({ ...s, receivable, compliance, risk, requests, quotes, settlement, responseDeadline, rfqOpen }));
+    return { hasReceivable: !!receivable, rfqOpen, settled: !!settlement };
   }, []);
 
-  const phaseFrom = (r: { hasReceivable: boolean; rfqOpen: boolean }): Phase =>
-    r.rfqOpen ? 'rfqOpen' : r.hasReceivable ? 'preRfq' : 'origination';
+  const phaseFrom = (r: { hasReceivable: boolean; rfqOpen: boolean; settled: boolean }): Phase =>
+    r.settled ? 'settled' : r.rfqOpen ? 'rfqOpen' : r.hasReceivable ? 'preRfq' : 'origination';
 
   // Initial load: config → read live state → derive starting phase.
   useEffect(() => { (async () => {
@@ -235,8 +272,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const setRole = useCallback((id: Role) => patch({ role: id }), [patch]);
   const setFunderTab = useCallback((k: string) => patch({ funderTab: k }), [patch]);
 
-  const invitedFunders = useMemo(() => state.requests.map((r) => r.funderKey), [state.requests]);
+  // Funders with an open request or an already-submitted quote (a quote archives
+  // the request, so we union both to keep the Funder tabs stable across quoting).
+  const invitedFunders = useMemo(() => {
+    const keys = new Set<string>([...state.requests.map((r) => r.funderKey), ...state.quotes.map((q) => q.funderKey)]);
+    return [...keys].sort();
+  }, [state.requests, state.quotes]);
   const requestFor = useCallback((key: string) => state.requests.find((r) => r.funderKey === key), [state.requests]);
+  const quoteFor = useCallback((key: string) => state.quotes.find((q) => q.funderKey === key), [state.quotes]);
 
   // ---- Phase 1 origination actions ----
   const createReceivable = useCallback((r: ReceivableForm) => {
@@ -245,7 +288,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       try {
         const P = getParties();
         await createAs(P.seller, 'Receivable', {
-          registrar: P.seller, owner: P.seller,
+          registrar: P.seller, owner: P.seller, newOwner: P.seller,
           metadata: {
             invoiceId: r.invoiceId,
             buyerReference: r.buyerReference.trim() || null,
@@ -301,10 +344,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const P = getParties();
         const rcv = state.receivable, comp = state.compliance, rk = state.risk;
         if (!rcv || !comp || !rk) { toast('Need the Receivable and both attestations first', '#f0795f'); return; }
+        // Response deadline opens a short quoting window; funders must quote before
+        // it, and the Seller can only settle after it (contract-enforced timing).
         const scen: Phase1Scenario = {
           ...dealScenario(rcv),
           compliance: { ...SCENARIO.compliance, sellerEligible: comp.sellerEligible, rfqEligible: comp.rfqEligible },
           risk: { ...SCENARIO.risk, riskTier: rk.riskTier },
+          rfq: { ...SCENARIO.rfq, responseDeadline: isoFromNow(QUOTE_WINDOW_SECONDS), funders: SCENARIO.rfq.funders },
         };
         const compCerts = await exerciseAs(P.seller, 'ComplianceAttestation', comp.attCid, 'CreateComplianceCertificate',
           { policyVersion: scen.compliance.policyVersion, certificationScope: scen.compliance.certificationScope }, 'Derive Compliance certificate');
@@ -316,7 +362,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         for (const k of funderKeys) {
           if (already.has(k)) continue;
           await createAs(P.seller, 'RFQRequest',
-            rfqRequestArgs(P.seller, P[funderRole(k)], P.compliance, P.risk, rcv.cid, compCertCid, riskCertCid, scen), 'Open RFQ · Funder ' + k);
+            rfqRequestArgs(P.seller, P[funderRole(k)], P.compliance, P.risk, P.tokenAdmin, rcv.cid, compCertCid, riskCertCid, scen), 'Open RFQ · Funder ' + k);
         }
         const d = await refreshData();
         patch({ phase: phaseFrom(d), funderTab: funderKeys[0] ?? 'A' });
@@ -324,6 +370,52 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       } catch (e) { toast(String(e), '#f0795f'); }
     })();
   }, [state.receivable, state.compliance, state.risk, state.requests, patch, toast, refreshData]);
+
+  // Phase 2 — a Funder locks funding via a committed token allocation (mock) and
+  // submits a private quote against its request (which the choice then archives).
+  const submitQuote = useCallback((funderKey: string, form: QuoteForm) => {
+    toast('Locking funding & submitting quote…', '#57e3a0');
+    (async () => {
+      try {
+        const P = getParties();
+        const funder = P[funderRole(funderKey)];
+        const req = state.requests.find((r) => r.funderKey === funderKey);
+        if (!req) { toast('No open request for this Funder', '#f0795f'); return; }
+        const price = form.netPurchasePrice.toFixed(1);
+        const quoteExpiresAt = isoFromNow(86400);   // 1 day — must be after the response deadline
+        const allocCid = await createAs(funder, 'MockFundingAllocation',
+          mockFundingAllocationArgs(funder, P.seller, P.tokenAdmin, SCENARIO.packageId, price, SCENARIO.rfq.paymentInstrumentId, quoteExpiresAt, isoFromNow(0)), 'Lock funding');
+        const quoteTerms: QuoteTerms = { netPurchasePrice: price, recourseModel: form.recourseModel, debtorNotificationRequired: form.debtorNotificationRequired, quoteExpiresAt };
+        await exerciseAs(funder, 'RFQRequest', req.cid, 'SubmitPrivateQuote', { quoteTerms, fundingAllocationCid: allocCid }, 'Submit private quote');
+        const d = await refreshData();
+        patch({ phase: phaseFrom(d) });
+        toast('Private quote submitted — funding locked', '#57e3a0', lastTx());
+      } catch (e) { toast(String(e), '#f0795f'); }
+    })();
+  }, [state.requests, patch, toast, refreshData]);
+
+  // Phase 3 — after the response deadline, the Seller accepts a quote and settles
+  // atomically: funds move to the Seller and the receivable transfers to the Funder,
+  // who accepts it. Requires a settlement factory (mock) from the token admin.
+  const acceptAndSettle = useCallback((funderKey: string) => {
+    toast('Settling on-ledger…', '#57e3a0');
+    (async () => {
+      try {
+        const P = getParties();
+        const funder = P[funderRole(funderKey)];
+        const quote = state.quotes.find((q) => q.funderKey === funderKey);
+        if (!quote) { toast('No quote to settle', '#f0795f'); return; }
+        const factoryCid = await createAs(P.tokenAdmin, 'MockSettlementFactory', mockSettlementFactoryArgs(P.tokenAdmin, P.seller), 'Prepare settlement');
+        const created = await exerciseAs(P.seller, 'PrivateQuote', quote.cid, 'AcceptAndSettle',
+          { auditor: P.auditor, settlementFactoryCid: factoryCid, extraSettlementAllocations: [] }, 'Accept & settle');
+        const transferCid = created.find((c) => c.template === 'Receivable')?.contractId;
+        if (transferCid) await exerciseAs(funder, 'Receivable', transferCid, 'AcceptTransfer', {}, 'Accept receivable transfer');
+        const d = await refreshData();
+        patch({ phase: phaseFrom(d) });
+        toast('Settled — receivable sold to Funder ' + funderKey, '#57e3a0', lastTx());
+      } catch (e) { toast(String(e), '#f0795f'); }
+    })();
+  }, [state.quotes, patch, toast, refreshData]);
 
   const onReset = useCallback(() => {
     toast('Reloading from ledger…', '#9aa1ad');
@@ -356,10 +448,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const disconnectWallet = useCallback(() => { patch({ walletState: 'disconnected', walletMenuOpen: false }); toast('Wallet disconnected', '#9aa1ad'); }, [patch, toast]);
 
   const value = useMemo<StoreCtx>(() => ({
-    state, invitedFunders, requestFor,
-    setRole, setFunderTab, createReceivable, issueCompliance, issueRisk, openRFQ, onReset,
+    state, invitedFunders, requestFor, quoteFor,
+    setRole, setFunderTab, createReceivable, issueCompliance, issueRisk, openRFQ, submitQuote, acceptAndSettle, onReset,
     walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet,
-  }), [state, invitedFunders, requestFor, setRole, setFunderTab, createReceivable, issueCompliance, issueRisk, openRFQ, onReset, walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet]);
+  }), [state, invitedFunders, requestFor, quoteFor, setRole, setFunderTab, createReceivable, issueCompliance, issueRisk, openRFQ, submitQuote, acceptAndSettle, onReset, walletParty, toggleWalletMenu, closeWalletMenu, connectWallet, disconnectWallet]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

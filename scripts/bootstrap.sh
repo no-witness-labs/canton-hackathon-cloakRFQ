@@ -13,26 +13,33 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BASE="${1:-http://127.0.0.1:6864}"
-DAR="$ROOT/ledger/contracts/.daml/dist/cloakrfq-contracts-0.1.0.dar"
+DAR="$ROOT/ledger/contracts/.daml/dist/cloakrfq-contracts-v2-0.2.0.dar"
+TEST_DAR="$ROOT/ledger/test/.daml/dist/cloakrfq-test-v2-0.2.0.dar"   # CIP-56 token mocks for Phase 2/3
 CONFIG="$ROOT/web/public/ledger-config.json"
 USER_ID="cloakrfq"
 
 # Roles → party-id hints. Outsider is allocated too, so the demo can show that a
-# non-stakeholder party sees nothing.
-ROLES=(Seller FunderA FunderB FunderC Compliance Risk Coordinator Auditor Outsider)
+# non-stakeholder party sees nothing. USDTokenAdmin is the CIP-56 payment registry
+# used by the Phase 2/3 quote-funding and settlement mocks.
+ROLES=(Seller FunderA FunderB FunderC Compliance Risk Coordinator Auditor Outsider USDTokenAdmin)
 
 [ -f "$DAR" ] || { echo "DAR not found at $DAR — run 'dpm build --all' from ledger/ first." >&2; exit 1; }
 
-echo "→ Uploading DAR to $BASE"
-code=000
-for attempt in 1 2 3 4 5; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/v2/packages" \
-    -H "Content-Type: application/octet-stream" --data-binary @"$DAR")
-  [ "$code" = "200" ] && break
-  echo "  upload attempt $attempt returned HTTP $code, retrying…" >&2
-  sleep 2
-done
-[ "$code" = "200" ] || { echo "DAR upload failed (HTTP $code)" >&2; exit 1; }
+upload_dar() {
+  local dar="$1" code=000
+  [ -f "$dar" ] || { echo "DAR not found at $dar — run 'dpm build --all' from ledger/ first." >&2; exit 1; }
+  echo "→ Uploading $(basename "$dar") to $BASE"
+  for attempt in 1 2 3 4 5; do
+    code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/v2/packages" \
+      -H "Content-Type: application/octet-stream" --data-binary @"$dar")
+    [ "$code" = "200" ] && break
+    echo "  upload attempt $attempt returned HTTP $code, retrying…" >&2
+    sleep 2
+  done
+  [ "$code" = "200" ] || { echo "DAR upload failed (HTTP $code)" >&2; exit 1; }
+}
+upload_dar "$DAR"
+upload_dar "$TEST_DAR"
 
 existing="$(curl -s "$BASE/v2/parties")"
 
@@ -66,7 +73,7 @@ mkdir -p "$(dirname "$CONFIG")"
 cat > "$CONFIG" <<JSON
 {
   "jsonApiUrl": "$BASE",
-  "packageRef": "#cloakrfq-contracts",
+  "packageRef": "#cloakrfq-contracts-v2",
   "userId": "$USER_ID",
   "parties": {
     "seller": "${PARTY[Seller]}",
@@ -77,7 +84,8 @@ cat > "$CONFIG" <<JSON
     "risk": "${PARTY[Risk]}",
     "coordinator": "${PARTY[Coordinator]}",
     "auditor": "${PARTY[Auditor]}",
-    "outsider": "${PARTY[Outsider]}"
+    "outsider": "${PARTY[Outsider]}",
+    "tokenAdmin": "${PARTY[USDTokenAdmin]}"
   }
 }
 JSON

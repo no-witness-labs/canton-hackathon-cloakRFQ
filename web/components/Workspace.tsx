@@ -7,7 +7,20 @@ import { subscribeTx, getTxLog, getTxVersion, isSessionMode, newSession } from '
 import {
   useStore, ROLES, LEGEND, BOUNDARY, truncParty, usd, FUNDER_PARTY_NAMES,
   type ReceivableForm, type RiskTier, type ComplianceView, type RiskView, type RFQRequestView,
+  type QuoteForm, type SettlementView,
 } from '@/lib/store';
+import type { RecourseModel } from '@/lib/ledger';
+import { Term } from './Term';
+
+// Live clock (ticks each second while `active`) for the quote-window countdown.
+function useNow(active = true): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { if (!active) return; const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, [active]);
+  return now;
+}
+const secsUntil = (iso: string | null, now: number): number => (iso ? Math.round((new Date(iso).getTime() - now) / 1000) : 0);
+const fmtSecs = (s: number): string => (s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`);
+const RECOURSE_LABEL: Record<string, string> = { WithRecourse: 'With recourse', WithoutRecourse: 'Non-recourse' };
 
 const TIER_LABEL: Record<string, string> = { LowRisk: 'Low risk', MediumRisk: 'Medium risk', HighRisk: 'High risk' };
 const fmtAmount = (n: number, ccy: string) => `${usd(n)} ${ccy}`;
@@ -36,7 +49,8 @@ export default function Workspace() {
   const { state, setRole } = useStore();
   const role = state.role;
   const lg = LEGEND[role];
-  const dealLabel = state.rfqOpen && state.receivable ? `${state.receivable.invoiceId} · RFQ open`
+  const dealLabel = state.settlement ? 'invoice sold · settled'
+    : state.rfqOpen && state.receivable ? `${state.receivable.invoiceId} · offers open`
     : state.receivable ? `${state.receivable.invoiceId} · building`
     : 'demo · new deal';
   const [showWelcome, setShowWelcome] = useState(false);
@@ -73,7 +87,7 @@ export default function Workspace() {
             <span className="brand-mark"><Icon name="lock" size={17} /></span>
             <div>
               <div className="brand-name">Cloak<span>RFQ</span> <span className="rec">Receipts</span></div>
-              <div className="brand-sub">Private invoice financing · Canton</div>
+              <div className="brand-sub">Private invoice financing · <Term id="canton">Canton</Term></div>
             </div>
           </div>
           <span className="demo-badge" title="Interactive demo — no wallet, sign-up, or real money needed">Demo · no real funds</span>
@@ -179,12 +193,15 @@ function WelcomeOverlay({ open, onClose }: { open: boolean; onClose: () => void 
 // Live Phase 1 progress, shown across role views so the deal's journey is always visible.
 function ProgressStepper() {
   const { state: s } = useStore();
+  const settled = !!s.settlement;
+  const hasQuotes = s.quotes.length > 0;
   const steps = [
-    { label: 'Receivable', done: !!s.receivable, active: !s.receivable },
-    { label: 'Compliance', done: !!s.compliance, active: !!s.receivable && !s.compliance },
-    { label: 'Risk', done: !!s.risk, active: !!s.receivable && !s.risk },
-    { label: 'Certificates', done: !!(s.compliance?.certified && s.risk?.certified), active: !!s.compliance && !!s.risk && !s.rfqOpen },
-    { label: 'RFQ open', done: s.rfqOpen, active: false },
+    { label: 'Invoice', done: !!s.receivable || settled, active: !s.receivable && !settled },
+    { label: 'Compliance', done: !!s.compliance || settled, active: !!s.receivable && !s.compliance },
+    { label: 'Risk', done: !!s.risk || settled, active: !!s.receivable && !s.risk },
+    { label: 'RFQ open', done: s.rfqOpen || settled, active: !!s.compliance && !!s.risk && !s.rfqOpen && !settled },
+    { label: 'Offers', done: hasQuotes || settled, active: s.rfqOpen && !hasQuotes && !settled },
+    { label: 'Settled', done: settled, active: hasQuotes && !settled },
   ];
   return (
     <div className="stepper">
@@ -387,9 +404,9 @@ function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; r
   const ready = eligible && !!risk && funders.length > 0;
   return (
     <section className="panel">
-      <div className="panel-h"><h2 className="lg">Open RFQ</h2><span className="spacer" /><span className="chip ghost">certificate-backed</span></div>
+      <div className="panel-h"><h2 className="lg">Open <Term id="rfq">RFQ</Term></h2><span className="spacer" /><span className="chip ghost">certificate-backed</span></div>
       <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-        <p className="t-ink3" style={{ fontSize: 12.5, lineHeight: 1.5 }}>Opening the RFQ derives a <b>Compliance Certificate</b> and <b>Risk Certificate</b> from the attestations, then creates one private <b>RFQRequest</b> per invited Funder — each Funder sees only its own.</p>
+        <p className="t-ink3" style={{ fontSize: 12.5, lineHeight: 1.5 }}>Opening the RFQ derives a <b>Compliance Certificate</b> and <b>Risk Certificate</b> from the <Term id="attestation">attestations</Term>, then creates one private request per invited <Term id="funder">Funder</Term> — each Funder sees only its own.</p>
         <Field label="Invite Funders">
           <div style={{ display: 'flex', gap: 8 }}>
             {['A', 'B', 'C'].map((k) => (
@@ -435,6 +452,9 @@ function SellerView() {
   const rcv = state.receivable;
   const { risk, compliance: comp } = state;
 
+  // Settled — the receivable has been sold and transferred; show the receipt.
+  if (state.settlement) return <SellerSettledView settlement={state.settlement} />;
+
   // Step 1 — register the Receivable
   if (!rcv) return (
     <div className="grid-origination">
@@ -445,7 +465,7 @@ function SellerView() {
 
   const receivableCard = (
     <section className="panel">
-      <div className="panel-h"><h2>Receivable</h2><span className="spacer" /><span className="h-tag">{rcv.invoiceId}</span></div>
+      <div className="panel-h"><h2><Term id="receivable">Receivable</Term></h2><span className="spacer" /><span className="h-tag">{rcv.invoiceId}</span></div>
       <div className="panel-b">
         <div className="face">{usd(rcv.payableAmount)}</div>
         <div className="t-ink3" style={{ fontSize: 12.5, marginTop: 3 }}>Payable · {rcv.currency} · {rcv.paymentTerms}</div>
@@ -461,7 +481,7 @@ function SellerView() {
 
   const debtorCard = (
     <section className="panel">
-      <div className="panel-h"><h2>Debtor</h2></div>
+      <div className="panel-h"><h2><Term id="debtor">Debtor</Term></h2></div>
       <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Identity (to you)</span><span style={{ fontSize: 13, fontWeight: 600 }}>{rcv.debtorName}</span></div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span>{risk ? <span className="chip accent">{TIER_LABEL[risk.riskTier] ?? risk.riskTier}</span> : <span className="chip ghost">pending</span>}</div>
@@ -501,36 +521,102 @@ function SellerView() {
         <div className="hook">
           <span className="hook-ic"><Icon name="check" size={16} /></span>
           <div>
-            <div className="t">RFQ package assembled.</div>
-            <div className="s">Two Seller-derived certificates back the request, and each Funder received its own private RFQRequest — hidden from every other Funder.</div>
+            <div className="t">RFQ open — waiting for offers.</div>
+            <div className="s">Each Funder received its own private request. Switch to a <b>Funder</b> to submit an offer, then come back to accept &amp; settle.</div>
           </div>
         </div>
 
+        <SellerQuotesPanel />
+
         <section className="panel">
-          <div className="panel-h"><h2 className="lg">Certificates</h2><span className="spacer" /><span className="chip ghost">Seller-derived</span></div>
+          <div className="panel-h"><h2 className="lg"><Term id="certificate">Certificates</Term></h2><span className="spacer" /><span className="chip ghost">Seller-derived</span></div>
           <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <StatusRow k="Compliance certificate" v={comp?.certified ? 'Derived' : 'Pending'} ok={!!comp?.certified} />
             <StatusRow k="Risk certificate" v={risk?.certified ? 'Derived' : 'Pending'} ok={!!risk?.certified} />
-            <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>Each certificate exposes only the Funder-visible certified terms — not the full compliance disclosure or raw risk data.</p>
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-h">
-            <h2 className="lg">Per-Funder RFQ requests</h2>
-            <span className="h-tag">{state.requests.length} sent</span>
-            <span className="spacer" />
-            <span className="chip ghost"><Icon name="eyeoff" size={12} /> Funders isolated</span>
-          </div>
-          <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {state.requests.map((r) => <RFQRequestCard key={r.cid} r={r} />)}
-            <div style={{ background: 'rgba(87,227,160,0.06)', border: '1px solid var(--accent-line)', borderRadius: 10, padding: '11px 13px' }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>🎉 That&apos;s the end of this demo</div>
-              <p className="t-ink3" style={{ fontSize: 11.5, lineHeight: 1.5 }}>You&apos;ve privately requested financing from each lender. Receiving offers and settling payment aren&apos;t built yet. Want proof the requests are actually private? Open the <Link href="/ledger" className="linklike">per-party Ledger view →</Link> and switch between funders — each sees only its own.</p>
-            </div>
+            <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>Each certificate exposes only the Funder-visible certified terms. Verify per-party privacy on the <Link href="/ledger" className="linklike">Ledger view</Link>.</p>
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function SellerQuotesPanel() {
+  const { state, acceptAndSettle } = useStore();
+  const now = useNow();
+  const deadlineSecs = secsUntil(state.responseDeadline, now);
+  const windowOpen = deadlineSecs > 0;
+  const quotes = state.quotes;
+  return (
+    <section className="panel">
+      <div className="panel-h">
+        <h2 className="lg">Offers</h2>
+        <span className="h-tag">{quotes.length} in</span>
+        <span className="spacer" />
+        {windowOpen
+          ? <span className="chip amber">offers close in {fmtSecs(Math.max(0, deadlineSecs))}</span>
+          : <span className="chip accent">offers closed · settle now</span>}
+      </div>
+      <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {quotes.length === 0 && (
+          <p className="t-mut" style={{ fontSize: 12.5, lineHeight: 1.5 }}>No offers yet. Switch to a <b>Funder</b> to submit one{windowOpen ? `, before the window closes.` : ' — but the window has closed.'}</p>
+        )}
+        {quotes.map((q) => (
+          <div key={q.cid} className="qcard">
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 13 }}>
+              <span className="q-av">{q.funderKey}</span>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div className="q-name">Funder {q.funderKey} · {FUNDER_PARTY_NAMES[q.funderKey] ?? '—'}</div>
+                <div className="q-id-note">{RECOURSE_LABEL[q.recourseModel]} · debtor notify {q.debtorNotificationRequired ? 'required' : 'not required'}</div>
+              </div>
+              <div style={{ textAlign: 'right', flex: 'none' }}>
+                <div className="q-net">{usd(q.netPurchasePrice)}</div>
+                <div className="q-net-sub">funding locked</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 13 }}>
+              <span className="mono t-accent" style={{ fontSize: 10.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="check" size={12} sw={2.5} /> Committed token allocation</span>
+              <span className="spacer" />
+              <button className="btn accent sm" disabled={windowOpen} onClick={() => acceptAndSettle(q.funderKey)}>
+                {windowOpen ? `Settle in ${fmtSecs(Math.max(0, deadlineSecs))}` : 'Accept & settle →'}
+              </button>
+            </div>
+          </div>
+        ))}
+        {state.requests.length > 0 && (
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>{state.requests.length} funder{state.requests.length === 1 ? '' : 's'} haven’t offered yet. Accepting an offer settles atomically: funds move to you, the invoice transfers to that lender.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SellerSettledView({ settlement }: { settlement: SettlementView }) {
+  const { onReset } = useStore();
+  const rows = [
+    { k: 'Buyer (lender)', v: `Funder ${settlement.funderKey} · ${FUNDER_PARTY_NAMES[settlement.funderKey] ?? '—'}` },
+    { k: 'Sale price received', v: usd(settlement.netPurchasePrice) },
+    { k: 'Settled at', v: settlement.settledAt.replace('T', ' ').slice(0, 19) + ' UTC' },
+    { k: 'Invoice ownership', v: 'Transferred to the lender' },
+    { k: 'Payment', v: 'Funds settled to you on-ledger' },
+  ];
+  return (
+    <div style={{ maxWidth: 620, margin: '0 auto' }}>
+      <section className="panel">
+        <div className="panel-h">
+          <span style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(87,227,160,0.12)', border: '1px solid rgba(87,227,160,0.28)', display: 'grid', placeItems: 'center', color: '#57e3a0', flex: 'none' }}><Icon name="check" size={16} sw={2.5} /></span>
+          <h2 className="lg">Invoice sold — settled</h2><span className="spacer" /><button className="btn dark sm" onClick={onReset}>Refresh</button>
+        </div>
+        <div style={{ padding: '6px 18px 16px' }}>
+          {rows.map((r) => (
+            <div key={r.k} style={{ display: 'flex', justifyContent: 'space-between', gap: 14, padding: '11px 0', borderBottom: '1px solid var(--line3)' }}>
+              <span className="t-ink3" style={{ fontSize: 12.5 }}>{r.k}</span>
+              <span className="mono" style={{ fontSize: 12.5, fontWeight: 500, textAlign: 'right', color: '#eef0f3' }}>{r.v}</span>
+            </div>
+          ))}
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Atomic on-ledger settlement — the lender’s locked funds paid you and the invoice transferred to them in one transaction. See it on the <Link href="/activity" className="linklike">Activity log</Link>.</p>
+        </div>
+      </section>
     </div>
   );
 }
@@ -561,36 +647,31 @@ function RFQRequestCard({ r }: { r: RFQRequestView }) {
 
 /* ============================ FUNDER ============================ */
 function FunderView() {
-  const { state, invitedFunders, requestFor, setFunderTab, setRole } = useStore();
+  const { state, invitedFunders, requestFor, quoteFor, setFunderTab, setRole, submitQuote } = useStore();
   const invited = invitedFunders;
   useEffect(() => { if (invited.length && !invited.includes(state.funderTab)) setFunderTab(invited[0]); }, [invited, state.funderTab, setFunderTab]);
   const ft = invited.includes(state.funderTab) ? state.funderTab : (invited[0] ?? state.funderTab);
   const req = requestFor(ft);
+  const quote = quoteFor(ft);
+  const now = useNow(!!req && !quote);
+  const deadlineSecs = secsUntil(state.responseDeadline, now);
+  const windowOpen = deadlineSecs > 0;
+  const settled = state.settlement;
+  const won = settled?.funderKey === ft;
+  const lost = !!settled && settled.funderKey !== ft;
 
-  if (!state.rfqOpen || !req) return (
+  if (!req && !quote) return (
     <div style={{ maxWidth: 600, margin: '40px auto' }}>
       <section className="panel">
         <div className="panel-h"><h2 className="lg">No request for you yet</h2><span className="spacer" /><span className="chip ghost">waiting</span></div>
         <div className="panel-b">
           <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.6 }}>As a <b>lender</b>, you receive a private financing request once a seller sends one. Nothing is here yet because no deal has been opened in this demo.</p>
-          <p className="t-mut" style={{ fontSize: 12.5, marginTop: 10, lineHeight: 1.5 }}>In this demo you create the deal yourself: play the <b>Seller</b>, register an invoice and open the RFQ — then come back here to see your private request.</p>
+          <p className="t-mut" style={{ fontSize: 12.5, marginTop: 10, lineHeight: 1.5 }}>In this demo you create the deal yourself: play the <b>Seller</b>, register an invoice and open the RFQ — then come back here to make an offer.</p>
           <button className="btn accent sm" style={{ marginTop: 14 }} onClick={() => setRole('seller')}>Start a deal as the Seller →</button>
         </div>
       </section>
     </div>
   );
-
-  const pkg = [
-    { label: 'Certified receivable amount', value: fmtAmount(req.payableAmount, req.currency), redacted: false },
-    { label: 'Payment terms', value: req.paymentTerms, redacted: false },
-    { label: 'Issue date', value: req.issueDate, redacted: false },
-    { label: 'Due date', value: req.dueDate, redacted: false },
-    { label: 'Certified risk tier', value: TIER_LABEL[req.riskTier] ?? req.riskTier, redacted: false },
-    { label: 'Response deadline', value: req.responseDeadline.replace('T', ' ').replace('Z', ' UTC'), redacted: false },
-    { label: 'Raw Debtor identity', value: 'withheld — Seller-only', redacted: true },
-    { label: 'Full compliance disclosure', value: 'withheld — Compliance-only', redacted: true },
-    { label: 'Other Funders’ requests', value: 'not visible to you', redacted: true },
-  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -600,48 +681,108 @@ function FunderView() {
           {invited.map((k) => (
             <button key={k} className={'ftab' + (k === ft ? ' on' : '')} onClick={() => setFunderTab(k)}>
               <div className="lab">Funder {k} · {FUNDER_PARTY_NAMES[k] ?? '—'}</div>
-              <div className="sub">other requests hidden</div>
+              <div className="sub">{quoteFor(k) ? 'offer submitted' : 'awaiting your offer'}</div>
             </button>
           ))}
         </div>
       </div>
 
       <div className="grid-funder">
-        <section className="panel">
-          <div className="panel-h"><h2>RFQ Disclosure Package</h2><span className="spacer" /><span className="mono t-accent" style={{ fontSize: 10 }}>certificate-backed</span></div>
-          <div style={{ padding: '6px 17px 14px' }}>
-            {pkg.map((d) => (
-              <div key={d.label} className="kvrow">
-                <span className="k">{d.label}</span>
-                {d.redacted
-                  ? <span className="redact-tag"><Icon name="lock" size={11} />{d.value}</span>
-                  : <span className="v">{d.value}</span>}
-              </div>
-            ))}
-          </div>
-        </section>
+        {req ? (
+          <section className="panel">
+            <div className="panel-h"><h2><Term id="rfq">RFQ</Term> Disclosure Package</h2><span className="spacer" /><span className="mono t-accent" style={{ fontSize: 10 }}>certificate-backed</span></div>
+            <div style={{ padding: '6px 17px 14px' }}>
+              {[
+                { label: 'Certified invoice amount', value: fmtAmount(req.payableAmount, req.currency), redacted: false },
+                { label: 'Payment terms', value: req.paymentTerms, redacted: false },
+                { label: 'Due date', value: req.dueDate, redacted: false },
+                { label: 'Certified risk rating', value: TIER_LABEL[req.riskTier] ?? req.riskTier, redacted: false },
+                { label: 'Raw Debtor identity', value: 'withheld — Seller-only', redacted: true },
+                { label: 'Other lenders’ offers', value: 'not visible to you', redacted: true },
+              ].map((d) => (
+                <div key={d.label} className="kvrow">
+                  <span className="k">{d.label}</span>
+                  {d.redacted ? <span className="redact-tag"><Icon name="lock" size={11} />{d.value}</span> : <span className="v">{d.value}</span>}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <section className="panel">
+            <div className="panel-h"><h2>Your submitted offer</h2><span className="spacer" /><span className="chip accent">funding locked</span></div>
+            <div style={{ padding: '6px 17px 14px' }}>
+              <div className="kvrow"><span className="k">Your price</span><span className="v">{usd(quote!.netPurchasePrice)}</span></div>
+              <div className="kvrow"><span className="k">Recourse</span><span className="v">{RECOURSE_LABEL[quote!.recourseModel]}</span></div>
+              <div className="kvrow"><span className="k">Debtor notification</span><span className="v">{quote!.debtorNotificationRequired ? 'Required' : 'Not required'}</span></div>
+              <div className="kvrow"><span className="k">Funding</span><span className="v t-accent">Committed on-ledger</span></div>
+            </div>
+          </section>
+        )}
 
         <div className="col">
-          <section className="panel" style={{ padding: '16px 17px' }}>
-            <div className="eyebrow" style={{ marginBottom: 9 }}>Your RFQ status</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span className="outcome-dot" style={{ background: '#57e3a0' }} />
-              <span className="disp" style={{ fontWeight: 600, fontSize: 14.5, color: '#57e3a0' }}>Invited — private request received</span>
-            </div>
-            <p className="t-mut" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>Making an offer on this request isn&apos;t built yet — this demo covers how the private request reaches you. The key point: you only see <span className="t-ink3">your own</span> request, never other lenders&apos;.</p>
-          </section>
+          {req && !quote && windowOpen && (
+            <QuoteComposer funderKey={ft} faceValue={req.payableAmount} deadlineSecs={deadlineSecs} onSubmit={submitQuote} />
+          )}
+          {req && !quote && !windowOpen && (
+            <section className="panel" style={{ padding: '16px 17px' }}>
+              <div className="eyebrow" style={{ marginBottom: 9 }}>Offer window closed</div>
+              <p className="t-ink3" style={{ fontSize: 12.5, lineHeight: 1.5 }}>The response deadline passed before you submitted an offer, so this request can no longer be quoted.</p>
+            </section>
+          )}
+          {quote && (
+            <section className="panel" style={{ padding: '16px 17px' }}>
+              <div className="eyebrow" style={{ marginBottom: 9 }}>Your offer status</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="outcome-dot" style={{ background: won ? '#57e3a0' : lost ? '#6b7280' : '#e8c15f' }} />
+                <span className="disp" style={{ fontWeight: 600, fontSize: 14.5, color: won ? '#57e3a0' : lost ? '#9aa1ad' : '#e8c15f' }}>
+                  {won ? 'Won — the invoice is now yours' : lost ? 'Not selected — seller settled with another lender' : 'Submitted — awaiting the seller’s decision'}
+                </span>
+              </div>
+              <p className="t-mut" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>
+                {won ? 'Your locked funds paid the seller and the invoice transferred to you.' : lost ? 'Your funding lock is released.' : 'The seller can accept & settle once the quoting window closes.'}
+              </p>
+            </section>
+          )}
 
           <section className="panel dashed" style={{ padding: '16px 17px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11 }}>
               <Icon name="eyeoff" size={15} color="#6b7280" />
-              <span className="t-ink3" style={{ fontSize: 12.5 }}>Other Funders&apos; requests — <span className="t-ink2" style={{ fontWeight: 600 }}>hidden from you</span></span>
+              <span className="t-ink3" style={{ fontSize: 12.5 }}>Other lenders’ offers — <span className="t-ink2" style={{ fontWeight: 600 }}>hidden from you</span></span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}><span className="bar" /><span className="bar" /></div>
-            <p className="t-mut" style={{ fontSize: 11, marginTop: 11, lineHeight: 1.5 }}>On Canton, each RFQRequest names a single Funder as observer. You cannot see the Receivable, the attestations, the certificates, or any other Funder&apos;s request — confirm it on <b>/ledger</b>.</p>
+            <p className="t-mut" style={{ fontSize: 11, lineHeight: 1.5 }}>Each request and offer is private to its lender — you never see another lender’s price. Confirm it on the <Link href="/ledger" className="linklike">Ledger view</Link>.</p>
           </section>
         </div>
       </div>
     </div>
+  );
+}
+
+function QuoteComposer({ funderKey, faceValue, deadlineSecs, onSubmit }: { funderKey: string; faceValue: number; deadlineSecs: number; onSubmit: (k: string, f: QuoteForm) => void }) {
+  const [f, setF] = useState<QuoteForm>({ netPurchasePrice: Math.round(faceValue * 0.969), recourseModel: 'WithoutRecourse', debtorNotificationRequired: false });
+  const discount = faceValue > 0 ? (1 - f.netPurchasePrice / faceValue) * 100 : 0;
+  return (
+    <section className="panel">
+      <div className="panel-h"><h2>Make an offer</h2><span className="spacer" /><span className="chip amber">closes in {fmtSecs(Math.max(0, deadlineSecs))}</span></div>
+      <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div>
+          <div className="eyebrow sm" style={{ marginBottom: 7 }}>Your price to buy the invoice</div>
+          <div className="netbox">
+            <span className="mono t-ink3" style={{ fontSize: 18 }}>$</span>
+            <input value={f.netPurchasePrice.toLocaleString('en-US')} inputMode="numeric"
+              onChange={(e) => setF((s) => ({ ...s, netPurchasePrice: parseInt(String(e.target.value).replace(/[^0-9]/g, '')) || 0 }))} />
+            <span className="mono t-mut" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>/ {usd(faceValue)} face</span>
+          </div>
+          <div className="t-mut" style={{ fontSize: 11, marginTop: 6 }}>{discount.toFixed(1)}% discount — your margin if the debtor pays in full.</div>
+        </div>
+        <div><div className="eyebrow sm" style={{ marginBottom: 7 }}>Recourse</div>
+          <Seg val={f.recourseModel} onPick={(v) => setF((s) => ({ ...s, recourseModel: v as RecourseModel }))} opts={[{ label: 'Non-recourse', value: 'WithoutRecourse' }, { label: 'With recourse', value: 'WithRecourse' }]} /></div>
+        <div><div className="eyebrow sm" style={{ marginBottom: 7 }}>Debtor notification</div>
+          <Seg val={f.debtorNotificationRequired ? 'y' : 'n'} onPick={(v) => setF((s) => ({ ...s, debtorNotificationRequired: v === 'y' }))} opts={[{ label: 'Not required', value: 'n' }, { label: 'Required', value: 'y' }]} /></div>
+        <span className="chip accent" style={{ justifyContent: 'center', padding: 9, borderRadius: 8 }}><Icon name="check" size={12} sw={2.5} /> Funds are locked on submit (demo token allocation)</span>
+        <button className="btn accent block" disabled={f.netPurchasePrice <= 0} onClick={() => onSubmit(funderKey, f)}><Icon name="send" size={16} sw={2.4} /> Submit private offer</button>
+        <p className="t-mut" style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.5 }}>Sealed to the seller only. Submit before the window closes — the seller settles after it.</p>
+      </div>
+    </section>
   );
 }
 
@@ -717,7 +858,7 @@ function RiskRoleView() {
                     <span className="t-ink3" style={{ fontSize: 12.5 }}>Risk certificate</span>
                     <span className={'chip ' + (att.certified ? 'accent' : 'ghost')}>{att.certified ? 'Derived by Seller' : 'Awaiting Seller derivation'}</span>
                   </div>
-                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Lenders receive this certified <span className="t-ink3">rating</span> in their request — never the customer&apos;s raw records. It signals how likely the invoice is to be paid.</p>
+                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Lenders receive this certified <Term id="risktier">rating</Term> in their request — never the customer&apos;s raw records. It signals how likely the invoice is to be paid.</p>
                   {state.compliance
                     ? <NextStep label="Next: back to Seller to open the RFQ →" onGo={() => setRole('seller')} />
                     : <NextStep label="Next: approve as Compliance →" onGo={() => setRole('compliance')} />}

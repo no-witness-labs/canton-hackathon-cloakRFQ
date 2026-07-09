@@ -10,7 +10,7 @@
 
 export type Role =
   | 'seller' | 'funderA' | 'funderB' | 'funderC'
-  | 'compliance' | 'risk' | 'coordinator' | 'auditor' | 'outsider';
+  | 'compliance' | 'risk' | 'coordinator' | 'auditor' | 'outsider' | 'tokenAdmin';
 
 interface LedgerConfig {
   jsonApiUrl: string;
@@ -21,10 +21,10 @@ interface LedgerConfig {
 
 const EMPTY_PARTIES: Record<Role, string> = {
   seller: '', funderA: '', funderB: '', funderC: '',
-  compliance: '', risk: '', coordinator: '', auditor: '', outsider: '',
+  compliance: '', risk: '', coordinator: '', auditor: '', outsider: '', tokenAdmin: '',
 };
 
-let cfg: LedgerConfig = { jsonApiUrl: '', packageRef: '#cloakrfq-contracts', userId: 'cloakrfq', parties: EMPTY_PARTIES };
+let cfg: LedgerConfig = { jsonApiUrl: '', packageRef: '#cloakrfq-contracts-v2', userId: 'cloakrfq', parties: EMPTY_PARTIES };
 
 /** Stable per-browser session id (for self-service per-visitor parties on the deploy). */
 function sessionId(): string {
@@ -83,14 +83,20 @@ export function explorerTxUrl(updateId: string): string | null {
   return onDevnet ? `https://lighthouse.devnet.cantonloop.com/transactions/${encodeURIComponent(updateId)}` : null;
 }
 
-// Phase 1 templates live in per-module namespaces inside cloakrfq-contracts.
+// CloakRFQ templates live in per-module namespaces inside cloakrfq-contracts.
 const MODULE: Record<string, string> = {
   Receivable: 'Receivable',
   ComplianceAttestation: 'Compliance', ComplianceCertificate: 'Compliance',
   RiskAttestation: 'Risk', RiskCertificate: 'Risk',
-  RFQRequest: 'RFQRequest',
+  RFQRequest: 'RFQRequest', PrivateQuote: 'RFQRequest',
+  ReceivableSaleSettlement: 'Settlement',
 };
-const tpl = (name: string) => `${cfg.packageRef}:CloakRFQ.${MODULE[name] ?? name}:${name}`;
+// The CIP-56 token mocks live in a separate package (cloakrfq-test).
+const TEST_PACKAGE_REF = '#cloakrfq-test-v2';
+const TEST_TEMPLATES = new Set(['MockFundingAllocation', 'MockSettlementFactory']);
+const tpl = (name: string) => TEST_TEMPLATES.has(name)
+  ? `${TEST_PACKAGE_REF}:CloakRFQ.Test.Fixtures:${name}`
+  : `${cfg.packageRef}:CloakRFQ.${MODULE[name] ?? name}:${name}`;
 
 const KNOWN: string[] = Object.keys(MODULE);
 
@@ -211,6 +217,11 @@ function digTx(o: unknown): Record<string, unknown> | null {
 function labelForEvents(events: TxEvent[]): string {
   const c = events.filter((e) => e.kind === 'created').map((e) => e.template);
   const a = events.filter((e) => e.kind === 'archived').map((e) => e.template);
+  if (c.includes('ReceivableSaleSettlement')) return 'Accept & settle · receivable sold';
+  if (c.includes('PrivateQuote')) return 'Submit private quote';
+  if (c.includes('MockSettlementFactory')) return 'Prepare settlement';
+  if (c.includes('MockFundingAllocation')) return 'Lock funding';
+  if (c.includes('Receivable') && a.includes('Receivable')) return 'Transfer receivable';
   if (c.includes('RFQRequest')) return 'Open RFQ · per-Funder request';
   if (c.includes('ComplianceCertificate')) return 'Derive Compliance certificate';
   if (c.includes('RiskCertificate')) return 'Derive Risk certificate';
@@ -285,8 +296,22 @@ export interface Phase1Scenario {
     policyVersion: string; certificationScope: string;
   };
   risk: { riskTier: RiskTier; riskPolicyVersion: string; certificationScope: string };
-  rfq: { responseDeadline: string; funders: Role[] };
+  rfq: { responseDeadline: string; funders: Role[]; paymentInstrumentId: string };
 }
+
+// Phase 2/3 quote data. QuoteTerms mirrors CloakRFQ.Lib.Quote.
+export type RecourseModel = 'WithRecourse' | 'WithoutRecourse';
+export interface QuoteTerms {
+  netPurchasePrice: string;          // Decimal → string
+  recourseModel: RecourseModel;
+  debtorNotificationRequired: boolean;
+  quoteExpiresAt: string;            // Time → RFC3339
+}
+
+// The contract requires quoting BEFORE the response deadline and settling AFTER it.
+export const QUOTE_WINDOW_SECONDS = 60;
+/** ISO time `secs` seconds from now (client clock ≈ ledger clock on DevNet). */
+export const isoFromNow = (secs: number): string => new Date(Date.now() + secs * 1000).toISOString();
 
 export const SCENARIO: Phase1Scenario = {
   packageId: 'PKG-INV-4471',
@@ -307,13 +332,13 @@ export const SCENARIO: Phase1Scenario = {
     policyVersion: 'MVP-COMPLIANCE-v1', certificationScope: 'Phase 1 RFQ package eligibility',
   },
   risk: { riskTier: 'LowRisk', riskPolicyVersion: 'MVP-RISK-v1', certificationScope: 'Phase 1 receivable risk tier' },
-  rfq: { responseDeadline: '2026-07-01T12:00:00Z', funders: ['funderA', 'funderB', 'funderC'] },
+  rfq: { responseDeadline: '2026-07-01T12:00:00Z', funders: ['funderA', 'funderB', 'funderC'], paymentInstrumentId: 'USD' },
 };
 
 // Command builders for the Phase 1 workflow — each mirrors a Test.daml step and is
 // reused by both seedDemo() (below) and the manual origination flow (store.tsx).
 export const receivableArgs = (registrar: string, s: Phase1Scenario) => ({
-  registrar, owner: registrar,
+  registrar, owner: registrar, newOwner: registrar,
   metadata: {
     invoiceId: s.receivable.invoiceId,
     buyerReference: s.receivable.buyerReference,
@@ -341,15 +366,31 @@ export const riskAttestationArgs = (riskAssessor: string, seller: string, receiv
   riskResult: { riskTier: s.risk.riskTier },
 });
 
+export const packageDataArgs = (tokenAdmin: string, s: Phase1Scenario) => ({
+  receivableTerms: s.receivable.terms,
+  riskTier: s.risk.riskTier,
+  responseDeadline: s.rfq.responseDeadline,
+  paymentInstrumentAdmin: tokenAdmin,
+  paymentInstrumentId: s.rfq.paymentInstrumentId,
+});
+
 export const rfqRequestArgs = (
-  seller: string, funder: string, complianceParty: string, riskAssessor: string,
+  seller: string, funder: string, complianceParty: string, riskAssessor: string, tokenAdmin: string,
   receivableCid: string, complianceCertificateCid: string, riskCertificateCid: string, s: Phase1Scenario,
 ) => ({
   seller, funder, complianceParty, riskAssessor,
   packageId: s.packageId, receivableCid,
-  packageData: { receivableTerms: s.receivable.terms, riskTier: s.risk.riskTier, responseDeadline: s.rfq.responseDeadline },
+  packageData: packageDataArgs(tokenAdmin, s),
   complianceCertificateCid, riskCertificateCid,
 });
+
+// Phase 2/3 command builders.
+export const mockFundingAllocationArgs = (
+  funder: string, seller: string, tokenAdmin: string, packageId: string,
+  amount: string, instrumentId: string, settlementDeadline: string, createdAt: string,
+) => ({ funder, seller, tokenAdmin, packageId, amount, instrumentId, settlementDeadline, createdAt });
+
+export const mockSettlementFactoryArgs = (tokenAdmin: string, seller: string) => ({ tokenAdmin, seller });
 
 const firstCid = (r: TxResult, template: string) => r.created.find((c) => c.template === template)!.contractId;
 
@@ -388,6 +429,6 @@ async function doSeed(): Promise<void> {
 
   // 6. Seller creates one RFQRequest per Funder (each Funder observes only its own).
   for (const role of s.rfq.funders) {
-    await submit(p.seller, create('RFQRequest', rfqRequestArgs(p.seller, p[role], p.compliance, p.risk, rcvCid, compCertCid, riskCertCid, s)), 'seed');
+    await submit(p.seller, create('RFQRequest', rfqRequestArgs(p.seller, p[role], p.compliance, p.risk, p.tokenAdmin, rcvCid, compCertCid, riskCertCid, s)), 'seed');
   }
 }
