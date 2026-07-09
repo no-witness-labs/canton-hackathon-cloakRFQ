@@ -64,6 +64,14 @@ For the simple local path, `extraSettlementAllocations = []`.
 
 For a real CIP-56 token demo, the UI must allow optional extra finalized allocations when the token workflow requires more than the Funder's funding allocation for `SettlementFactory_SettleBatch`.
 
+## Current Token Demo Boundary
+
+The CloakRFQ ledger templates are designed against the CIP-56-compatible token interfaces: `RFQRequest.SubmitPrivateQuote` accepts `ContractId Token.Allocation`, and `PrivateQuote.AcceptAndSettle` accepts `ContractId Token.SettlementFactory`.
+
+The current UI demo does not connect a real wallet or use real token holdings. Instead, it creates `MockFundingAllocation` and `MockSettlementFactory` contracts from the test fixture package. Those fixture templates implement the same token interfaces, so the production CloakRFQ choices still fetch `Token.Allocation` / `Token.SettlementFactory`, inspect their views, validate commitment, package id, Funder authorizer, token admin, payment leg, and settlement result, then proceed through the same interface-shaped path.
+
+This means the demo proves the CloakRFQ workflow integration points and validation logic, but it does not prove production wallet signing, real token custody, real token balance availability, or a production CIP-56 allocation provider. Replacing the fixture path with real tokens requires the UI to let the Funder select or create a real committed allocation and the Seller select the real settlement factory required by that token workflow.
+
 ## CIP-56 Demo Checklist
 
 Before allowing `SubmitPrivateQuote`, the UI should verify or display:

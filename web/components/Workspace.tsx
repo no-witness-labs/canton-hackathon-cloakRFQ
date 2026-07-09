@@ -599,11 +599,11 @@ function SellerQuotesPanel() {
               </div>
               <div style={{ textAlign: 'right', flex: 'none' }}>
                 <div className="q-net">{usd(q.netPurchasePrice)}</div>
-                <div className="q-net-sub">funding locked</div>
+                <div className="q-net-sub">demo allocation locked</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 13 }}>
-              <span className="mono t-accent" style={{ fontSize: 10.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="check" size={12} sw={2.5} /> Committed token allocation</span>
+              <span className="mono t-accent" style={{ fontSize: 10.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="check" size={12} sw={2.5} /> Mock CIP-56 allocation</span>
               <span className="spacer" />
               <button className="btn accent sm" disabled={windowOpen} onClick={() => acceptAndSettle(q.funderKey)}>
                 {windowOpen ? `Settle in ${fmtSecs(Math.max(0, deadlineSecs))}` : 'Accept & settle →'}
@@ -642,7 +642,7 @@ function SellerSettledView({ settlement }: { settlement: SettlementView }) {
               <span className="mono" style={{ fontSize: 12.5, fontWeight: 500, textAlign: 'right', color: '#eef0f3' }}>{r.v}</span>
             </div>
           ))}
-          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Atomic on-ledger settlement — the Funder’s locked funds paid you and the invoice transferred to them in one transaction. See it on the <Link href="/activity" className="linklike">Activity log</Link>.</p>
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Atomic on-ledger settlement — the Funder’s mock allocation paid you and the invoice transferred to them in one transaction. See it on the <Link href="/activity" className="linklike">Activity log</Link>.</p>
         </div>
       </section>
     </div>
@@ -737,12 +737,12 @@ function FunderView() {
           </section>
         ) : (
           <section className="panel">
-            <div className="panel-h"><h2>Your submitted offer</h2><span className="spacer" /><span className="chip accent">funding locked</span></div>
+            <div className="panel-h"><h2>Your submitted offer</h2><span className="spacer" /><span className="chip accent">mock allocation</span></div>
             <div style={{ padding: '6px 17px 14px' }}>
               <div className="kvrow"><span className="k">Your price</span><span className="v">{usd(quote!.netPurchasePrice)}</span></div>
               <div className="kvrow"><span className="k">Recourse</span><span className="v">{RECOURSE_LABEL[quote!.recourseModel]}</span></div>
               <div className="kvrow"><span className="k">Debtor notification</span><span className="v">{quote!.debtorNotificationRequired ? 'Required' : 'Not required'}</span></div>
-              <div className="kvrow"><span className="k">Funding</span><span className="v t-accent">Committed on-ledger</span></div>
+              <div className="kvrow"><span className="k">Funding</span><span className="v t-accent">Mock CIP-56 allocation</span></div>
             </div>
           </section>
         )}
@@ -767,7 +767,7 @@ function FunderView() {
                 </span>
               </div>
               <p className="t-mut" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>
-                {won ? 'Your locked funds paid the seller and the invoice transferred to you.' : lost ? 'Your funding lock is released.' : 'The seller can accept & settle once the quoting window closes.'}
+                {won ? 'Your mock allocation paid the seller and the invoice transferred to you.' : lost ? 'Your mock allocation lock is released.' : 'The seller can accept & settle once the quoting window closes.'}
               </p>
             </section>
           )}
@@ -806,7 +806,7 @@ function QuoteComposer({ funderKey, faceValue, deadlineSecs, onSubmit }: { funde
           <Seg val={f.recourseModel} onPick={(v) => setF((s) => ({ ...s, recourseModel: v as RecourseModel }))} opts={[{ label: 'Non-recourse', value: 'WithoutRecourse' }, { label: 'With recourse', value: 'WithRecourse' }]} /></div>
         <div><div className="eyebrow sm" style={{ marginBottom: 7 }}>Debtor notification</div>
           <Seg val={f.debtorNotificationRequired ? 'y' : 'n'} onPick={(v) => setF((s) => ({ ...s, debtorNotificationRequired: v === 'y' }))} opts={[{ label: 'Not required', value: 'n' }, { label: 'Required', value: 'y' }]} /></div>
-        <span className="chip accent" style={{ justifyContent: 'center', padding: 9, borderRadius: 8 }}><Icon name="check" size={12} sw={2.5} /> Funds are locked on submit (demo token allocation)</span>
+        <span className="chip accent" style={{ justifyContent: 'center', padding: 9, borderRadius: 8 }}><Icon name="check" size={12} sw={2.5} /> Funds are locked on submit (mock CIP-56 allocation)</span>
         <button className="btn accent block" disabled={f.netPurchasePrice <= 0} onClick={() => onSubmit(funderKey, f)}><Icon name="send" size={16} sw={2.4} /> Submit private offer</button>
         <p className="t-mut" style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.5 }}>Sealed to the seller only. Submit before the window closes — the seller settles after it.</p>
       </div>
