@@ -854,7 +854,7 @@ function ComplianceForm({ onIssue }: { onIssue: (sellerEligible: boolean, rfqEli
         <Seg val={rfqEligible ? 'yes' : 'no'} onPick={(v) => setRfqEligible(v === 'yes')} opts={[{ label: 'Eligible', value: 'yes' }, { label: 'Not eligible', value: 'no', danger: true }]} />
       </Field>
       <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>In a real deployment this is where KYC, sanctions, and package-scope checks run. A negative result records the attestation but prevents certificate creation and RFQ opening.</p>
-      <button className="btn accent block" onClick={() => onIssue(sellerEligible, rfqEligible)}>
+      <button className={"btn block " + (passed ? "accent" : "amber")} onClick={() => onIssue(sellerEligible, rfqEligible)}>
         <Icon name="check" size={15} sw={2.3} /> {passed ? 'Approve compliance' : 'Record not eligible'}
       </button>
     </div>
