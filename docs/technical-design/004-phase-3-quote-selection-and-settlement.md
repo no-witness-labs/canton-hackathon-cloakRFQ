@@ -9,7 +9,7 @@ Phase 3 is the final MVP phase. It is implemented in two internal steps:
 1. Common settlement path plus success branch.
 2. Failure and fallback branch.
 
-This document currently records the confirmed design for the common path and success branch only. Failure recording and fallback promotion remain to be grilled and documented before implementation.
+This document records the confirmed design for the common path, success branch, and MVP failed/fallback handling. The failed path is implemented through existing rollback behavior, UI error surfacing, and off-ledger selection of another still-valid `PrivateQuote`.
 
 ## Confirmed Scope
 
@@ -63,6 +63,42 @@ On success, `AcceptAndSettle` must atomically:
 3. create `ReceivableSaleSettlement` as durable post-settlement evidence linked to that pending transfer.
 
 `ReceivableSaleSettlement` is not the swap engine itself. It is the durable record created after the MVP demo settlement succeeds.
+
+## Failed Settlement Handling
+
+For the MVP, a failed `AcceptAndSettle` transaction does not create an on-ledger failure record.
+
+If `SettlementFactory_SettleBatch` or any mandatory settlement check aborts, the Daml transaction rolls back. The `PrivateQuote`, `Receivable`, allocation, and other active contracts remain in their prior state unless the failing token workflow consumed or changed something outside the successful CloakRFQ transaction, which should be treated as a demo integration issue.
+
+The UI must surface the ledger error message clearly to the Seller so the Seller understands why settlement failed. The Seller may then:
+
+- retry the same `PrivateQuote` if the issue is operational and the quote is still valid;
+- choose another visible, still-valid `PrivateQuote` off-ledger and attempt settlement on that quote.
+
+This keeps the failed path flexible for the demo and avoids adding a failure-record template before there is a verifiable token-failure signal to record. The UI must not present a rolled-back failed attempt as final settlement evidence.
+
+## Fallback Quote Selection
+
+For the MVP failed path, fallback selection is off-ledger.
+
+If settlement fails and the Seller does not retry the same `PrivateQuote`, the Seller may review the remaining visible `PrivateQuote`s in the UI and choose another still-valid quote. The Seller then calls the existing `PrivateQuote.AcceptAndSettle` choice on that quote.
+
+There is no on-ledger fallback queue, fallback-ranking contract, or `SelectedQuote` contract in this MVP path. The ledger does not encode business ranking or prove that the Seller chose the next-best quote. It only enforces that any quote the Seller attempts to settle still satisfies the mandatory settlement checks.
+
+This keeps the failed path simple and demo-safe. A formal fallback queue or ranking evidence can be added later if the product needs auditability over why one fallback quote was chosen over another.
+
+## Implementation Approach For Failed Path
+
+The failed-settlement MVP pass is docs and tests only unless tests expose a real ledger gap.
+
+No new templates or choices are required for the current failed/fallback path because the existing ledger behavior already provides the required mechanics:
+
+- a failed `AcceptAndSettle` transaction rolls back and leaves the attempted `PrivateQuote` active;
+- other visible `PrivateQuote`s remain active;
+- the Seller can retry the same quote or call `AcceptAndSettle` on another still-valid quote;
+- `ReceivableSaleSettlement` is created only by a successful `AcceptAndSettle` transaction.
+
+The required regression coverage is a Phase 3 test proving that a failed settlement attempt does not consume the failed quote or create settlement evidence, and that the Seller can then settle another valid quote.
 
 ## Receivable Transfer
 
@@ -118,7 +154,7 @@ The real Canton Coin/Amulet demo path therefore requires a visible CIP-56 alloca
 
 The following are intentionally deferred until the next grilling step:
 
-- failed settlement recording;
-- fallback quote promotion;
-- fallback finality rules;
+- formal on-ledger fallback queue or fallback-ranking evidence, if later needed;
+- fallback finality rules beyond quote expiry and settlement success;
+- on-ledger failed-settlement evidence, if later needed;
 - generic Receivable transfer UI beyond what the RFQ settlement path needs.
