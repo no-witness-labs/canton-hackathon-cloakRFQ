@@ -1,8 +1,8 @@
 # CloakRFQ Runbook
 
 Operational guide for running the on-ledger stack (Canton sandbox + JSON Ledger
-API) locally. The UI wiring lands with issue #21; for now this brings up the
-ledger and allocates the demo parties.
+API) locally. The web UI reads this ledger configuration and submits real Daml
+commands through the JSON API.
 
 ## 1. Prerequisites
 
@@ -50,9 +50,8 @@ Stop it with `./scripts/stop-sandbox.sh`.
 
 To re-bootstrap against an already-running sandbox: `./scripts/bootstrap.sh`.
 
-> Seeding of demo contracts (a Receivable, Private Quotes, etc.) is added once the
-> phase templates exist (#9–#11); bootstrap only uploads the DAR and allocates
-> parties today.
+> Bootstrap uploads the DAR, allocates parties, and writes the UI runtime
+> configuration. The UI can then create the workflow contracts interactively.
 
 ## 4. Verifying the build (CI-style)
 
@@ -70,8 +69,8 @@ cd ledger/test && dpm test        # Daml Script tests
 | `ledger/lib/` | shared Daml library package (`cloakrfq-lib`) |
 | `ledger/contracts/` | deployable Daml contract package (`cloakrfq-contracts`) |
 | `ledger/test/` | Daml Script tests (`cloakrfq-test`) |
-| `backend/` | off-ledger ledger client / integration glue (placeholder until #21) |
-| `web/` | Next.js UI (mock today; #21 wires it to the live ledger) |
+| `backend/` | off-ledger ledger client / integration glue placeholder |
+| `web/` | Next.js UI backed by the Canton JSON Ledger API |
 | `scripts/` | dev orchestration (sandbox + bootstrap) |
 
 ## 6. Troubleshooting

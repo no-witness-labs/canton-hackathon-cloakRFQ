@@ -24,7 +24,7 @@ the price"); settlement is demonstrated **on-ledger**; an Auditor receives a
 The brief and our positioning are in [`HACKATHON_ALIGNMENT.md`](HACKATHON_ALIGNMENT.md);
 the product detail in [`CLOAKRFQ_PRD.md`](CLOAKRFQ_PRD.md).
 
-## Run the UI (mocked, no backend needed)
+## Run the UI
 
 ```bash
 cd web
@@ -33,10 +33,10 @@ npm run dev    # http://localhost:3000
 ```
 
 Flip the **role switcher** across the seven Canton parties (Seller, Funder
-A/B/C, Compliance, Risk, Coordinator, Auditor, Outsider). As Seller, select the
-Best Compliant Quote and settle — or simulate a Commitment Failure and promote a
-fallback. Switch to Auditor for the Scoped Compliance Receipt; to Outsider to
-see that a non-party sees nothing.
+A/B/C, Compliance, Risk, Coordinator, Auditor, Outsider). As Seller, create the
+RFQ, review visible Private Quotes, settle, retry a failed settlement, or select
+another still-valid quote. Switch to Auditor for final settlement evidence; to
+Outsider to see that a non-party sees nothing.
 
 ## Run the ledger (Canton sandbox)
 
@@ -46,7 +46,7 @@ the JSON Ledger API and allocates the demo parties.
 ## Claim boundaries
 
 This is a demo. It does **not** use ZK proofs, production payment finality,
-custody, real bank settlement or production custody, production legal
-assignment, Funding Locks, or escrow. Settlement uses a non-production **Demo
-Settlement Asset**; Proof-of-Funds is **bid-eligibility evidence only**. See
-[`CLAIM_BOUNDARY_REVIEW.md`](CLAIM_BOUNDARY_REVIEW.md).
+production custody, real bank settlement, production legal assignment, escrow,
+or guaranteed settlement. Token funding and settlement are scoped to the Canton
+demo environment and must not be described as bank settlement or production
+custody. See [`CLAIM_BOUNDARY_REVIEW.md`](CLAIM_BOUNDARY_REVIEW.md).
