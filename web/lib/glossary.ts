@@ -7,15 +7,15 @@ export interface GlossaryEntry { term: string; def: string }
 export const GLOSSARY: Record<string, GlossaryEntry> = {
   receivable: {
     term: 'Receivable',
-    def: 'An unpaid invoice — money a customer owes you. You can sell it to a lender for cash now instead of waiting to be paid.',
+    def: 'An unpaid invoice — money a customer owes you. You can sell it to a Funder for cash now instead of waiting to be paid.',
   },
   rfq: {
     term: 'RFQ (Request for Quote)',
-    def: 'You privately ask several lenders to make an offer to finance your invoice — without them seeing each other or competing openly.',
+    def: 'You privately ask several Funders to make an offer to buy your invoice — without them seeing each other or competing openly.',
   },
   funder: {
     term: 'Funder',
-    def: 'A lender who can buy your invoice: they pay you now and collect from your customer later. Sometimes called an investor.',
+    def: 'A party that can buy your invoice: they pay you now and collect from your customer later. Sometimes called an investor.',
   },
   debtor: {
     term: 'Debtor',
@@ -27,11 +27,11 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   certificate: {
     term: 'Certificate',
-    def: 'A trimmed, shareable version of an attestation. It proves a check passed while revealing only what lenders need to see — not the underlying data.',
+    def: 'A trimmed, shareable version of an attestation. It proves a check passed while revealing only what Funders need to see — not the underlying data.',
   },
   risktier: {
     term: 'Risk rating',
-    def: 'A simple low / medium / high rating of how likely the invoice is to be paid. Lenders use it to price their offer — lower risk means better terms.',
+    def: 'A simple low / medium / high rating of how likely the invoice is to be paid. Funders use it to price their offer — lower risk means better terms.',
   },
   canton: {
     term: 'Canton',
@@ -39,6 +39,6 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
   },
   party: {
     term: 'Party',
-    def: 'One participant in the deal — you, a lender, a compliance checker, and so on. On Canton, each party sees only its own slice of the data.',
+    def: 'One participant in the deal — you, a Funder, a compliance checker, and so on. On Canton, each party sees only its own slice of the data.',
   },
 };

@@ -156,7 +156,7 @@ function WelcomeOverlay({ open, onClose }: { open: boolean; onClose: () => void 
   const steps = [
     { n: '1', t: 'Register your invoice', d: 'Add an unpaid invoice you want to turn into cash now — we call it a “Receivable”.' },
     { n: '2', t: 'Get it approved', d: 'Switch to the Compliance and Risk roles (top tabs) and approve it — in this demo you play every party yourself.' },
-    { n: '3', t: 'Send private requests', d: 'Open the RFQ (Request for Quote) to send each lender (“Funder”) its own private request — no funder can see another’s.' },
+    { n: '3', t: 'Send private requests', d: 'Open the RFQ (Request for Quote) to send each Funder its own private request — no Funder can see another’s.' },
   ];
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -167,7 +167,7 @@ function WelcomeOverlay({ open, onClose }: { open: boolean; onClose: () => void 
         </div>
         <p className="t-ink2" style={{ fontSize: 13.5, lineHeight: 1.6 }}>
           A private marketplace for <b>invoice financing</b> on the Canton Network: sell an unpaid invoice
-          to lenders early — <b>without exposing your data to competing lenders</b>.
+          to Funders early — <b>without exposing your data to competing Funders</b>.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 13, margin: '16px 0' }}>
           {steps.map((s) => (
@@ -321,12 +321,13 @@ function WalletConnector() {
   );
 }
 
-function Seg({ opts, val, onPick }: { opts: { label: string; value: string | number; danger?: boolean }[]; val: string | number; onPick: (v: string | number) => void }) {
+function Seg({ opts, val, onPick }: { opts: { label: string; value: string | number; danger?: boolean; tone?: 'accent' | 'amber' | 'orange' }[]; val: string | number; onPick: (v: string | number) => void }) {
   return (
     <div className="seg">
       {opts.map((o) => {
         const selected = o.value === val;
-        return <button key={String(o.value)} className={selected ? (o.danger ? 'on danger' : 'on') : ''} onClick={() => onPick(o.value)}>{o.label}</button>;
+        const tone = o.tone ?? (o.danger ? 'danger' : '');
+        return <button key={String(o.value)} className={selected ? ('on ' + tone).trim() : ''} onClick={() => onPick(o.value)}>{o.label}</button>;
       })}
     </div>
   );
@@ -341,11 +342,20 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
-function StatusRow({ k, v, ok }: { k: string; v: string; ok: boolean }) {
+type ChipTone = 'accent' | 'amber' | 'orange' | 'red' | 'ghost';
+
+function riskTone(tier: RiskTier): ChipTone {
+  if (tier === 'LowRisk') return 'accent';
+  if (tier === 'MediumRisk') return 'amber';
+  return 'orange';
+}
+
+function StatusRow({ k, v, ok, tone }: { k: string; v: string; ok: boolean; tone?: ChipTone }) {
+  const chipTone = tone ?? (ok ? 'accent' : 'ghost');
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
       <span className="t-ink3" style={{ fontSize: 12 }}>{k}</span>
-      <span className="chip" style={{ background: ok ? 'rgba(87,227,160,.12)' : 'rgba(154,161,173,.1)', color: ok ? 'var(--accent)' : 'var(--mut)' }}>{v}</span>
+      <span className={'chip ' + chipTone}>{v}</span>
     </div>
   );
 }
@@ -387,12 +397,13 @@ function ReceivableForm({ onCreate }: { onCreate: (r: ReceivableForm) => void })
 }
 
 function AttestStatus({ risk, comp }: { risk: RiskView | null; comp: ComplianceView | null }) {
-  const compVal = comp ? (comp.sellerEligible && comp.rfqEligible ? 'Eligible' : 'Not eligible') : 'Not issued';
+  const eligible = !!comp && comp.sellerEligible && comp.rfqEligible;
+  const compVal = comp ? (eligible ? 'Eligible' : 'Not eligible') : 'Not issued';
   const riskVal = risk ? TIER_LABEL[risk.riskTier] ?? risk.riskTier : 'Not issued';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <StatusRow k="Compliance attestation" v={compVal} ok={!!comp && comp.sellerEligible && comp.rfqEligible} />
-      <StatusRow k="Risk attestation" v={riskVal} ok={!!risk} />
+      <StatusRow k="Compliance attestation" v={compVal} ok={eligible} tone={comp ? (eligible ? 'accent' : 'red') : undefined} />
+      <StatusRow k="Risk attestation" v={riskVal} ok={!!risk} tone={risk ? riskTone(risk.riskTier) : undefined} />
     </div>
   );
 }
@@ -501,7 +512,7 @@ function SellerView() {
       <div className="panel-h"><h2><Term id="debtor">Debtor</Term></h2></div>
       <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Identity (to you)</span><span style={{ fontSize: 13, fontWeight: 600 }}>{rcv.debtorName}</span></div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span>{risk ? <span className="chip accent">{TIER_LABEL[risk.riskTier] ?? risk.riskTier}</span> : <span className="chip ghost">pending</span>}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span>{risk ? <span className={'chip ' + riskTone(risk.riskTier)}>{TIER_LABEL[risk.riskTier] ?? risk.riskTier}</span> : <span className="chip ghost">pending</span>}</div>
         <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>Funders receive the certified <span className="t-ink3">risk tier</span> — not the raw Debtor identity.</p>
       </div>
     </section>
@@ -601,7 +612,7 @@ function SellerQuotesPanel() {
           </div>
         ))}
         {state.requests.length > 0 && (
-          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>{state.requests.length} funder{state.requests.length === 1 ? '' : 's'} haven’t offered yet. Accepting an offer settles atomically: funds move to you, the invoice transfers to that lender.</p>
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>{state.requests.length} funder{state.requests.length === 1 ? '' : 's'} haven’t offered yet. Accepting an offer settles atomically: funds move to you, the invoice transfers to that Funder.</p>
         )}
       </div>
     </section>
@@ -611,10 +622,10 @@ function SellerQuotesPanel() {
 function SellerSettledView({ settlement }: { settlement: SettlementView }) {
   const { onReset } = useStore();
   const rows = [
-    { k: 'Buyer (lender)', v: `Funder ${settlement.funderKey} · ${FUNDER_PARTY_NAMES[settlement.funderKey] ?? '—'}` },
+    { k: 'Buyer / Funder', v: `Funder ${settlement.funderKey} · ${FUNDER_PARTY_NAMES[settlement.funderKey] ?? '—'}` },
     { k: 'Sale price received', v: usd(settlement.netPurchasePrice) },
     { k: 'Settled at', v: settlement.settledAt.replace('T', ' ').slice(0, 19) + ' UTC' },
-    { k: 'Invoice ownership', v: 'Transferred to the lender' },
+    { k: 'Invoice ownership', v: 'Transferred to the Funder' },
     { k: 'Payment', v: 'Funds settled to you on-ledger' },
   ];
   return (
@@ -631,7 +642,7 @@ function SellerSettledView({ settlement }: { settlement: SettlementView }) {
               <span className="mono" style={{ fontSize: 12.5, fontWeight: 500, textAlign: 'right', color: '#eef0f3' }}>{r.v}</span>
             </div>
           ))}
-          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Atomic on-ledger settlement — the lender’s locked funds paid you and the invoice transferred to them in one transaction. See it on the <Link href="/activity" className="linklike">Activity log</Link>.</p>
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Atomic on-ledger settlement — the Funder’s locked funds paid you and the invoice transferred to them in one transaction. See it on the <Link href="/activity" className="linklike">Activity log</Link>.</p>
         </div>
       </section>
     </div>
@@ -682,7 +693,7 @@ function FunderView() {
       <section className="panel">
         <div className="panel-h"><h2 className="lg">No request for you yet</h2><span className="spacer" /><span className="chip ghost">waiting</span></div>
         <div className="panel-b">
-          <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.6 }}>As a <b>lender</b>, you receive a private financing request once a seller sends one. Nothing is here yet because no deal has been opened in this demo.</p>
+          <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.6 }}>As a <b>Funder</b>, you receive a private financing request once a seller sends one. Nothing is here yet because no deal has been opened in this demo.</p>
           <p className="t-mut" style={{ fontSize: 12.5, marginTop: 10, lineHeight: 1.5 }}>In this demo you create the deal yourself: play the <b>Seller</b>, register an invoice and open the RFQ — then come back here to make an offer.</p>
           <button className="btn accent sm" style={{ marginTop: 14 }} onClick={() => setRole('seller')}>Start a deal as the Seller →</button>
         </div>
@@ -715,7 +726,7 @@ function FunderView() {
                 { label: 'Due date', value: req.dueDate, redacted: false },
                 { label: 'Certified risk rating', value: TIER_LABEL[req.riskTier] ?? req.riskTier, redacted: false },
                 { label: 'Raw Debtor identity', value: 'withheld — Seller-only', redacted: true },
-                { label: 'Other lenders’ offers', value: 'not visible to you', redacted: true },
+                { label: 'Other Funders’ offers', value: 'not visible to you', redacted: true },
               ].map((d) => (
                 <div key={d.label} className="kvrow">
                   <span className="k">{d.label}</span>
@@ -752,7 +763,7 @@ function FunderView() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span className="outcome-dot" style={{ background: won ? '#57e3a0' : lost ? '#6b7280' : '#e8c15f' }} />
                 <span className="disp" style={{ fontWeight: 600, fontSize: 14.5, color: won ? '#57e3a0' : lost ? '#9aa1ad' : '#e8c15f' }}>
-                  {won ? 'Won — the invoice is now yours' : lost ? 'Not selected — seller settled with another lender' : 'Submitted — awaiting the seller’s decision'}
+                  {won ? 'Won — the invoice is now yours' : lost ? 'Not selected — seller settled with another Funder' : 'Submitted — awaiting the seller’s decision'}
                 </span>
               </div>
               <p className="t-mut" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>
@@ -764,9 +775,9 @@ function FunderView() {
           <section className="panel dashed" style={{ padding: '16px 17px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11 }}>
               <Icon name="eyeoff" size={15} color="#6b7280" />
-              <span className="t-ink3" style={{ fontSize: 12.5 }}>Other lenders’ offers — <span className="t-ink2" style={{ fontWeight: 600 }}>hidden from you</span></span>
+              <span className="t-ink3" style={{ fontSize: 12.5 }}>Other Funders’ offers — <span className="t-ink2" style={{ fontWeight: 600 }}>hidden from you</span></span>
             </div>
-            <p className="t-mut" style={{ fontSize: 11, lineHeight: 1.5 }}>Each request and offer is private to its lender — you never see another lender’s price. Confirm it on the <Link href="/ledger" className="linklike">Ledger view</Link>.</p>
+            <p className="t-mut" style={{ fontSize: 11, lineHeight: 1.5 }}>Each request and offer is private to its Funder — you never see another Funder’s price. Confirm it on the <Link href="/ledger" className="linklike">Ledger view</Link>.</p>
           </section>
         </div>
       </div>
@@ -880,7 +891,7 @@ function RiskRoleView() {
                     <span className="t-ink3" style={{ fontSize: 12.5 }}>Risk certificate</span>
                     <span className={'chip ' + (att.certified ? 'accent' : 'ghost')}>{att.certified ? 'Derived by Seller' : 'Awaiting Seller derivation'}</span>
                   </div>
-                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Lenders receive this certified <Term id="risktier">rating</Term> in their request — never the customer&apos;s raw records. It signals how likely the invoice is to be paid.</p>
+                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Funders receive this certified <Term id="risktier">rating</Term> in their request — never the customer&apos;s raw records. It signals how likely the invoice is to be paid.</p>
                   {state.compliance
                     ? <NextStep label="Next: back to Seller to open the RFQ →" onGo={() => setRole('seller')} />
                     : <NextStep label="Next: approve as Compliance →" onGo={() => setRole('compliance')} />}
@@ -904,9 +915,9 @@ function RiskForm({ onIssue }: { onIssue: (tier: RiskTier) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
       <Field label="How likely is this invoice to be paid?">
-        <Seg val={tier} onPick={(v) => setTier(v as RiskTier)} opts={[{ label: 'Low risk', value: 'LowRisk' }, { label: 'Medium', value: 'MediumRisk' }, { label: 'High risk', value: 'HighRisk' }]} />
+        <Seg val={tier} onPick={(v) => setTier(v as RiskTier)} opts={[{ label: 'Low risk', value: 'LowRisk', tone: 'accent' }, { label: 'Medium', value: 'MediumRisk', tone: 'amber' }, { label: 'High risk', value: 'HighRisk', tone: 'orange' }]} />
       </Field>
-      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Lenders use this rating to price their offer. Lower risk = better terms for the seller.</p>
+      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Funders use this rating to price their offer. Lower risk = better terms for the seller.</p>
       <button className="btn accent block" onClick={() => onIssue(tier)}>
         <Icon name="risk" size={15} sw={2} /> Submit risk rating
       </button>
