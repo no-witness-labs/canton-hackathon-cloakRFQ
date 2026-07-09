@@ -62,7 +62,7 @@ On success, `AcceptAndSettle` must atomically:
 2. exercise `Receivable.Transfer` to create a pending Receivable transfer to the Funder;
 3. create `ReceivableSaleSettlement` as durable post-settlement evidence linked to that pending transfer.
 
-`ReceivableSaleSettlement` is not the swap engine itself. It is the durable record created after the MVP demo settlement succeeds.
+`ReceivableSaleSettlement` is not the swap engine itself. It is the durable record created after the MVP demo settlement succeeds. From the Seller's point of view, settlement is complete when `AcceptAndSettle` succeeds: the Seller has received the allocation settlement and has initiated the Receivable transfer. The Funder's later `AcceptTransfer` is a post-settlement ownership completion step, not a condition for Seller settlement finality.
 
 ## Failed Settlement Handling
 

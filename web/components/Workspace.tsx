@@ -625,15 +625,15 @@ function SellerSettledView({ settlement }: { settlement: SettlementView }) {
     { k: 'Buyer / Funder', v: `Funder ${settlement.funderKey} · ${FUNDER_PARTY_NAMES[settlement.funderKey] ?? '—'}` },
     { k: 'Sale price received', v: usd(settlement.netPurchasePrice) },
     { k: 'Settled at', v: settlement.settledAt.replace('T', ' ').slice(0, 19) + ' UTC' },
-    { k: 'Invoice ownership', v: 'Transferred to the Funder' },
-    { k: 'Payment', v: 'Funds settled to you on-ledger' },
+    { k: 'Receivable transfer', v: settlement.transferAccepted ? 'Accepted by Funder' : 'Initiated to Funder' },
+    { k: 'Payment', v: 'Mock allocation settled to you' },
   ];
   return (
     <div style={{ maxWidth: 620, margin: '0 auto' }}>
       <section className="panel">
         <div className="panel-h">
           <span style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(87,227,160,0.12)', border: '1px solid rgba(87,227,160,0.28)', display: 'grid', placeItems: 'center', color: '#57e3a0', flex: 'none' }}><Icon name="check" size={16} sw={2.5} /></span>
-          <h2 className="lg">Invoice sold — settled</h2><span className="spacer" /><button className="btn dark sm" onClick={onReset}>Refresh</button>
+          <h2 className="lg">Invoice sold — settlement recorded</h2><span className="spacer" /><button className="btn dark sm" onClick={onReset}>Refresh</button>
         </div>
         <div style={{ padding: '6px 18px 16px' }}>
           {rows.map((r) => (
@@ -642,7 +642,7 @@ function SellerSettledView({ settlement }: { settlement: SettlementView }) {
               <span className="mono" style={{ fontSize: 12.5, fontWeight: 500, textAlign: 'right', color: '#eef0f3' }}>{r.v}</span>
             </div>
           ))}
-          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Atomic on-ledger settlement — the Funder’s mock allocation paid you and the invoice transferred to them in one transaction. See it on the <Link href="/activity" className="linklike">Activity log</Link>.</p>
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Atomic on-ledger settlement recorded the sale and settled the Funder’s mock allocation to you. Funder acceptance is a post-settlement ownership step. See it on the <Link href="/activity" className="linklike">Activity log</Link>.</p>
         </div>
       </section>
     </div>
@@ -675,7 +675,7 @@ function RFQRequestCard({ r }: { r: RFQRequestView }) {
 
 /* ============================ FUNDER ============================ */
 function FunderView() {
-  const { state, invitedFunders, requestFor, quoteFor, setFunderTab, setRole, submitQuote } = useStore();
+  const { state, invitedFunders, requestFor, quoteFor, setFunderTab, setRole, submitQuote, acceptReceivableTransfer } = useStore();
   const invited = invitedFunders;
   useEffect(() => { if (invited.length && !invited.includes(state.funderTab)) setFunderTab(invited[0]); }, [invited, state.funderTab, setFunderTab]);
   const ft = invited.includes(state.funderTab) ? state.funderTab : (invited[0] ?? state.funderTab);
@@ -688,7 +688,7 @@ function FunderView() {
   const won = settled?.funderKey === ft;
   const lost = !!settled && settled.funderKey !== ft;
 
-  if (!req && !quote) return (
+  if (!req && !quote && !settled) return (
     <div style={{ maxWidth: 600, margin: '40px auto' }}>
       <section className="panel">
         <div className="panel-h"><h2 className="lg">No request for you yet</h2><span className="spacer" /><span className="chip ghost">waiting</span></div>
@@ -709,7 +709,7 @@ function FunderView() {
           {invited.map((k) => (
             <button key={k} className={'ftab' + (k === ft ? ' on' : '')} onClick={() => setFunderTab(k)}>
               <div className="lab">Funder {k} · {FUNDER_PARTY_NAMES[k] ?? '—'}</div>
-              <div className="sub">{quoteFor(k) ? 'offer submitted' : 'awaiting your offer'}</div>
+              <div className="sub">{state.settlement?.funderKey === k ? (state.settlement.transferAccepted ? 'ownership accepted' : 'transfer ready') : quoteFor(k) ? 'offer submitted' : 'awaiting your offer'}</div>
             </button>
           ))}
         </div>
@@ -735,17 +735,25 @@ function FunderView() {
               ))}
             </div>
           </section>
-        ) : (
+        ) : quote ? (
           <section className="panel">
             <div className="panel-h"><h2>Your submitted offer</h2><span className="spacer" /><span className="chip accent">mock allocation</span></div>
             <div style={{ padding: '6px 17px 14px' }}>
-              <div className="kvrow"><span className="k">Your price</span><span className="v">{usd(quote!.netPurchasePrice)}</span></div>
-              <div className="kvrow"><span className="k">Recourse</span><span className="v">{RECOURSE_LABEL[quote!.recourseModel]}</span></div>
-              <div className="kvrow"><span className="k">Debtor notification</span><span className="v">{quote!.debtorNotificationRequired ? 'Required' : 'Not required'}</span></div>
+              <div className="kvrow"><span className="k">Your price</span><span className="v">{usd(quote.netPurchasePrice)}</span></div>
+              <div className="kvrow"><span className="k">Recourse</span><span className="v">{RECOURSE_LABEL[quote.recourseModel]}</span></div>
+              <div className="kvrow"><span className="k">Debtor notification</span><span className="v">{quote.debtorNotificationRequired ? 'Required' : 'Not required'}</span></div>
               <div className="kvrow"><span className="k">Funding</span><span className="v t-accent">Mock CIP-56 allocation</span></div>
             </div>
           </section>
-        )}
+        ) : won ? (
+          <section className="panel">
+            <div className="panel-h"><h2>Settled offer</h2><span className="spacer" /><span className="chip accent">sale recorded</span></div>
+            <div style={{ padding: '6px 17px 14px' }}>
+              <div className="kvrow"><span className="k">Sale price</span><span className="v">{usd(settled!.netPurchasePrice)}</span></div>
+              <div className="kvrow"><span className="k">Transfer</span><span className="v t-accent">{settled!.transferAccepted ? 'Ownership accepted' : 'Ready to accept'}</span></div>
+            </div>
+          </section>
+        ) : null}
 
         <div className="col">
           {req && !quote && windowOpen && (
@@ -757,18 +765,23 @@ function FunderView() {
               <p className="t-ink3" style={{ fontSize: 12.5, lineHeight: 1.5 }}>The response deadline passed before you submitted an offer, so this request can no longer be quoted.</p>
             </section>
           )}
-          {quote && (
+          {(quote || won || lost) && (
             <section className="panel" style={{ padding: '16px 17px' }}>
               <div className="eyebrow" style={{ marginBottom: 9 }}>Your offer status</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span className="outcome-dot" style={{ background: won ? '#57e3a0' : lost ? '#6b7280' : '#e8c15f' }} />
                 <span className="disp" style={{ fontWeight: 600, fontSize: 14.5, color: won ? '#57e3a0' : lost ? '#9aa1ad' : '#e8c15f' }}>
-                  {won ? 'Won — the invoice is now yours' : lost ? 'Not selected — seller settled with another Funder' : 'Submitted — awaiting the seller’s decision'}
+                  {won ? (settled!.transferAccepted ? 'Ownership accepted — invoice is yours' : 'Settlement complete — transfer ready') : lost ? 'Not selected — seller settled with another Funder' : 'Submitted — awaiting the seller’s decision'}
                 </span>
               </div>
               <p className="t-mut" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>
-                {won ? 'Your mock allocation paid the seller and the invoice transferred to you.' : lost ? 'Your mock allocation lock is released.' : 'The seller can accept & settle once the quoting window closes.'}
+                {won ? (settled!.transferAccepted ? 'You accepted the receivable ownership transfer after settlement.' : 'The seller has been paid. Accept the receivable transfer to complete your ownership step.') : lost ? 'Your mock allocation lock is released.' : 'The seller can accept & settle once the quoting window closes.'}
               </p>
+              {won && !settled!.transferAccepted && (
+                <button className="btn accent block" style={{ marginTop: 12 }} onClick={() => acceptReceivableTransfer(ft)}>
+                  <Icon name="check" size={15} sw={2.4} /> Accept receivable transfer
+                </button>
+              )}
             </section>
           )}
 

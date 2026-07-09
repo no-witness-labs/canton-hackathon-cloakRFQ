@@ -58,7 +58,7 @@ The selected allocation must be visible to the submitting Funder and later visib
    - `settlementFactoryCid`
    - `extraSettlementAllocations`
 4. If settlement fails, the UI surfaces the ledger error and lets the Seller retry or select another visible, still-valid `PrivateQuote` off-ledger.
-5. Funder later exercises `Receivable.AcceptTransfer` on the pending transfer created by successful settlement.
+5. Funder later exercises `Receivable.AcceptTransfer` on the pending transfer created by successful settlement. The Seller UI treats `AcceptAndSettle` as settlement recorded; the Funder UI exposes `AcceptTransfer` as the post-settlement ownership step.
 
 For the simple local path, `extraSettlementAllocations = []`.
 
