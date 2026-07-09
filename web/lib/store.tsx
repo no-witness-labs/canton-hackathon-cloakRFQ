@@ -344,8 +344,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const P = getParties();
         const rcv = state.receivable, comp = state.compliance, rk = state.risk;
         if (!rcv || !comp || !rk) { toast('Need the Receivable and both attestations first', '#f0795f'); return; }
-        // Response deadline opens a short quoting window; funders must quote before
-        // it, and the Seller can only settle after it (contract-enforced timing).
+        // Response deadline opens a short demo quoting window; Funders must quote
+        // before it, and the Seller can only settle after it (contract-enforced timing).
         const scen: Phase1Scenario = {
           ...dealScenario(rcv),
           compliance: { ...SCENARIO.compliance, sellerEligible: comp.sellerEligible, rfqEligible: comp.rfqEligible },

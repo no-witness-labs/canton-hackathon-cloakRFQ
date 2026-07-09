@@ -97,6 +97,8 @@ The UI should guide the operator through time-sensitive phases:
 
 For local demos, scripts or UI controls may advance ledger time, but the displayed workflow should still explain why an action is currently enabled or disabled.
 
+The UI uses a deliberately short quote window for the hackathon demo. The current local demo window is 2.5 minutes, which is only a usability simplification so the operator can see quote submission and settlement in one session. In real receivable-sale RFQs, response windows can run for days to weeks depending on diligence, transaction size, and counterparty process.
+
 ## Visibility Rules
 
 Each Funder should only see their own `RFQRequest` and their own `PrivateQuote`.

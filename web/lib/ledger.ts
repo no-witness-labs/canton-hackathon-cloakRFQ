@@ -309,7 +309,8 @@ export interface QuoteTerms {
 }
 
 // The contract requires quoting BEFORE the response deadline and settling AFTER it.
-export const QUOTE_WINDOW_SECONDS = 60;
+// Demo-only short window: real RFQ response windows can run for days or weeks.
+export const QUOTE_WINDOW_SECONDS = 150;
 /** ISO time `secs` seconds from now (client clock ≈ ledger clock on DevNet). */
 export const isoFromNow = (secs: number): string => new Date(Date.now() + secs * 1000).toISOString();
 
