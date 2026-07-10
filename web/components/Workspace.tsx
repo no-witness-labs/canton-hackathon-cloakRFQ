@@ -82,7 +82,7 @@ export default function Workspace() {
         <div style={{ textAlign: 'center' }}>
           <span className="spinner" style={{ display: 'block', margin: '0 auto 14px' }} />
           <div className="disp" style={{ fontSize: 15, fontWeight: 600 }}>Setting up your demo…</div>
-          <div className="t-mut" style={{ fontSize: 12, lineHeight: 1.6, marginTop: 6 }}>Connecting to Canton and creating your isolated workspace for private RFQs.<br />This may take about 20 seconds.</div>
+          <div className="t-mut" style={{ fontSize: 12, lineHeight: 1.6, marginTop: 6 }}>Connecting to Canton and creating your isolated workspace for private RFQs.<br />This may take up to a minute the first time.</div>
         </div>
       </div>
     </>

@@ -57,15 +57,24 @@ export async function loadConfig(): Promise<boolean> {
   try {
     const sid = sessionId();
     if (sid) {
-      const s = await fetch(`/api/session?sid=${sid}`, { cache: 'no-store' });
-      if (s.ok) {
-        const j = await s.json();
-        if (j?.parties?.seller) { sessionMode = true; return applyConfig(j); }   // provisioning enabled → per-session parties
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const response = await fetch(`/api/session?sid=${sid}`, { cache: 'no-store' });
+          if (response.ok) {
+            const loaded = await response.json();
+            if (loaded?.parties?.seller) { sessionMode = true; return applyConfig(loaded); }
+            break;
+          }
+          if (response.status < 500 && response.status !== 429) break;
+        } catch {
+          if (attempt === 2) break;
+        }
+        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 1250));
       }
     }
-    const res = await fetch('/ledger-config.json', { cache: 'no-store' });
-    if (!res.ok) return false;
-    return applyConfig(await res.json());
+    const response = await fetch('/ledger-config.json', { cache: 'no-store' });
+    if (!response.ok) return false;
+    return applyConfig(await response.json());
   } catch {
     return false;
   }

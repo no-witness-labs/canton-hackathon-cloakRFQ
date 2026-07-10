@@ -53,7 +53,7 @@ While provisioning the isolated Canton parties, show:
 > **Setting up your demo...**
 >
 > Connecting to Canton and creating your isolated workspace for private RFQs.
-> This may take about 20 seconds.
+> This may take up to a minute the first time.
 
 Deployment copy should foreground CloakRFQ’s private-RFQ and selective-disclosure
 value while remaining precise about party-scoped privacy. It must not imply

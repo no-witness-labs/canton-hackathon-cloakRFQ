@@ -88,7 +88,7 @@ running `bootstrap-devnet.py`), enable per-session provisioning:
 3. Deploy. On first load, `web/app/api/session/route.ts` discovers a connected
    synchronizer, allocates a fresh versioned party set on that synchronizer, and waits
    until every party has submission permission before returning the UI configuration.
-   This can take up to about 20 seconds. Reloads reuse the same parties; the topbar
+   This can take up to a minute on the first request. Reloads reuse the same parties; the topbar
    **"↻ New deal"** action provisions another isolated set after confirmation.
 
 Notes: it's a public write endpoint (allocates parties on the shared validator) — it has a
