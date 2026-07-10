@@ -72,12 +72,33 @@ async function waitForParty(origin: string, party: string, synchronizerId: strin
 }
 
 
+async function grantCanActAs(origin: string, party: string): Promise<void> {
+  const { status } = await api(origin, 'POST', `/v2/users/${encodeURIComponent(USER_ID)}/rights`, {
+    userId: USER_ID,
+    rights: [{ kind: { CanActAs: { value: { party } } } }],
+  });
+  if (status !== 200) throw new Error(`CanActAs grant failed for ${party.split('::')[0]} (HTTP ${status})`);
+}
+
+async function verifyCanActAs(origin: string, parties: string[]): Promise<void> {
+  const { status, json } = await api(origin, 'GET', `/v2/users/${encodeURIComponent(USER_ID)}/rights`);
+  if (status !== 200) throw new Error(`User rights verification failed (HTTP ${status})`);
+
+  const authorized = new Set<string>((json?.rights ?? []).flatMap((right: any) => {
+    const party = right?.kind?.CanActAs?.value?.party;
+    return party ? [String(party)] : [];
+  }));
+  const missing = parties.filter((party) => !authorized.has(party));
+  if (missing.length > 0) {
+    throw new Error(`CanActAs verification failed for: ${missing.map((party) => party.split('::')[0]).join(', ')}`);
+  }
+}
+
 async function allocateParty(origin: string, hint: string, synchronizerId: string, role: string): Promise<string> {
   for (let attempt = 0; attempt < 6; attempt++) {
     const { status, json } = await api(origin, 'POST', '/v2/parties', {
       partyIdHint: hint,
       synchronizerId,
-      userId: USER_ID,
     });
     const party = json?.partyDetails?.party;
     if (status === 200 && party) return String(party);
@@ -98,7 +119,9 @@ async function provision(origin: string, sid: string): Promise<SessionConfig> {
     const party = await allocateParty(origin, partyHint(base, sid), synchronizerId, role);
     parties[role] = party;
     await waitForParty(origin, party, synchronizerId);
+    await grantCanActAs(origin, party);
   }
+  await verifyCanActAs(origin, Object.values(parties));
   return { jsonApiUrl: TARGET, packageRef: PKG, userId: USER_ID, parties };
 }
 
