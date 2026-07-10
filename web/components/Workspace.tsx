@@ -28,7 +28,19 @@ const fmtAmount = (n: number, ccy: string) => `${usd(n)} ${ccy}`;
 function NewDealButton() {
   const [confirming, setConfirming] = useState(false);
   if (!isSessionMode()) return null;
-  const startNewDeal = () => { newSession(); window.location.href = '/'; };
+  const [error, setError] = useState<string | null>(null);
+  const startNewDeal = async () => {
+    setError(null);
+    const sid = localStorage.getItem('cloakrfq-sid');
+    try {
+      const response = await fetch(`/api/session?sid=${encodeURIComponent(sid ?? '')}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Could not retire the current deal. Please retry.');
+      newSession();
+      window.location.href = '/';
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not retire the current deal. Please retry.');
+    }
+  };
   return (
     <>
       <button className="chip ghost" style={{ cursor: 'pointer' }} title="Start a fresh, isolated deal (new parties)"
@@ -42,6 +54,7 @@ function NewDealButton() {
             <p className="t-ink3" style={{ fontSize: 13, lineHeight: 1.6, marginTop: 8 }}>
               This creates a fresh isolated workspace and Canton party set. Your current deal remains on Canton, but this browser will switch to the new deal.
             </p>
+            {error && <p className="t-ink3" style={{ fontSize: 12, color: '#b42318' }}>{error}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
               <button className="btn dark" onClick={() => setConfirming(false)}>Cancel</button>
               <button className="btn accent" onClick={startNewDeal}>Start new deal</button>

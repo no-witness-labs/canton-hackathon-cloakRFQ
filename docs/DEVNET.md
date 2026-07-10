@@ -89,11 +89,16 @@ running `bootstrap-devnet.py`), enable per-session provisioning:
    synchronizer, allocates a fresh versioned party set on that synchronizer, and waits
    until every party has submission permission before returning the UI configuration.
    This can take up to a minute on the first request. Reloads reuse the same parties; the topbar
-   **"↻ New deal"** action provisions another isolated set after confirmation.
+   **"↻ New deal"** action first revokes and verifies removal of the current session party
+   rights, then provisions another isolated set. Retired contracts and parties remain on
+   Canton, but the shared demo user can no longer operate that retired session.
 
 Notes: it's a public write endpoint (allocates parties on the shared validator) — it has a
 crude per-instance guard, but add real rate-limiting before wide sharing. When the flag is
 **off**, the app uses the single static `ledger-config.json` (the flow above) — unchanged.
+The participant limits a user to 1,000 rights. Browser sessions abandoned without using
+`New deal` can leave stale rights, so the operator may need to revoke old CloakRFQ rights;
+do not revoke unrelated project rights or infer inactivity from party age alone.
 
 ## Toggle local ↔ DevNet
 

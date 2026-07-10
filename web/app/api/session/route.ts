@@ -93,6 +93,29 @@ async function verifyCanActAs(origin: string, parties: string[]): Promise<void> 
     throw new Error(`CanActAs verification failed for: ${missing.map((party) => party.split('::')[0]).join(', ')}`);
   }
 }
+async function retireSession(origin: string, sid: string): Promise<void> {
+  if (!PARTY_NAMESPACE) throw new Error('Party namespace is required to retire a session');
+  const parties = Object.values(ROLES).map((base) => partyHint(base, sid) + '::' + PARTY_NAMESPACE);
+  const rights = parties.flatMap((party) => [
+    { kind: { CanActAs: { value: { party } } } },
+    { kind: { CanReadAs: { value: { party } } } },
+  ]);
+  const { status } = await api(origin, 'PATCH', '/v2/users/' + encodeURIComponent(USER_ID) + '/rights', {
+    userId: USER_ID,
+    rights,
+  });
+  if (status !== 200) throw new Error('Session rights revocation failed (HTTP ' + status + ')');
+
+  const { status: rightsStatus, json } = await api(origin, 'GET', '/v2/users/' + encodeURIComponent(USER_ID) + '/rights');
+  if (rightsStatus !== 200) throw new Error('Session rights verification failed (HTTP ' + rightsStatus + ')');
+  const remaining = new Set<string>((json?.rights ?? []).flatMap((right: any) => {
+    const party = right?.kind?.CanActAs?.value?.party ?? right?.kind?.CanReadAs?.value?.party;
+    return party ? [String(party)] : [];
+  }));
+  const stillPresent = parties.filter((party) => remaining.has(party));
+  if (stillPresent.length > 0) throw new Error('Session rights remain for: ' + stillPresent.map((party) => party.split('::')[0]).join(', '));
+  sessionCache.delete(sid);
+}
 
 async function allocateParty(origin: string, hint: string, synchronizerId: string, role: string): Promise<string> {
   for (let attempt = 0; attempt < 6; attempt++) {
