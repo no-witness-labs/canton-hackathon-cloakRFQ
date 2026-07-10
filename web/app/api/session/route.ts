@@ -61,11 +61,12 @@ let inflight = 0;
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const partyHint = (base: string, sid: string) => `${base}-${PROVISIONING_VERSION}-${sid}`;
 
-async function getSynchronizerId(token: string): Promise<string> {
-  const { status, json } = await api(token, 'GET', '/v2/state/connected-synchronizers');
+async function getSynchronizerId(origin: string): Promise<string> {
+  const response = await fetch(`${origin}/v2/state/connected-synchronizers`, { cache: 'no-store' });
+  const json = await response.json();
   const connected = json?.connectedSynchronizers ?? [];
   const synchronizer = connected.find((item: any) => item.permission === 'PARTICIPANT_PERMISSION_SUBMISSION') ?? connected[0];
-  if (status !== 200 || !synchronizer?.synchronizerId) throw new Error('No connected Canton synchronizer is available');
+  if (!response.ok || !synchronizer?.synchronizerId) throw new Error(`No connected Canton synchronizer is available (HTTP ${response.status})`);
   return String(synchronizer.synchronizerId);
 }
 
@@ -87,8 +88,8 @@ async function waitForParty(token: string, party: string, synchronizerId: string
   throw new Error(`Party did not become active on the selected synchronizer: ${party.split('::')[0]}`);
 }
 
-async function provision(token: string, sid: string): Promise<SessionConfig> {
-  const synchronizerId = await getSynchronizerId(token);
+async function provision(token: string, sid: string, origin: string): Promise<SessionConfig> {
+  const synchronizerId = await getSynchronizerId(origin);
   const existing = await existingParties(token);
   const parties: Record<string, string> = {};
 
@@ -125,7 +126,7 @@ export async function GET(req: NextRequest) {
 
   inflight++;
   try {
-    const config = await provision(await getToken(), sid);
+    const config = await provision(await getToken(), sid, req.nextUrl.origin);
     sessionCache.set(sid, config);
     return Response.json(config);
   } catch (error) {
