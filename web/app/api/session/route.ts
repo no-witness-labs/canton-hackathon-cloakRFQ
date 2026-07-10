@@ -13,13 +13,7 @@ const TARGET = (process.env.CLOAKRFQ_LEDGER_TARGET ?? '').replace(/\/$/, '');
 const USER_ID = process.env.CLOAKRFQ_LEDGER_USER_ID ?? '6';
 const PKG = process.env.CLOAKRFQ_PACKAGE_REF ?? '#cloakrfq-contracts-v2';
 const PROVISIONING_VERSION = 'v2';
-const OIDC = {
-  tokenUrl: process.env.CLOAKRFQ_OIDC_TOKEN_URL,
-  clientId: process.env.CLOAKRFQ_OIDC_CLIENT_ID,
-  clientSecret: process.env.CLOAKRFQ_OIDC_CLIENT_SECRET,
-  audience: process.env.CLOAKRFQ_OIDC_AUDIENCE,
-  scope: process.env.CLOAKRFQ_OIDC_SCOPE ?? 'daml_ledger_api',
-};
+const HAS_OIDC = Boolean(process.env.CLOAKRFQ_OIDC_CLIENT_SECRET);
 const ROLES: Record<string, string> = {
   seller: 'cloakrfqSeller', funderA: 'cloakrfqFunderA', funderB: 'cloakrfqFunderB', funderC: 'cloakrfqFunderC',
   compliance: 'cloakrfqCompliance', risk: 'cloakrfqRisk', coordinator: 'cloakrfqCoordinator', auditor: 'cloakrfqAuditor', outsider: 'cloakrfqOutsider', tokenAdmin: 'cloakrfqTokenAdmin',
@@ -32,23 +26,12 @@ type SessionConfig = {
   parties: Record<string, string>;
 };
 
-let tokenCache: { value: string; exp: number } | null = null;
-async function getToken(): Promise<string> {
-  if (tokenCache && tokenCache.exp - 60_000 > Date.now()) return tokenCache.value;
-  const body = new URLSearchParams({ grant_type: 'client_credentials', client_id: OIDC.clientId!, client_secret: OIDC.clientSecret!, scope: OIDC.scope });
-  if (OIDC.audience) body.set('audience', OIDC.audience);
-  const response = await fetch(OIDC.tokenUrl!, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
-  if (!response.ok) throw new Error(`OIDC token exchange failed (HTTP ${response.status})`);
-  const token = await response.json();
-  tokenCache = { value: token.access_token, exp: Date.now() + Number(token.expires_in ?? 3600) * 1000 };
-  return tokenCache.value;
-}
-
-async function api(token: string, method: string, path: string, body?: unknown): Promise<{ status: number; json: any }> {
-  const response = await fetch(`${TARGET}${path}`, {
+async function api(origin: string, method: string, path: string, body?: unknown): Promise<{ status: number; json: any }> {
+  const response = await fetch(`${origin}${path}`, {
     method,
-    headers: { Authorization: `Bearer ${token}`, ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    cache: 'no-store',
   });
   const text = await response.text();
   let json: any = {};
@@ -62,24 +45,23 @@ const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const partyHint = (base: string, sid: string) => `${base}-${PROVISIONING_VERSION}-${sid}`;
 
 async function getSynchronizerId(origin: string): Promise<string> {
-  const response = await fetch(`${origin}/v2/state/connected-synchronizers`, { cache: 'no-store' });
-  const json = await response.json();
+  const { status, json } = await api(origin, 'GET', '/v2/state/connected-synchronizers');
   const connected = json?.connectedSynchronizers ?? [];
   const synchronizer = connected.find((item: any) => item.permission === 'PARTICIPANT_PERMISSION_SUBMISSION') ?? connected[0];
-  if (!response.ok || !synchronizer?.synchronizerId) throw new Error(`No connected Canton synchronizer is available (HTTP ${response.status})`);
+  if (status !== 200 || !synchronizer?.synchronizerId) throw new Error(`No connected Canton synchronizer is available (HTTP ${status})`);
   return String(synchronizer.synchronizerId);
 }
 
-async function existingParties(token: string): Promise<Map<string, string>> {
-  const { status, json } = await api(token, 'GET', '/v2/parties');
+async function existingParties(origin: string): Promise<Map<string, string>> {
+  const { status, json } = await api(origin, 'GET', '/v2/parties');
   if (status !== 200) throw new Error(`Party lookup failed (HTTP ${status})`);
   return new Map((json?.partyDetails ?? []).map((item: any) => [String(item.party).split('::')[0], String(item.party)]));
 }
 
-async function waitForParty(token: string, party: string, synchronizerId: string): Promise<void> {
+async function waitForParty(origin: string, party: string, synchronizerId: string): Promise<void> {
   for (let attempt = 0; attempt < 10; attempt++) {
     const path = `/v2/state/connected-synchronizers?party=${encodeURIComponent(party)}`;
-    const { status, json } = await api(token, 'GET', path);
+    const { status, json } = await api(origin, 'GET', path);
     const active = status === 200 && (json?.connectedSynchronizers ?? []).some((item: any) =>
       item.synchronizerId === synchronizerId && item.permission === 'PARTICIPANT_PERMISSION_SUBMISSION');
     if (active) return;
@@ -88,9 +70,9 @@ async function waitForParty(token: string, party: string, synchronizerId: string
   throw new Error(`Party did not become active on the selected synchronizer: ${party.split('::')[0]}`);
 }
 
-async function provision(token: string, sid: string, origin: string): Promise<SessionConfig> {
+async function provision(origin: string, sid: string): Promise<SessionConfig> {
   const synchronizerId = await getSynchronizerId(origin);
-  const existing = await existingParties(token);
+  const existing = await existingParties(origin);
   const parties: Record<string, string> = {};
 
   for (const [role, base] of Object.entries(ROLES)) {
@@ -101,7 +83,7 @@ async function provision(token: string, sid: string, origin: string): Promise<Se
       continue;
     }
 
-    const { status, json } = await api(token, 'POST', '/v2/parties', {
+    const { status, json } = await api(origin, 'POST', '/v2/parties', {
       partyIdHint: hint,
       synchronizerId,
       userId: USER_ID,
@@ -111,12 +93,12 @@ async function provision(token: string, sid: string, origin: string): Promise<Se
     parties[role] = String(party);
   }
 
-  await Promise.all(Object.values(parties).map((party) => waitForParty(token, party, synchronizerId)));
+  await Promise.all(Object.values(parties).map((party) => waitForParty(origin, party, synchronizerId)));
   return { jsonApiUrl: TARGET, packageRef: PKG, userId: USER_ID, parties };
 }
 
 export async function GET(req: NextRequest) {
-  if (!ENABLED || !TARGET || !OIDC.clientSecret) return Response.json({ enabled: false });
+  if (!ENABLED || !TARGET || !HAS_OIDC) return Response.json({ enabled: false });
   const sid = (req.nextUrl.searchParams.get('sid') || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
   if (!sid) return Response.json({ error: 'missing sid' }, { status: 400 });
 
@@ -126,7 +108,7 @@ export async function GET(req: NextRequest) {
 
   inflight++;
   try {
-    const config = await provision(await getToken(), sid, req.nextUrl.origin);
+    const config = await provision(req.nextUrl.origin, sid);
     sessionCache.set(sid, config);
     return Response.json(config);
   } catch (error) {
