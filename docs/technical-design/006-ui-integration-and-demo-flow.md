@@ -101,11 +101,13 @@ concurrency guard limits simultaneous provisioning work but is not durable abuse
 protection.
 
 Session provisioning must discover an active connected synchronizer, allocate
-parties explicitly on it, use the party IDs returned by Canton, and wait until
-each party has submission permission before exposing the workspace. Allocation
-or readiness failures must fail setup rather than returning fabricated party IDs.
-Version party hints when changing provisioning semantics so browser sessions with
-invalid older party sets recover deterministically on refresh.
+parties explicitly on it, use party IDs returned by Canton, and wait until each
+party has submission permission before exposing the workspace. If Canton reports
+that a deterministic party already exists but redacts its namespace, the route
+may reconstruct the ID from the configured participant namespace only when the
+same readiness check verifies it. Allocation or readiness failures must fail
+setup rather than exposing an unverified party ID. Version party hints when
+changing provisioning semantics so invalid older party sets recover on refresh.
 
 ## Parties
 

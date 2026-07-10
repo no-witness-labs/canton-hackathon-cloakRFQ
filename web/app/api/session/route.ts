@@ -12,6 +12,7 @@ const ENABLED = process.env.CLOAKRFQ_SESSION_PROVISIONING === '1';
 const TARGET = (process.env.CLOAKRFQ_LEDGER_TARGET ?? '').replace(/\/$/, '');
 const USER_ID = process.env.CLOAKRFQ_LEDGER_USER_ID ?? '6';
 const PKG = process.env.CLOAKRFQ_PACKAGE_REF ?? '#cloakrfq-contracts-v2';
+const PARTY_NAMESPACE = process.env.CLOAKRFQ_PARTY_NAMESPACE ?? '';
 const PROVISIONING_VERSION = 'v2';
 const HAS_OIDC = Boolean(process.env.CLOAKRFQ_OIDC_CLIENT_SECRET);
 const ROLES: Record<string, string> = {
@@ -82,8 +83,7 @@ async function allocateParty(origin: string, hint: string, synchronizerId: strin
     if (status === 200 && party) return String(party);
     const cause = String(json?.cause ?? json?.code ?? 'unknown error');
     if (status === 400) {
-      const existing = cause.match(/Party already exists: party (\S+) is already allocated/)?.[1];
-      if (existing) return existing;
+      if (cause.includes('Party already exists') && PARTY_NAMESPACE) return `${hint}::${PARTY_NAMESPACE}`;
       if (attempt < 5) { await pause(1250); continue; }
     }
     throw new Error(`Party allocation failed for ${role} (HTTP ${status}): ${cause}`);

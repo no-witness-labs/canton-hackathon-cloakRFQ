@@ -83,6 +83,7 @@ running `bootstrap-devnet.py`), enable per-session provisioning:
    ```
    CLOAKRFQ_SESSION_PROVISIONING=1
    CLOAKRFQ_LEDGER_USER_ID=6
+   CLOAKRFQ_PARTY_NAMESPACE=<the participant namespace, e.g. 1220a14ca128…>
    ```
 3. Deploy. On first load, `web/app/api/session/route.ts` discovers a connected
    synchronizer, allocates a fresh versioned party set on that synchronizer, and waits
@@ -99,7 +100,7 @@ crude per-instance guard, but add real rate-limiting before wide sharing. When t
 | Mode | How | Notes |
 |---|---|---|
 | **DevNet (shared deal)** | `web/.env.local` present + `bootstrap-devnet.py` | real network, auth'd, one shared deal |
-| **DevNet (self-service)** | add `CLOAKRFQ_SESSION_PROVISIONING=1` (+ USER_ID) | per-visitor isolated deals |
+| **DevNet (self-service)** | add `CLOAKRFQ_SESSION_PROVISIONING=1` (+ USER_ID, PARTY_NAMESPACE) | per-visitor isolated deals |
 | **Local**  | remove/rename `web/.env.local` + `./scripts/reset-local-demo.sh` | fresh local ledger and parties; starts the UI |
 
 ## Reset the demo
