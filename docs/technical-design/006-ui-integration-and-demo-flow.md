@@ -100,6 +100,13 @@ login, access code, or database-backed quota system. Keep the confirmation-gated
 concurrency guard limits simultaneous provisioning work but is not durable abuse
 protection.
 
+Session provisioning must discover an active connected synchronizer, allocate
+parties explicitly on it, use the party IDs returned by Canton, and wait until
+each party has submission permission before exposing the workspace. Allocation
+or readiness failures must fail setup rather than returning fabricated party IDs.
+Version party hints when changing provisioning semantics so browser sessions with
+invalid older party sets recover deterministically on refresh.
+
 ## Parties
 
 The UI should support at least these demo roles:

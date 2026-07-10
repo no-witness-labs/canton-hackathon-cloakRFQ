@@ -83,11 +83,12 @@ running `bootstrap-devnet.py`), enable per-session provisioning:
    ```
    CLOAKRFQ_SESSION_PROVISIONING=1
    CLOAKRFQ_LEDGER_USER_ID=6
-   CLOAKRFQ_PARTY_NAMESPACE=<the participant namespace, e.g. 1220a14ca128…>
    ```
-3. Deploy. On first load the server route `web/app/api/session/route.ts` allocates a fresh
-   `cloakrfq*-<sessionId>` party set for that browser (~3s) and grants it; reloads are
-   instant (cached). Each visitor is isolated; the topbar **"↻ New deal"** starts a clean one.
+3. Deploy. On first load, `web/app/api/session/route.ts` discovers a connected
+   synchronizer, allocates a fresh versioned party set on that synchronizer, and waits
+   until every party has submission permission before returning the UI configuration.
+   This can take up to about 20 seconds. Reloads reuse the same parties; the topbar
+   **"↻ New deal"** action provisions another isolated set after confirmation.
 
 Notes: it's a public write endpoint (allocates parties on the shared validator) — it has a
 crude per-instance guard, but add real rate-limiting before wide sharing. When the flag is
@@ -98,7 +99,7 @@ crude per-instance guard, but add real rate-limiting before wide sharing. When t
 | Mode | How | Notes |
 |---|---|---|
 | **DevNet (shared deal)** | `web/.env.local` present + `bootstrap-devnet.py` | real network, auth'd, one shared deal |
-| **DevNet (self-service)** | add `CLOAKRFQ_SESSION_PROVISIONING=1` (+ USER_ID, PARTY_NAMESPACE) | per-visitor isolated deals |
+| **DevNet (self-service)** | add `CLOAKRFQ_SESSION_PROVISIONING=1` (+ USER_ID) | per-visitor isolated deals |
 | **Local**  | remove/rename `web/.env.local` + `./scripts/reset-local-demo.sh` | fresh local ledger and parties; starts the UI |
 
 ## Reset the demo
