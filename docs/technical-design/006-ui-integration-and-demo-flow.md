@@ -30,10 +30,12 @@ separate parties even though the UI presents them through one Funder role view.
 
 ## New Deal
 
-Keep the `New deal` action in per-visitor session mode. It starts another isolated
-RFQ by discarding the browser session identifier and provisioning a fresh party
-set. The action is hidden in local static-party mode, where it cannot provision a
-new isolated deal.
+Keep the `New deal` action in per-visitor session mode. It retires the current
+browser session by revoking the shared Ledger API user rights for that deterministic
+party set, verifies removal, and only then provisions a fresh party set. The contracts
+and parties remain on Canton, but the retired browser session can no longer be operated
+through the shared demo user. The action is hidden in local static-party mode, where it
+cannot provision a fresh set.
 
 The UI must always ask for confirmation before performing this action, regardless
 of the current workflow state.
@@ -53,7 +55,7 @@ While provisioning the isolated Canton parties, show:
 > **Setting up your demo...**
 >
 > Connecting to Canton and creating your isolated workspace for private RFQs.
-> This may take about 20 seconds.
+> This may take up to a minute the first time.
 
 Deployment copy should foreground CloakRFQ’s private-RFQ and selective-disclosure
 value while remaining precise about party-scoped privacy. It must not imply
@@ -101,11 +103,23 @@ concurrency guard limits simultaneous provisioning work but is not durable abuse
 protection.
 
 Session provisioning must discover an active connected synchronizer, allocate
-parties explicitly on it, use the party IDs returned by Canton, and wait until
-each party has submission permission before exposing the workspace. Allocation
-or readiness failures must fail setup rather than returning fabricated party IDs.
-Version party hints when changing provisioning semantics so browser sessions with
-invalid older party sets recover deterministically on refresh.
+parties explicitly on it, use party IDs returned by Canton, and wait until each
+party has submission permission before exposing the workspace. If Canton reports
+that a deterministic party already exists but redacts its namespace, the route
+may reconstruct the ID from the configured participant namespace only when the
+same readiness check verifies it. Allocation or readiness failures must fail
+setup rather than exposing an unverified party ID. Version party hints when
+changing provisioning semantics so invalid older party sets recover on refresh.
+
+The deployed backend authenticates as a shared Ledger API user. The persistent
+DevNet participant limits that user to 1,000 rights; allocating fresh parties and
+retaining every prior session `CanActAs` right eventually prevents provisioning
+with `TOO_MANY_USER_RIGHTS`. Explicit `New deal` retirement therefore revokes only
+the old deterministic party set `CanActAs` and `CanReadAs` rights before replacement.
+Browser abandonment has no reliable cleanup signal in this serverless MVP, so stale
+CloakRFQ rights may still require controlled operational cleanup. Automatic age-based
+revocation is out of scope because it could disable an active or returning session.
+changing provisioning semantics so invalid older party sets recover on refresh.
 
 ## Parties
 

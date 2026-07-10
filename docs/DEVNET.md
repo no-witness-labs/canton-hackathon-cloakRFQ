@@ -83,23 +83,29 @@ running `bootstrap-devnet.py`), enable per-session provisioning:
    ```
    CLOAKRFQ_SESSION_PROVISIONING=1
    CLOAKRFQ_LEDGER_USER_ID=6
+   CLOAKRFQ_PARTY_NAMESPACE=<the participant namespace, e.g. 1220a14ca128…>
    ```
 3. Deploy. On first load, `web/app/api/session/route.ts` discovers a connected
    synchronizer, allocates a fresh versioned party set on that synchronizer, and waits
    until every party has submission permission before returning the UI configuration.
-   This can take up to about 20 seconds. Reloads reuse the same parties; the topbar
-   **"↻ New deal"** action provisions another isolated set after confirmation.
+   This can take up to a minute on the first request. Reloads reuse the same parties; the topbar
+   **"↻ New deal"** action first revokes and verifies removal of the current session party
+   rights, then provisions another isolated set. Retired contracts and parties remain on
+   Canton, but the shared demo user can no longer operate that retired session.
 
 Notes: it's a public write endpoint (allocates parties on the shared validator) — it has a
 crude per-instance guard, but add real rate-limiting before wide sharing. When the flag is
 **off**, the app uses the single static `ledger-config.json` (the flow above) — unchanged.
+The participant limits a user to 1,000 rights. Browser sessions abandoned without using
+`New deal` can leave stale rights, so the operator may need to revoke old CloakRFQ rights;
+do not revoke unrelated project rights or infer inactivity from party age alone.
 
 ## Toggle local ↔ DevNet
 
 | Mode | How | Notes |
 |---|---|---|
 | **DevNet (shared deal)** | `web/.env.local` present + `bootstrap-devnet.py` | real network, auth'd, one shared deal |
-| **DevNet (self-service)** | add `CLOAKRFQ_SESSION_PROVISIONING=1` (+ USER_ID) | per-visitor isolated deals |
+| **DevNet (self-service)** | add `CLOAKRFQ_SESSION_PROVISIONING=1` (+ USER_ID, PARTY_NAMESPACE) | per-visitor isolated deals |
 | **Local**  | remove/rename `web/.env.local` + `./scripts/reset-local-demo.sh` | fresh local ledger and parties; starts the UI |
 
 ## Reset the demo
