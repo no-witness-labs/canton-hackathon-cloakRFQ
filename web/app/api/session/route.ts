@@ -27,16 +27,21 @@ type SessionConfig = {
 };
 
 async function api(origin: string, method: string, path: string, body?: unknown): Promise<{ status: number; json: any }> {
-  const response = await fetch(`${origin}${path}`, {
-    method,
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    cache: 'no-store',
-  });
-  const text = await response.text();
-  let json: any = {};
-  try { json = text ? JSON.parse(text) : {}; } catch { json = {}; }
-  return { status: response.status, json };
+  const transient = new Set([429, 502, 503, 504]);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const response = await fetch(`${origin}${path}`, {
+      method,
+      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      cache: 'no-store',
+    });
+    const text = await response.text();
+    let json: any = {};
+    try { json = text ? JSON.parse(text) : {}; } catch { json = {}; }
+    if (!transient.has(response.status) || attempt === 4) return { status: response.status, json };
+    await pause(750 * (attempt + 1));
+  }
+  throw new Error(`Ledger proxy request exhausted retries: ${method} ${path}`);
 }
 
 const sessionCache = new Map<string, SessionConfig>();
@@ -70,6 +75,24 @@ async function waitForParty(origin: string, party: string, synchronizerId: strin
   throw new Error(`Party did not become active on the selected synchronizer: ${party.split('::')[0]}`);
 }
 
+
+async function allocateParty(origin: string, hint: string, synchronizerId: string, role: string): Promise<string> {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { status, json } = await api(origin, 'POST', '/v2/parties', {
+      partyIdHint: hint,
+      synchronizerId,
+      userId: USER_ID,
+    });
+    const party = json?.partyDetails?.party;
+    if (status === 200 && party) return String(party);
+    if (status !== 400 || attempt === 5) {
+      const cause = json?.cause ?? json?.code ?? 'unknown error';
+      throw new Error(`Party allocation failed for ${role} (HTTP ${status}): ${cause}`);
+    }
+    await pause(1250);
+  }
+  throw new Error(`Party allocation failed for ${role}`);
+}
 async function provision(origin: string, sid: string): Promise<SessionConfig> {
   const synchronizerId = await getSynchronizerId(origin);
   const existing = await existingParties(origin);
@@ -77,23 +100,10 @@ async function provision(origin: string, sid: string): Promise<SessionConfig> {
 
   for (const [role, base] of Object.entries(ROLES)) {
     const hint = partyHint(base, sid);
-    const known = existing.get(hint);
-    if (known) {
-      parties[role] = known;
-      continue;
-    }
-
-    const { status, json } = await api(origin, 'POST', '/v2/parties', {
-      partyIdHint: hint,
-      synchronizerId,
-      userId: USER_ID,
-    });
-    const party = json?.partyDetails?.party;
-    if (status !== 200 || !party) throw new Error(`Party allocation failed for ${role} (HTTP ${status})`);
-    parties[role] = String(party);
+    const party = existing.get(hint) ?? await allocateParty(origin, hint, synchronizerId, role);
+    parties[role] = party;
+    await waitForParty(origin, party, synchronizerId);
   }
-
-  await Promise.all(Object.values(parties).map((party) => waitForParty(origin, party, synchronizerId)));
   return { jsonApiUrl: TARGET, packageRef: PKG, userId: USER_ID, parties };
 }
 
