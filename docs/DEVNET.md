@@ -99,12 +99,12 @@ crude per-instance guard, but add real rate-limiting before wide sharing. When t
 |---|---|---|
 | **DevNet (shared deal)** | `web/.env.local` present + `bootstrap-devnet.py` | real network, auth'd, one shared deal |
 | **DevNet (self-service)** | add `CLOAKRFQ_SESSION_PROVISIONING=1` (+ USER_ID, PARTY_NAMESPACE) | per-visitor isolated deals |
-| **Local**  | remove/rename `web/.env.local` + `./scripts/start-sandbox.sh` | proxy falls back to `localhost`, no auth; instant resets |
+| **Local**  | remove/rename `web/.env.local` + `./scripts/reset-local-demo.sh` | fresh local ledger and parties; starts the UI |
 
 ## Reset the demo
 
 - **DevNet** (persistent): fresh parties — `python3 scripts/bootstrap-devnet.py <newtag>`, then hard-reload.
-- **Local**: `./scripts/stop-sandbox.sh && ./scripts/start-sandbox.sh` (true wipe), then hard-reload.
+- **Local**: `./scripts/reset-local-demo.sh` (true wipe), then hard-reload.
 
 ## Seeing the transactions
 

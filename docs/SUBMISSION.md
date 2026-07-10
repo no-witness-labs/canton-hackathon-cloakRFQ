@@ -24,12 +24,12 @@ the price"); settlement is demonstrated **on-ledger**; an Auditor receives a
 The brief and our positioning are in [`HACKATHON_ALIGNMENT.md`](HACKATHON_ALIGNMENT.md);
 the product detail in [`CLOAKRFQ_PRD.md`](CLOAKRFQ_PRD.md).
 
-## Run the UI
+## Run the local demo
 
 ```bash
-cd web
-npm install
-npm run dev    # http://localhost:3000
+npm --prefix web install       # first run only
+./scripts/reset-local-demo.sh  # fresh ledger, demo parties, and UI
+# open http://localhost:3000
 ```
 
 Flip the **role switcher** across the seven Canton parties (Seller, Funder
@@ -38,10 +38,10 @@ RFQ, review visible Private Quotes, settle, retry a failed settlement, or select
 another still-valid quote. Switch to Auditor for final settlement evidence; to
 Outsider to see that a non-party sees nothing.
 
-## Run the ledger (Canton sandbox)
+## Component-level operation
 
-See [`RUNBOOK.md`](RUNBOOK.md) — `./scripts/start-sandbox.sh` brings up Canton +
-the JSON Ledger API and allocates the demo parties.
+See [`RUNBOOK.md`](RUNBOOK.md) for ledger-only startup, manual UI startup, and
+troubleshooting.
 
 ## Claim boundaries
 

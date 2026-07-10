@@ -14,11 +14,14 @@ UX source of truth) and its `handoff/` spec.
 ## Run it
 
 ```bash
-cd web
-npm install
-npm run dev
+npm --prefix web install       # from the repository root; first run only
+./scripts/reset-local-demo.sh  # reset and start Canton plus the web app
 # open http://localhost:3000
 ```
+
+`reset-local-demo.sh` intentionally creates a fresh local ledger and demo party
+set. To run only the web process against an already-configured ledger, use
+`npm --prefix web run dev`.
 
 `npm run build && npm start` for a production build.
 

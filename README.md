@@ -25,10 +25,14 @@ back per-party contract visibility — the selective disclosure is enforced
 on-ledger, not mocked. See `web/README.md` for details.
 
 ```bash
-cd web
-npm install
-npm run dev   # http://localhost:3000
+npm --prefix web install       # first run only
+./scripts/reset-local-demo.sh  # reset and start the complete local demo
+# open http://localhost:3000
 ```
+
+The reset command creates a fresh local ledger and demo parties, writes the UI
+configuration, and starts the web server. See `docs/RUNBOOK.md` for ledger-only
+and component-level commands.
 
 ## Documentation files
 
