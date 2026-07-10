@@ -156,7 +156,7 @@ function WelcomeOverlay({ open, onClose }: { open: boolean; onClose: () => void 
   const steps = [
     { n: '1', t: 'Register your invoice', d: 'Add an unpaid invoice you want to turn into cash now — we call it a “Receivable”.' },
     { n: '2', t: 'Get it approved', d: 'Switch to the Compliance and Risk roles (top tabs) and approve it — in this demo you play every party yourself.' },
-    { n: '3', t: 'Send private requests', d: 'Open the RFQ (Request for Quote) to send each lender (“Funder”) its own private request — no funder can see another’s.' },
+    { n: '3', t: 'Send private requests', d: 'Open the RFQ (Request for Quote) to send each Funder its own private request — no Funder can see another’s.' },
   ];
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -167,7 +167,7 @@ function WelcomeOverlay({ open, onClose }: { open: boolean; onClose: () => void 
         </div>
         <p className="t-ink2" style={{ fontSize: 13.5, lineHeight: 1.6 }}>
           A private marketplace for <b>invoice financing</b> on the Canton Network: sell an unpaid invoice
-          to lenders early — <b>without exposing your data to competing lenders</b>.
+          to Funders early — <b>without exposing your data to competing Funders</b>.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 13, margin: '16px 0' }}>
           {steps.map((s) => (
@@ -321,12 +321,14 @@ function WalletConnector() {
   );
 }
 
-function Seg({ opts, val, onPick }: { opts: { label: string; value: string | number }[]; val: string | number; onPick: (v: string | number) => void }) {
+function Seg({ opts, val, onPick }: { opts: { label: string; value: string | number; danger?: boolean; tone?: 'accent' | 'amber' | 'orange' }[]; val: string | number; onPick: (v: string | number) => void }) {
   return (
     <div className="seg">
-      {opts.map((o) => (
-        <button key={String(o.value)} className={o.value === val ? 'on' : ''} onClick={() => onPick(o.value)}>{o.label}</button>
-      ))}
+      {opts.map((o) => {
+        const selected = o.value === val;
+        const tone = o.tone ?? (o.danger ? 'danger' : '');
+        return <button key={String(o.value)} className={selected ? ('on ' + tone).trim() : ''} onClick={() => onPick(o.value)}>{o.label}</button>;
+      })}
     </div>
   );
 }
@@ -340,11 +342,20 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
-function StatusRow({ k, v, ok }: { k: string; v: string; ok: boolean }) {
+type ChipTone = 'accent' | 'amber' | 'orange' | 'red' | 'ghost';
+
+function riskTone(tier: RiskTier): ChipTone {
+  if (tier === 'LowRisk') return 'accent';
+  if (tier === 'MediumRisk') return 'amber';
+  return 'orange';
+}
+
+function StatusRow({ k, v, ok, tone }: { k: string; v: string; ok: boolean; tone?: ChipTone }) {
+  const chipTone = tone ?? (ok ? 'accent' : 'ghost');
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
       <span className="t-ink3" style={{ fontSize: 12 }}>{k}</span>
-      <span className="chip" style={{ background: ok ? 'rgba(87,227,160,.12)' : 'rgba(154,161,173,.1)', color: ok ? 'var(--accent)' : 'var(--mut)' }}>{v}</span>
+      <span className={'chip ' + chipTone}>{v}</span>
     </div>
   );
 }
@@ -386,12 +397,13 @@ function ReceivableForm({ onCreate }: { onCreate: (r: ReceivableForm) => void })
 }
 
 function AttestStatus({ risk, comp }: { risk: RiskView | null; comp: ComplianceView | null }) {
-  const compVal = comp ? (comp.sellerEligible && comp.rfqEligible ? 'Eligible' : 'Not eligible') : 'Not issued';
+  const eligible = !!comp && comp.sellerEligible && comp.rfqEligible;
+  const compVal = comp ? (eligible ? 'Eligible' : 'Not eligible') : 'Not issued';
   const riskVal = risk ? TIER_LABEL[risk.riskTier] ?? risk.riskTier : 'Not issued';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <StatusRow k="Compliance attestation" v={compVal} ok={!!comp && comp.sellerEligible && comp.rfqEligible} />
-      <StatusRow k="Risk attestation" v={riskVal} ok={!!risk} />
+      <StatusRow k="Compliance attestation" v={compVal} ok={eligible} tone={comp ? (eligible ? 'accent' : 'red') : undefined} />
+      <StatusRow k="Risk attestation" v={riskVal} ok={!!risk} tone={risk ? riskTone(risk.riskTier) : undefined} />
     </div>
   );
 }
@@ -401,7 +413,12 @@ function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; r
   const [funders, setFunders] = useState<string[]>(['A', 'B', 'C']);
   const toggle = (k: string) => setFunders((s) => (s.includes(k) ? s.filter((x) => x !== k) : [...s, k]));
   const eligible = !!comp && comp.sellerEligible && comp.rfqEligible;
-  const ready = eligible && !!risk && funders.length > 0;
+  const missing = [
+    !comp ? 'Compliance attestation' : !eligible ? 'Compliance marked not eligible' : null,
+    !risk ? 'Risk attestation' : null,
+    funders.length === 0 ? 'At least one invited Funder' : null,
+  ].filter((x): x is string => !!x);
+  const ready = missing.length === 0;
   return (
     <section className="panel">
       <div className="panel-h"><h2 className="lg">Open <Term id="rfq">RFQ</Term></h2><span className="spacer" /><span className="chip ghost">certificate-backed</span></div>
@@ -415,7 +432,7 @@ function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; r
           </div>
         </Field>
         <AttestStatus risk={risk} comp={comp} />
-        {!eligible && comp && <p className="t-red" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Compliance marked the package not eligible — the certificate choice will reject. Re-issue an eligible attestation to proceed.</p>}
+        {!eligible && comp && <p className="t-red" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Compliance marked the package not eligible. Open RFQ is blocked in this MVP demo.</p>}
         {(!comp || !risk) && (
           <div style={{ background: 'rgba(232,193,95,0.08)', border: '1px solid var(--amber-line)', borderRadius: 10, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 9 }}>
             <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--amber)' }}>Next step: get this approved</div>
@@ -426,9 +443,20 @@ function OpenRFQPanel({ onOpen, risk, comp }: { onOpen: (k: string[]) => void; r
             </div>
           </div>
         )}
-        <button className="btn accent block" disabled={!ready} onClick={() => onOpen(funders)}>
-          <Icon name="send" size={16} sw={2.4} /> Open RFQ to {funders.length} Funder{funders.length === 1 ? '' : 's'}
-        </button>
+        <div className="action-tip-wrap" tabIndex={ready ? undefined : 0}>
+          <button className="btn accent block" disabled={!ready} onClick={() => onOpen(funders)} aria-describedby={ready ? undefined : 'open-rfq-missing'}>
+            <Icon name="send" size={16} sw={2.4} /> Open RFQ to {funders.length} Funder{funders.length === 1 ? '' : 's'}
+          </button>
+          {!ready && (
+            <div id="open-rfq-missing" className="action-tip" role="tooltip">
+              <div className="action-tip-title">Missing before Open RFQ</div>
+              <ul>
+                {missing.map((m) => <li key={m}>{m}</li>)}
+              </ul>
+              <div className="action-tip-note">Certificates are derived automatically when the RFQ opens.</div>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -484,7 +512,7 @@ function SellerView() {
       <div className="panel-h"><h2><Term id="debtor">Debtor</Term></h2></div>
       <div className="panel-b" style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Identity (to you)</span><span style={{ fontSize: 13, fontWeight: 600 }}>{rcv.debtorName}</span></div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span>{risk ? <span className="chip accent">{TIER_LABEL[risk.riskTier] ?? risk.riskTier}</span> : <span className="chip ghost">pending</span>}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}><span className="t-ink3" style={{ fontSize: 12.5 }}>Risk attestation</span>{risk ? <span className={'chip ' + riskTone(risk.riskTier)}>{TIER_LABEL[risk.riskTier] ?? risk.riskTier}</span> : <span className="chip ghost">pending</span>}</div>
         <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 2 }}>Funders receive the certified <span className="t-ink3">risk tier</span> — not the raw Debtor identity.</p>
       </div>
     </section>
@@ -571,11 +599,11 @@ function SellerQuotesPanel() {
               </div>
               <div style={{ textAlign: 'right', flex: 'none' }}>
                 <div className="q-net">{usd(q.netPurchasePrice)}</div>
-                <div className="q-net-sub">funding locked</div>
+                <div className="q-net-sub">demo allocation locked</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 13 }}>
-              <span className="mono t-accent" style={{ fontSize: 10.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="check" size={12} sw={2.5} /> Committed token allocation</span>
+              <span className="mono t-accent" style={{ fontSize: 10.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="check" size={12} sw={2.5} /> Mock CIP-56 allocation</span>
               <span className="spacer" />
               <button className="btn accent sm" disabled={windowOpen} onClick={() => acceptAndSettle(q.funderKey)}>
                 {windowOpen ? `Settle in ${fmtSecs(Math.max(0, deadlineSecs))}` : 'Accept & settle →'}
@@ -584,7 +612,7 @@ function SellerQuotesPanel() {
           </div>
         ))}
         {state.requests.length > 0 && (
-          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>{state.requests.length} funder{state.requests.length === 1 ? '' : 's'} haven’t offered yet. Accepting an offer settles atomically: funds move to you, the invoice transfers to that lender.</p>
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>{state.requests.length} funder{state.requests.length === 1 ? '' : 's'} haven’t offered yet. Accepting an offer settles atomically: funds move to you, the invoice transfers to that Funder.</p>
         )}
       </div>
     </section>
@@ -594,18 +622,18 @@ function SellerQuotesPanel() {
 function SellerSettledView({ settlement }: { settlement: SettlementView }) {
   const { onReset } = useStore();
   const rows = [
-    { k: 'Buyer (lender)', v: `Funder ${settlement.funderKey} · ${FUNDER_PARTY_NAMES[settlement.funderKey] ?? '—'}` },
+    { k: 'Buyer / Funder', v: `Funder ${settlement.funderKey} · ${FUNDER_PARTY_NAMES[settlement.funderKey] ?? '—'}` },
     { k: 'Sale price received', v: usd(settlement.netPurchasePrice) },
     { k: 'Settled at', v: settlement.settledAt.replace('T', ' ').slice(0, 19) + ' UTC' },
-    { k: 'Invoice ownership', v: 'Transferred to the lender' },
-    { k: 'Payment', v: 'Funds settled to you on-ledger' },
+    { k: 'Receivable transfer', v: settlement.transferAccepted ? 'Accepted by Funder' : 'Initiated to Funder' },
+    { k: 'Payment', v: 'Mock allocation settled to you' },
   ];
   return (
     <div style={{ maxWidth: 620, margin: '0 auto' }}>
       <section className="panel">
         <div className="panel-h">
           <span style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(87,227,160,0.12)', border: '1px solid rgba(87,227,160,0.28)', display: 'grid', placeItems: 'center', color: '#57e3a0', flex: 'none' }}><Icon name="check" size={16} sw={2.5} /></span>
-          <h2 className="lg">Invoice sold — settled</h2><span className="spacer" /><button className="btn dark sm" onClick={onReset}>Refresh</button>
+          <h2 className="lg">Invoice sold — settlement recorded</h2><span className="spacer" /><button className="btn dark sm" onClick={onReset}>Refresh</button>
         </div>
         <div style={{ padding: '6px 18px 16px' }}>
           {rows.map((r) => (
@@ -614,7 +642,7 @@ function SellerSettledView({ settlement }: { settlement: SettlementView }) {
               <span className="mono" style={{ fontSize: 12.5, fontWeight: 500, textAlign: 'right', color: '#eef0f3' }}>{r.v}</span>
             </div>
           ))}
-          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Atomic on-ledger settlement — the lender’s locked funds paid you and the invoice transferred to them in one transaction. See it on the <Link href="/activity" className="linklike">Activity log</Link>.</p>
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Atomic on-ledger settlement recorded the sale and settled the Funder’s mock allocation to you. Funder acceptance is a post-settlement ownership step. See it on the <Link href="/activity" className="linklike">Activity log</Link>.</p>
         </div>
       </section>
     </div>
@@ -647,7 +675,7 @@ function RFQRequestCard({ r }: { r: RFQRequestView }) {
 
 /* ============================ FUNDER ============================ */
 function FunderView() {
-  const { state, invitedFunders, requestFor, quoteFor, setFunderTab, setRole, submitQuote } = useStore();
+  const { state, invitedFunders, requestFor, quoteFor, setFunderTab, setRole, submitQuote, acceptReceivableTransfer } = useStore();
   const invited = invitedFunders;
   useEffect(() => { if (invited.length && !invited.includes(state.funderTab)) setFunderTab(invited[0]); }, [invited, state.funderTab, setFunderTab]);
   const ft = invited.includes(state.funderTab) ? state.funderTab : (invited[0] ?? state.funderTab);
@@ -660,12 +688,12 @@ function FunderView() {
   const won = settled?.funderKey === ft;
   const lost = !!settled && settled.funderKey !== ft;
 
-  if (!req && !quote) return (
+  if (!req && !quote && !settled) return (
     <div style={{ maxWidth: 600, margin: '40px auto' }}>
       <section className="panel">
         <div className="panel-h"><h2 className="lg">No request for you yet</h2><span className="spacer" /><span className="chip ghost">waiting</span></div>
         <div className="panel-b">
-          <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.6 }}>As a <b>lender</b>, you receive a private financing request once a seller sends one. Nothing is here yet because no deal has been opened in this demo.</p>
+          <p className="t-ink2" style={{ fontSize: 13, lineHeight: 1.6 }}>As a <b>Funder</b>, you receive a private financing request once a seller sends one. Nothing is here yet because no deal has been opened in this demo.</p>
           <p className="t-mut" style={{ fontSize: 12.5, marginTop: 10, lineHeight: 1.5 }}>In this demo you create the deal yourself: play the <b>Seller</b>, register an invoice and open the RFQ — then come back here to make an offer.</p>
           <button className="btn accent sm" style={{ marginTop: 14 }} onClick={() => setRole('seller')}>Start a deal as the Seller →</button>
         </div>
@@ -681,7 +709,7 @@ function FunderView() {
           {invited.map((k) => (
             <button key={k} className={'ftab' + (k === ft ? ' on' : '')} onClick={() => setFunderTab(k)}>
               <div className="lab">Funder {k} · {FUNDER_PARTY_NAMES[k] ?? '—'}</div>
-              <div className="sub">{quoteFor(k) ? 'offer submitted' : 'awaiting your offer'}</div>
+              <div className="sub">{state.settlement?.funderKey === k ? (state.settlement.transferAccepted ? 'ownership accepted' : 'transfer ready') : quoteFor(k) ? 'offer submitted' : 'awaiting your offer'}</div>
             </button>
           ))}
         </div>
@@ -698,7 +726,7 @@ function FunderView() {
                 { label: 'Due date', value: req.dueDate, redacted: false },
                 { label: 'Certified risk rating', value: TIER_LABEL[req.riskTier] ?? req.riskTier, redacted: false },
                 { label: 'Raw Debtor identity', value: 'withheld — Seller-only', redacted: true },
-                { label: 'Other lenders’ offers', value: 'not visible to you', redacted: true },
+                { label: 'Other Funders’ offers', value: 'not visible to you', redacted: true },
               ].map((d) => (
                 <div key={d.label} className="kvrow">
                   <span className="k">{d.label}</span>
@@ -707,17 +735,25 @@ function FunderView() {
               ))}
             </div>
           </section>
-        ) : (
+        ) : quote ? (
           <section className="panel">
-            <div className="panel-h"><h2>Your submitted offer</h2><span className="spacer" /><span className="chip accent">funding locked</span></div>
+            <div className="panel-h"><h2>Your submitted offer</h2><span className="spacer" /><span className="chip accent">mock allocation</span></div>
             <div style={{ padding: '6px 17px 14px' }}>
-              <div className="kvrow"><span className="k">Your price</span><span className="v">{usd(quote!.netPurchasePrice)}</span></div>
-              <div className="kvrow"><span className="k">Recourse</span><span className="v">{RECOURSE_LABEL[quote!.recourseModel]}</span></div>
-              <div className="kvrow"><span className="k">Debtor notification</span><span className="v">{quote!.debtorNotificationRequired ? 'Required' : 'Not required'}</span></div>
-              <div className="kvrow"><span className="k">Funding</span><span className="v t-accent">Committed on-ledger</span></div>
+              <div className="kvrow"><span className="k">Your price</span><span className="v">{usd(quote.netPurchasePrice)}</span></div>
+              <div className="kvrow"><span className="k">Recourse</span><span className="v">{RECOURSE_LABEL[quote.recourseModel]}</span></div>
+              <div className="kvrow"><span className="k">Debtor notification</span><span className="v">{quote.debtorNotificationRequired ? 'Required' : 'Not required'}</span></div>
+              <div className="kvrow"><span className="k">Funding</span><span className="v t-accent">Mock CIP-56 allocation</span></div>
             </div>
           </section>
-        )}
+        ) : won ? (
+          <section className="panel">
+            <div className="panel-h"><h2>Settled offer</h2><span className="spacer" /><span className="chip accent">sale recorded</span></div>
+            <div style={{ padding: '6px 17px 14px' }}>
+              <div className="kvrow"><span className="k">Sale price</span><span className="v">{usd(settled!.netPurchasePrice)}</span></div>
+              <div className="kvrow"><span className="k">Transfer</span><span className="v t-accent">{settled!.transferAccepted ? 'Ownership accepted' : 'Ready to accept'}</span></div>
+            </div>
+          </section>
+        ) : null}
 
         <div className="col">
           {req && !quote && windowOpen && (
@@ -729,27 +765,32 @@ function FunderView() {
               <p className="t-ink3" style={{ fontSize: 12.5, lineHeight: 1.5 }}>The response deadline passed before you submitted an offer, so this request can no longer be quoted.</p>
             </section>
           )}
-          {quote && (
+          {(quote || won || lost) && (
             <section className="panel" style={{ padding: '16px 17px' }}>
               <div className="eyebrow" style={{ marginBottom: 9 }}>Your offer status</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span className="outcome-dot" style={{ background: won ? '#57e3a0' : lost ? '#6b7280' : '#e8c15f' }} />
                 <span className="disp" style={{ fontWeight: 600, fontSize: 14.5, color: won ? '#57e3a0' : lost ? '#9aa1ad' : '#e8c15f' }}>
-                  {won ? 'Won — the invoice is now yours' : lost ? 'Not selected — seller settled with another lender' : 'Submitted — awaiting the seller’s decision'}
+                  {won ? (settled!.transferAccepted ? 'Ownership accepted — invoice is yours' : 'Settlement complete — transfer ready') : lost ? 'Not selected — seller settled with another Funder' : 'Submitted — awaiting the seller’s decision'}
                 </span>
               </div>
               <p className="t-mut" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>
-                {won ? 'Your locked funds paid the seller and the invoice transferred to you.' : lost ? 'Your funding lock is released.' : 'The seller can accept & settle once the quoting window closes.'}
+                {won ? (settled!.transferAccepted ? 'You accepted the receivable ownership transfer after settlement.' : 'The seller has been paid. Accept the receivable transfer to complete your ownership step.') : lost ? 'Your mock allocation lock is released.' : 'The seller can accept & settle once the quoting window closes.'}
               </p>
+              {won && !settled!.transferAccepted && (
+                <button className="btn accent block" style={{ marginTop: 12 }} onClick={() => acceptReceivableTransfer(ft)}>
+                  <Icon name="check" size={15} sw={2.4} /> Accept receivable transfer
+                </button>
+              )}
             </section>
           )}
 
           <section className="panel dashed" style={{ padding: '16px 17px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11 }}>
               <Icon name="eyeoff" size={15} color="#6b7280" />
-              <span className="t-ink3" style={{ fontSize: 12.5 }}>Other lenders’ offers — <span className="t-ink2" style={{ fontWeight: 600 }}>hidden from you</span></span>
+              <span className="t-ink3" style={{ fontSize: 12.5 }}>Other Funders’ offers — <span className="t-ink2" style={{ fontWeight: 600 }}>hidden from you</span></span>
             </div>
-            <p className="t-mut" style={{ fontSize: 11, lineHeight: 1.5 }}>Each request and offer is private to its lender — you never see another lender’s price. Confirm it on the <Link href="/ledger" className="linklike">Ledger view</Link>.</p>
+            <p className="t-mut" style={{ fontSize: 11, lineHeight: 1.5 }}>Each request and offer is private to its Funder — you never see another Funder’s price. Confirm it on the <Link href="/ledger" className="linklike">Ledger view</Link>.</p>
           </section>
         </div>
       </div>
@@ -778,7 +819,7 @@ function QuoteComposer({ funderKey, faceValue, deadlineSecs, onSubmit }: { funde
           <Seg val={f.recourseModel} onPick={(v) => setF((s) => ({ ...s, recourseModel: v as RecourseModel }))} opts={[{ label: 'Non-recourse', value: 'WithoutRecourse' }, { label: 'With recourse', value: 'WithRecourse' }]} /></div>
         <div><div className="eyebrow sm" style={{ marginBottom: 7 }}>Debtor notification</div>
           <Seg val={f.debtorNotificationRequired ? 'y' : 'n'} onPick={(v) => setF((s) => ({ ...s, debtorNotificationRequired: v === 'y' }))} opts={[{ label: 'Not required', value: 'n' }, { label: 'Required', value: 'y' }]} /></div>
-        <span className="chip accent" style={{ justifyContent: 'center', padding: 9, borderRadius: 8 }}><Icon name="check" size={12} sw={2.5} /> Funds are locked on submit (demo token allocation)</span>
+        <span className="chip accent" style={{ justifyContent: 'center', padding: 9, borderRadius: 8 }}><Icon name="check" size={12} sw={2.5} /> Funds are locked on submit (mock CIP-56 allocation)</span>
         <button className="btn accent block" disabled={f.netPurchasePrice <= 0} onClick={() => onSubmit(funderKey, f)}><Icon name="send" size={16} sw={2.4} /> Submit private offer</button>
         <p className="t-mut" style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.5 }}>Sealed to the seller only. Submit before the window closes — the seller settles after it.</p>
       </div>
@@ -825,15 +866,20 @@ function ComplianceRoleView() {
 }
 
 function ComplianceForm({ onIssue }: { onIssue: (sellerEligible: boolean, rfqEligible: boolean) => void }) {
-  const [eligible, setEligible] = useState(true);
+  const [sellerEligible, setSellerEligible] = useState(true);
+  const [rfqEligible, setRfqEligible] = useState(true);
+  const passed = sellerEligible && rfqEligible;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
-      <Field label="Is this invoice eligible for financing?">
-        <Seg val={eligible ? 'yes' : 'no'} onPick={(v) => setEligible(v === 'yes')} opts={[{ label: 'Eligible', value: 'yes' }, { label: 'Not eligible', value: 'no' }]} />
+      <Field label="Seller eligibility">
+        <Seg val={sellerEligible ? 'yes' : 'no'} onPick={(v) => setSellerEligible(v === 'yes')} opts={[{ label: 'Eligible', value: 'yes' }, { label: 'Not eligible', value: 'no', danger: true }]} />
       </Field>
-      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>In a real deployment this is where KYC and sanctions checks run. Marking it not eligible stops the deal from proceeding.</p>
-      <button className="btn accent block" onClick={() => onIssue(eligible, eligible)}>
-        <Icon name="check" size={15} sw={2.3} /> Approve compliance
+      <Field label="RFQ package eligibility">
+        <Seg val={rfqEligible ? 'yes' : 'no'} onPick={(v) => setRfqEligible(v === 'yes')} opts={[{ label: 'Eligible', value: 'yes' }, { label: 'Not eligible', value: 'no', danger: true }]} />
+      </Field>
+      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>In a real deployment this is where KYC, sanctions, and package-scope checks run. A negative result records the attestation but prevents certificate creation and RFQ opening.</p>
+      <button className={"btn block " + (passed ? "accent" : "amber")} onClick={() => onIssue(sellerEligible, rfqEligible)}>
+        <Icon name="check" size={15} sw={2.3} /> {passed ? 'Approve compliance' : 'Record not eligible'}
       </button>
     </div>
   );
@@ -858,7 +904,7 @@ function RiskRoleView() {
                     <span className="t-ink3" style={{ fontSize: 12.5 }}>Risk certificate</span>
                     <span className={'chip ' + (att.certified ? 'accent' : 'ghost')}>{att.certified ? 'Derived by Seller' : 'Awaiting Seller derivation'}</span>
                   </div>
-                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Lenders receive this certified <Term id="risktier">rating</Term> in their request — never the customer&apos;s raw records. It signals how likely the invoice is to be paid.</p>
+                  <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5, marginTop: 12 }}>Funders receive this certified <Term id="risktier">rating</Term> in their request — never the customer&apos;s raw records. It signals how likely the invoice is to be paid.</p>
                   {state.compliance
                     ? <NextStep label="Next: back to Seller to open the RFQ →" onGo={() => setRole('seller')} />
                     : <NextStep label="Next: approve as Compliance →" onGo={() => setRole('compliance')} />}
@@ -882,9 +928,9 @@ function RiskForm({ onIssue }: { onIssue: (tier: RiskTier) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
       <Field label="How likely is this invoice to be paid?">
-        <Seg val={tier} onPick={(v) => setTier(v as RiskTier)} opts={[{ label: 'Low risk', value: 'LowRisk' }, { label: 'Medium', value: 'MediumRisk' }, { label: 'High risk', value: 'HighRisk' }]} />
+        <Seg val={tier} onPick={(v) => setTier(v as RiskTier)} opts={[{ label: 'Low risk', value: 'LowRisk', tone: 'accent' }, { label: 'Medium', value: 'MediumRisk', tone: 'amber' }, { label: 'High risk', value: 'HighRisk', tone: 'orange' }]} />
       </Field>
-      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Lenders use this rating to price their offer. Lower risk = better terms for the seller.</p>
+      <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>Funders use this rating to price their offer. Lower risk = better terms for the seller.</p>
       <button className="btn accent block" onClick={() => onIssue(tier)}>
         <Icon name="risk" size={15} sw={2} /> Submit risk rating
       </button>

@@ -7,7 +7,7 @@ holds both the planning documentation and the first implementation.
 
 ```
 docs/    Planning documentation — product brief, PRD, ADRs, technical design, roadmap.
-ledger/  Daml multi-package ledger model and script tests for Phase 1, Phase 2, and Phase 3 happy path.
+ledger/  Daml multi-package ledger model and script tests for the MVP workflow.
 web/     Next.js 14 (App Router + TypeScript) UI prototype of the MVP. See web/README.md.
 ```
 
@@ -18,17 +18,21 @@ built to match the design prototype `CloakRFQ.dc.html`. A single workspace
 with a **role switcher** across all seven Canton parties (Seller, Funder A/B/C,
 Compliance, Risk Assessor, Coordinator, Auditor/Regulator, Outsider) shows the
 same RFQ from each party's entitled view — demonstrating selective disclosure,
-the Phase 1 origination flow, and a simulated wallet connector that acts as the
-party for the selected role. The UI is **live-backed**: each action submits a
+the full MVP flow, and a simulated wallet connector that acts as the party for
+the selected role. The UI is **live-backed**: each action submits a
 real Daml transaction to a Canton participant (local sandbox or DevNet) and reads
 back per-party contract visibility — the selective disclosure is enforced
 on-ledger, not mocked. See `web/README.md` for details.
 
 ```bash
-cd web
-npm install
-npm run dev   # http://localhost:3000
+npm --prefix web install       # first run only
+./scripts/reset-local-demo.sh  # reset and start the complete local demo
+# open http://localhost:3000
 ```
+
+The reset command creates a fresh local ledger and demo parties, writes the UI
+configuration, and starts the web server. See `docs/RUNBOOK.md` for ledger-only
+and component-level commands.
 
 ## Documentation files
 
@@ -43,7 +47,7 @@ npm run dev   # http://localhost:3000
 - `docs/technical-design/002-phase-1-origination-eligibility.md` — Phase 1 ledger design and implementation notes.
 - `docs/technical-design/003-phase-2-private-quote-intake.md` — Phase 2 Private Quote intake and CIP-56 allocation design notes.
 - `docs/technical-design/004-phase-3-quote-selection-and-settlement.md` — Phase 3 quote selection and settlement design notes.
-- `docs/technical-design/005-workflow-diagrams.md` — diagram-first technical workflow summary for the implemented Phase 1, Phase 2, and Phase 3 happy-path ledger flow.
+- `docs/technical-design/005-workflow-diagrams.md` — diagram-first technical workflow summary for the implemented Phase 1, Phase 2, Phase 3 settlement, and failed-settlement handling flow.
 - `docs/technical-design/006-ui-integration-and-demo-flow.md` — UI and demo integration checklist for party roles, visible CIDs, timing, and CIP-56 settlement inputs.
 - `docs/adr/0001-receivable-sale-rfq-mvp.md` — model the MVP as a Receivable Sale, not a secured loan.
 - `docs/adr/0002-maximum-practical-privacy-for-rfqs.md` — target Maximum Practical Privacy for RFQs.
@@ -60,11 +64,11 @@ npm run dev   # http://localhost:3000
 
 ## Status
 
-Phase 1, Phase 2, and the Phase 3 happy-path settlement flow are implemented on the ledger branch as of 2026-07-07.
+Phase 1, Phase 2, Phase 3 settlement, and rollback-based failed-settlement handling are implemented.
 
 Implemented ledger scope currently covers represented Receivable registration, Compliance/Risk attestations and certificates, `RFQPackageData`, per-Funder `RFQRequest` bridge contracts, allocation-backed `PrivateQuote` submission, CIP-56 settlement factory integration, pending Receivable transfer, and `ReceivableSaleSettlement` evidence.
 
-Not complete as production implementation. Later RFQ discovery, package access policy, fallback settlement paths, receipts beyond current settlement evidence, and production payment/custody integration remain open.
+Not complete as production implementation. Later RFQ discovery, package access policy, receipts beyond current settlement evidence, and production payment/custody integration remain open.
 
 Settlement product decision is resolved as On-Ledger Demo Settlement. Compliance Receipt product decision is resolved as Scoped Compliance Receipt.
 

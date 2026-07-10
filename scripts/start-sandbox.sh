@@ -31,7 +31,7 @@ echo "→ Java: $(java -version 2>&1 | head -1)"
 
 echo "→ Starting Canton sandbox (logs: ledger/log/canton.log)"
 rm -f log/canton.log
-dpm sandbox > /tmp/cloakrfq-sandbox.log 2>&1 &
+nohup setsid dpm sandbox </dev/null > /tmp/cloakrfq-sandbox.log 2>&1 &
 SANDBOX_PID=$!
 echo "  sandbox pid $SANDBOX_PID"
 

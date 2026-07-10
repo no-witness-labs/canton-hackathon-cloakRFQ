@@ -1,8 +1,8 @@
 # CloakRFQ Runbook
 
 Operational guide for running the on-ledger stack (Canton sandbox + JSON Ledger
-API) locally. The UI wiring lands with issue #21; for now this brings up the
-ledger and allocates the demo parties.
+API) locally. The web UI reads this ledger configuration and submits real Daml
+commands through the JSON API.
 
 ## 1. Prerequisites
 
@@ -22,12 +22,19 @@ ledger and allocates the demo parties.
 From the repo root:
 
 ```bash
-# Builds the DAR if needed, starts Canton on JDK 17, uploads the DAR, allocates
-# the demo parties, and writes web/public/ledger-config.json.
-./scripts/start-sandbox.sh
+# First run only:
+npm --prefix web install
+
+# Resets and starts Canton, bootstraps fresh demo parties, and starts the UI.
+./scripts/reset-local-demo.sh
 ```
 
-Stop it with `./scripts/stop-sandbox.sh`.
+Open `http://localhost:3000`. The command intentionally wipes prior local
+ledger state. Stop Canton with `./scripts/stop-sandbox.sh`; stop the Next.js
+process separately when the demo is finished.
+
+For ledger-only operation, use `./scripts/start-sandbox.sh`. To start only the
+web process against an already-configured ledger, use `npm --prefix web run dev`.
 
 ### Ports
 
@@ -37,22 +44,27 @@ Stop it with `./scripts/stop-sandbox.sh`.
 | 6864 | Canton JSON Ledger API v2 |
 | 3000 | Next.js dev server (`web/`) |
 
-## 3. What start-sandbox.sh does
+## 3. What the scripts do
+
+`reset-local-demo.sh` stops any existing local sandbox, calls
+`start-sandbox.sh`, and ensures the Next.js web server is running.
+
+`start-sandbox.sh`:
 
 1. Pins `JAVA_HOME` to OpenJDK 17 and builds the DAR if missing (`dpm build --all` in `ledger/`).
 2. Launches `dpm sandbox` (single-process Canton) in the background.
 3. Waits for `HTTP JSON API Server started`, then for `/readyz` = 200.
 4. Runs `scripts/bootstrap.sh`, which is idempotent:
-   - uploads `ledger/contracts/.daml/dist/cloakrfq-contracts-0.1.0.dar`,
+   - uploads `ledger/contracts/.daml/dist/cloakrfq-contracts-v2-0.2.0.dar` and
+     the test fixture DAR used by the mock CIP-56 demo path,
    - allocates one party per role — Seller, Funder A/B/C, Compliance, Risk,
-     Coordinator, Auditor, Outsider (reuses existing),
+     Coordinator, Auditor, Outsider, and USD Token Admin (reuses existing),
    - writes `web/public/ledger-config.json` (gitignored; the UI fetches it at runtime).
 
 To re-bootstrap against an already-running sandbox: `./scripts/bootstrap.sh`.
 
-> Seeding of demo contracts (a Receivable, Private Quotes, etc.) is added once the
-> phase templates exist (#9–#11); bootstrap only uploads the DAR and allocates
-> parties today.
+> Bootstrap uploads the DAR, allocates parties, and writes the UI runtime
+> configuration. The UI can then create the workflow contracts interactively.
 
 ## 4. Verifying the build (CI-style)
 
@@ -70,8 +82,8 @@ cd ledger/test && dpm test        # Daml Script tests
 | `ledger/lib/` | shared Daml library package (`cloakrfq-lib`) |
 | `ledger/contracts/` | deployable Daml contract package (`cloakrfq-contracts`) |
 | `ledger/test/` | Daml Script tests (`cloakrfq-test`) |
-| `backend/` | off-ledger ledger client / integration glue (placeholder until #21) |
-| `web/` | Next.js UI (mock today; #21 wires it to the live ledger) |
+| `backend/` | off-ledger ledger client / integration glue placeholder |
+| `web/` | Next.js UI backed by the Canton JSON Ledger API |
 | `scripts/` | dev orchestration (sandbox + bootstrap) |
 
 ## 6. Troubleshooting

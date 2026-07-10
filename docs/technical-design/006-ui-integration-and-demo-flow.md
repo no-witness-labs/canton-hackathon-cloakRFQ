@@ -58,11 +58,19 @@ The selected allocation must be visible to the submitting Funder and later visib
    - `settlementFactoryCid`
    - `extraSettlementAllocations`
 4. If settlement fails, the UI surfaces the ledger error and lets the Seller retry or select another visible, still-valid `PrivateQuote` off-ledger.
-5. Funder later exercises `Receivable.AcceptTransfer` on the pending transfer created by successful settlement.
+5. Funder later exercises `Receivable.AcceptTransfer` on the pending transfer created by successful settlement. The Seller UI treats `AcceptAndSettle` as settlement recorded; the Funder UI exposes `AcceptTransfer` as the post-settlement ownership step.
 
 For the simple local path, `extraSettlementAllocations = []`.
 
 For a real CIP-56 token demo, the UI must allow optional extra finalized allocations when the token workflow requires more than the Funder's funding allocation for `SettlementFactory_SettleBatch`.
+
+## Current Token Demo Boundary
+
+The CloakRFQ ledger templates are designed against the CIP-56-compatible token interfaces: `RFQRequest.SubmitPrivateQuote` accepts `ContractId Token.Allocation`, and `PrivateQuote.AcceptAndSettle` accepts `ContractId Token.SettlementFactory`.
+
+The current UI demo does not connect a real wallet or use real token holdings. Instead, it creates `MockFundingAllocation` and `MockSettlementFactory` contracts from the test fixture package. Those fixture templates implement the same token interfaces, so the production CloakRFQ choices still fetch `Token.Allocation` / `Token.SettlementFactory`, inspect their views, validate commitment, package id, Funder authorizer, token admin, payment leg, and settlement result, then proceed through the same interface-shaped path.
+
+This means the demo proves the CloakRFQ workflow integration points and validation logic, but it does not prove production wallet signing, real token custody, real token balance availability, or a production CIP-56 allocation provider. Replacing the fixture path with real tokens requires the UI to let the Funder select or create a real committed allocation and the Seller select the real settlement factory required by that token workflow.
 
 ## CIP-56 Demo Checklist
 
@@ -96,6 +104,8 @@ The UI should guide the operator through time-sensitive phases:
 | AcceptTransfer | after successful `AcceptAndSettle`. |
 
 For local demos, scripts or UI controls may advance ledger time, but the displayed workflow should still explain why an action is currently enabled or disabled.
+
+The UI uses a deliberately short quote window for the hackathon demo. The current local demo window is 2.5 minutes, which is only a usability simplification so the operator can see quote submission and settlement in one session. In real receivable-sale RFQs, response windows can run for days to weeks depending on diligence, transaction size, and counterparty process.
 
 ## Visibility Rules
 
