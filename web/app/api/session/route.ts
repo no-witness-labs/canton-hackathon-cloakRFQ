@@ -85,11 +85,13 @@ async function allocateParty(origin: string, hint: string, synchronizerId: strin
     });
     const party = json?.partyDetails?.party;
     if (status === 200 && party) return String(party);
-    if (status !== 400 || attempt === 5) {
-      const cause = json?.cause ?? json?.code ?? 'unknown error';
-      throw new Error(`Party allocation failed for ${role} (HTTP ${status}): ${cause}`);
+    if (status === 400) {
+      const known = (await existingParties(origin)).get(hint);
+      if (known) return known;
+      if (attempt < 5) { await pause(1250); continue; }
     }
-    await pause(1250);
+    const cause = json?.cause ?? json?.code ?? 'unknown error';
+    throw new Error(`Party allocation failed for ${role} (HTTP ${status}): ${cause}`);
   }
   throw new Error(`Party allocation failed for ${role}`);
 }
