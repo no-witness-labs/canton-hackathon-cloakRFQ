@@ -121,8 +121,8 @@ export default function ActivityPage() {
                 <button className="btn dark sm" onClick={() => verify(tx.updateId, tx.actAs)}>Verify on ledger</button>
                 {ex && (
                   <a className="btn dark sm" href={`/tx/${tx.updateId}`} target="_blank" rel="noopener noreferrer"
-                    style={{ textDecoration: 'none' }} title="Open this transaction on the 5N Lighthouse explorer (waits for indexing)">
-                    Explore on Lighthouse ↗
+                    style={{ textDecoration: 'none' }} title="Verify this transaction on Canton DevNet with 5N Lighthouse. Private contract data is intentionally not shown.">
+                    Verify on Canton ↗
                   </a>
                 )}
                 {v === 'fail' && <span className="mono t-red" style={{ fontSize: 11 }}>not found</span>}

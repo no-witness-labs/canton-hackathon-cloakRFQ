@@ -12,6 +12,101 @@ For the hackathon MVP, prefer a reliable guided flow over maximum automation. Th
 
 The ledger remains the source of truth for authorization and visibility. The UI should not claim an action is available unless the current party can see and exercise the required contracts.
 
+## First-Run Welcome
+
+Keep a compact first-run welcome popup for new browser origins. Its copy should
+describe the complete MVP as four steps:
+
+1. Register the Receivable.
+2. Obtain separate Compliance eligibility and Risk assessment attestations.
+3. Open private RFQ requests and collect allocation-backed Private Quotes.
+4. Settle the selected quote and let the winning Funder accept the pending
+   Receivable transfer.
+
+The popup should describe CloakRFQ as a Receivable Sale RFQ, not as a loan. It
+must distinguish real Daml transactions on the demo ledger from the
+CIP-56-compatible mock funding and settlement fixtures. Funder A/B/C are
+separate parties even though the UI presents them through one Funder role view.
+
+## New Deal
+
+Keep the `New deal` action in per-visitor session mode. It starts another isolated
+RFQ by discarding the browser session identifier and provisioning a fresh party
+set. The action is hidden in local static-party mode, where it cannot provision a
+new isolated deal.
+
+The UI must always ask for confirmation before performing this action, regardless
+of the current workflow state.
+
+## Deployed Session Isolation
+
+Each deployed browser session must use its own isolated demo party set. Sharing
+one party set across public visitors would allow them to see or affect each
+other’s RFQs. The browser session persists across refreshes and browser restarts
+until the user explicitly confirms `New deal`; the MVP has no automatic session
+expiry.
+
+## Deployed Setup State
+
+While provisioning the isolated Canton parties, show:
+
+> **Setting up your demo...**
+>
+> Connecting to Canton and creating your isolated workspace for private RFQs.
+> This may take about 20 seconds.
+
+Deployment copy should foreground CloakRFQ’s private-RFQ and selective-disclosure
+value while remaining precise about party-scoped privacy. It must not imply
+absolute privacy from entitled parties or infrastructure operators.
+
+## Deployed Error State
+
+When Canton connectivity or isolated-party provisioning fails, show:
+
+> **Demo connection unavailable**
+>
+> We couldn’t connect to Canton or finish creating your isolated workspace.
+> Please retry in a moment.
+
+Keep a `Retry` action and do not expose raw ledger, OIDC, or server errors in the
+public UI. The local-only hint should direct developers to
+`./scripts/reset-local-demo.sh`.
+
+## Transaction Evidence
+
+Use the in-app `Activity` and `Ledger` views as the primary transaction and
+party-visibility evidence. On DevNet, retain 5N Lighthouse as a secondary
+`Verify on Canton` action. Its tooltip or nearby context must explain that
+Lighthouse confirms the Canton transaction but intentionally cannot display
+CloakRFQ’s private contract contents.
+
+## Environment And Funding Claims
+
+Show `Canton DevNet · mock funds` in deployed session mode and
+`Local Canton · mock funds` in local sandbox mode. The welcome copy should state:
+
+> Workflow actions are real Daml transactions on Canton. Token funding uses
+> CIP-56-compatible demo fixtures; no wallet or real money is used.
+
+Use `Live` only for connection or workflow status. It must not imply production
+operation, production custody, or real payment finality.
+
+## Public Provisioning Boundary
+
+Keep deployed session provisioning anonymous for the hackathon MVP; do not add a
+login, access code, or database-backed quota system. Keep the confirmation-gated
+`New deal` action available. Apply deployment-level rate limiting to
+`/api/session` when the hosting platform supports it. The route’s in-memory
+concurrency guard limits simultaneous provisioning work but is not durable abuse
+protection.
+
+Session provisioning must discover an active connected synchronizer, allocate
+parties explicitly on it, use the party IDs returned by Canton, and wait until
+each party has submission permission before exposing the workspace. Allocation
+or readiness failures must fail setup rather than returning fabricated party IDs.
+Version party hints when changing provisioning semantics so browser sessions with
+invalid older party sets recover deterministically on refresh.
+
 ## Parties
 
 The UI should support at least these demo roles:

@@ -26,12 +26,30 @@ const TIER_LABEL: Record<string, string> = { LowRisk: 'Low risk', MediumRisk: 'M
 const fmtAmount = (n: number, ccy: string) => `${usd(n)} ${ccy}`;
 
 function NewDealButton() {
+  const [confirming, setConfirming] = useState(false);
   if (!isSessionMode()) return null;
+  const startNewDeal = () => { newSession(); window.location.href = '/'; };
   return (
-    <button className="chip ghost" style={{ cursor: 'pointer' }} title="Start a fresh, isolated deal (new parties)"
-      onClick={() => { newSession(); window.location.href = '/'; }}>
-      ↻ New deal
-    </button>
+    <>
+      <button className="chip ghost" style={{ cursor: 'pointer' }} title="Start a fresh, isolated deal (new parties)"
+        onClick={() => setConfirming(true)}>
+        ↻ New deal
+      </button>
+      {confirming && (
+        <div className="modal-overlay" onClick={() => setConfirming(false)}>
+          <div className="modal-card" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+            <h2 className="disp" style={{ fontSize: 18, fontWeight: 700 }}>Start a new deal?</h2>
+            <p className="t-ink3" style={{ fontSize: 13, lineHeight: 1.6, marginTop: 8 }}>
+              This creates a fresh isolated workspace and Canton party set. Your current deal remains on Canton, but this browser will switch to the new deal.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
+              <button className="btn dark" onClick={() => setConfirming(false)}>Cancel</button>
+              <button className="btn accent" onClick={startNewDeal}>Start new deal</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -64,17 +82,17 @@ export default function Workspace() {
         <div style={{ textAlign: 'center' }}>
           <span className="spinner" style={{ display: 'block', margin: '0 auto 14px' }} />
           <div className="disp" style={{ fontSize: 15, fontWeight: 600 }}>Setting up your demo…</div>
-          <div className="t-mut" style={{ fontSize: 12, marginTop: 6 }}>Creating your private demo workspace — about 20 seconds.</div>
+          <div className="t-mut" style={{ fontSize: 12, lineHeight: 1.6, marginTop: 6 }}>Connecting to Canton and creating your isolated workspace for private RFQs.<br />This may take about 20 seconds.</div>
         </div>
       </div>
     </>
   );
   if (state.ready === false) return (
     <div style={{ maxWidth: 520, margin: '80px auto', padding: 24, textAlign: 'center' }}>
-      <h1 className="disp" style={{ fontSize: 20, fontWeight: 700 }}>Demo temporarily unavailable</h1>
-      <p className="t-ink3" style={{ marginTop: 10, lineHeight: 1.6 }}>We couldn&apos;t reach the demo ledger just now. Please refresh in a moment — no action needed on your part.</p>
+      <h1 className="disp" style={{ fontSize: 20, fontWeight: 700 }}>Demo connection unavailable</h1>
+      <p className="t-ink3" style={{ marginTop: 10, lineHeight: 1.6 }}>We couldn&apos;t connect to Canton or finish creating your isolated workspace. Please retry in a moment.</p>
       <button className="btn accent" style={{ marginTop: 16 }} onClick={() => window.location.reload()}>Retry</button>
-      <p className="t-mut" style={{ marginTop: 18, fontSize: 11.5 }}>Running locally? Start the ledger with <span className="mono">./scripts/start-sandbox.sh</span>, then reload.</p>
+      <p className="t-mut" style={{ marginTop: 18, fontSize: 11.5 }}>Running locally? Start the complete demo with <span className="mono">./scripts/reset-local-demo.sh</span>, then reload.</p>
     </div>
   );
 
@@ -87,10 +105,12 @@ export default function Workspace() {
             <span className="brand-mark"><Icon name="lock" size={17} /></span>
             <div>
               <div className="brand-name">Cloak<span>RFQ</span> <span className="rec">Receipts</span></div>
-              <div className="brand-sub">Private invoice financing · <Term id="canton">Canton</Term></div>
+              <div className="brand-sub">Private Receivable Sale RFQs · <Term id="canton">Canton</Term></div>
             </div>
           </div>
-          <span className="demo-badge" title="Interactive demo — no wallet, sign-up, or real money needed">Demo · no real funds</span>
+          <span className="demo-badge" title="Real Daml workflow transactions with CIP-56-compatible mock funding">
+            {isSessionMode() ? 'Canton DevNet · mock funds' : 'Local Canton · mock funds'}
+          </span>
           <span className="spacer" />
           <button className="chip ghost" style={{ cursor: 'pointer' }} onClick={() => setShowWelcome(true)}>? How it works</button>
           <NewDealButton />
@@ -136,27 +156,25 @@ const toastLinkStyle: React.CSSProperties = { marginLeft: 12, paddingLeft: 12, b
 function Toast() {
   const { state } = useStore();
   if (!state.toast) return null;
-  // The /tx page waits for the explorer to index the tx, then forwards — so a
-  // fresh transaction never lands on a 404. (It routes to Activity off DevNet.)
   return (
     <div className="toast">
       <span className="dot" style={{ background: state.toastColor }} />
       <span>{state.toast}</span>
       {state.toastTx && (
-        <a href={`/tx/${state.toastTx}`} target="_blank" rel="noopener noreferrer" style={toastLinkStyle}>Explore transaction ↗</a>
+        <Link href={`/activity?tx=${state.toastTx}`} style={toastLinkStyle}>View in Activity →</Link>
       )}
     </div>
   );
 }
 
-// First-run welcome — explains what the app is, the 3-step flow, and that it's a
-// role-play demo, so a new user isn't dropped into a jargon-heavy workspace cold.
+// First-run welcome: a compact overview of the complete demo workflow.
 function WelcomeOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
   const steps = [
-    { n: '1', t: 'Register your invoice', d: 'Add an unpaid invoice you want to turn into cash now — we call it a “Receivable”.' },
-    { n: '2', t: 'Get it approved', d: 'Switch to the Compliance and Risk roles (top tabs) and approve it — in this demo you play every party yourself.' },
-    { n: '3', t: 'Send private requests', d: 'Open the RFQ (Request for Quote) to send each Funder its own private request — no Funder can see another’s.' },
+    { n: '1', t: 'Register the Receivable', d: 'Add the unpaid invoice the Seller wants to sell through a private RFQ.' },
+    { n: '2', t: 'Attest eligibility and risk', d: 'Compliance records eligibility, while the Risk Assessor assigns a risk tier. The Seller derives scoped certificates.' },
+    { n: '3', t: 'Collect Private Quotes', d: 'Open a separate request for each Funder. Every Funder sees only its own request and submits an allocation-backed quote.' },
+    { n: '4', t: 'Settle and transfer', d: 'After the deadline, the Seller settles one quote and the winning Funder accepts the pending Receivable transfer.' },
   ];
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -166,8 +184,8 @@ function WelcomeOverlay({ open, onClose }: { open: boolean; onClose: () => void 
           <h2 className="disp" style={{ fontSize: 19, fontWeight: 700 }}>Welcome to CloakRFQ</h2>
         </div>
         <p className="t-ink2" style={{ fontSize: 13.5, lineHeight: 1.6 }}>
-          A private marketplace for <b>invoice financing</b> on the Canton Network: sell an unpaid invoice
-          to Funders early — <b>without exposing your data to competing Funders</b>.
+          A private marketplace for <b>Receivable Sale RFQs</b> on Canton. Funders compete without seeing
+          each other&apos;s quotes or data beyond what the Seller discloses to them.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 13, margin: '16px 0' }}>
           {steps.map((s) => (
@@ -182,7 +200,7 @@ function WelcomeOverlay({ open, onClose }: { open: boolean; onClose: () => void 
         </div>
         <div className="note" style={{ fontSize: 12 }}>
           <Icon name="eyeoff" size={16} color="#57e3a0" />
-          <div>This is a free interactive <b>demo</b>. You role-play all seven parties to see how each sees only what it&apos;s entitled to. <b>No wallet, sign-up, or real money</b> needed — ledger actions are real test-net transactions.</div>
+          <div>Workflow actions are real Daml transactions on Canton. Token funding uses CIP-56-compatible demo fixtures; <b>no wallet or real money is used</b>.</div>
         </div>
         <button className="btn accent block" style={{ marginTop: 16 }} onClick={onClose}>Got it — start the demo</button>
       </div>
