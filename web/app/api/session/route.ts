@@ -57,11 +57,6 @@ async function getSynchronizerId(origin: string): Promise<string> {
   return String(synchronizer.synchronizerId);
 }
 
-async function existingParties(origin: string): Promise<Map<string, string>> {
-  const { status, json } = await api(origin, 'GET', '/v2/parties');
-  if (status !== 200) throw new Error(`Party lookup failed (HTTP ${status})`);
-  return new Map((json?.partyDetails ?? []).map((item: any) => [String(item.party).split('::')[0], String(item.party)]));
-}
 
 async function waitForParty(origin: string, party: string, synchronizerId: string): Promise<void> {
   for (let attempt = 0; attempt < 10; attempt++) {
@@ -85,24 +80,22 @@ async function allocateParty(origin: string, hint: string, synchronizerId: strin
     });
     const party = json?.partyDetails?.party;
     if (status === 200 && party) return String(party);
+    const cause = String(json?.cause ?? json?.code ?? 'unknown error');
     if (status === 400) {
-      const known = (await existingParties(origin)).get(hint);
-      if (known) return known;
+      const existing = cause.match(/Party already exists: party (\S+) is already allocated/)?.[1];
+      if (existing) return existing;
       if (attempt < 5) { await pause(1250); continue; }
     }
-    const cause = json?.cause ?? json?.code ?? 'unknown error';
     throw new Error(`Party allocation failed for ${role} (HTTP ${status}): ${cause}`);
   }
   throw new Error(`Party allocation failed for ${role}`);
 }
 async function provision(origin: string, sid: string): Promise<SessionConfig> {
   const synchronizerId = await getSynchronizerId(origin);
-  const existing = await existingParties(origin);
   const parties: Record<string, string> = {};
 
   for (const [role, base] of Object.entries(ROLES)) {
-    const hint = partyHint(base, sid);
-    const party = existing.get(hint) ?? await allocateParty(origin, hint, synchronizerId, role);
+    const party = await allocateParty(origin, partyHint(base, sid), synchronizerId, role);
     parties[role] = party;
     await waitForParty(origin, party, synchronizerId);
   }
