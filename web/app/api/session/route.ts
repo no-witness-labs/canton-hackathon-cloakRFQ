@@ -168,3 +168,16 @@ export async function GET(req: NextRequest) {
     inflight--;
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  if (!ENABLED || !TARGET || !HAS_OIDC) return Response.json({ enabled: false });
+  const sid = (req.nextUrl.searchParams.get('sid') || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
+  if (!sid) return Response.json({ error: 'missing sid' }, { status: 400 });
+
+  try {
+    await retireSession(req.nextUrl.origin, sid);
+    return Response.json({ retired: true });
+  } catch (error) {
+    return Response.json({ error: String(error) }, { status: 502 });
+  }
+}
