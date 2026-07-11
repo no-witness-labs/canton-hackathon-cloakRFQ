@@ -4,7 +4,9 @@
   "scripts": {
     "capture:v3": "node v3/capture-images.mjs",
     "finalize:v3": "node v3/finalize-images.mjs",
-    "validate:v3": "node v3/validate-image-plan.mjs"
+    "validate:v3": "node v3/validate-image-plan.mjs",
+    "narrate:v3": "node v3/generate-narration.mjs",
+    "render:v3": "node v3/render.mjs"
   },
   "dependencies": {
     "playwright-core": "1.61.1"
