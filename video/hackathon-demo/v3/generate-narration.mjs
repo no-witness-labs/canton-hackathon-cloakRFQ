@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const sources = [
   { name: '02-origination', expectedCues: 7 },
+  { name: '03-quotes', expectedCues: 4 },
   { name: '04-privacy', expectedCues: 6 },
+  { name: '06-audit', expectedCues: 2 },
 ];
 const narrationDir = resolve(here, 'assets', 'narration');
 const captionDir = resolve(here, 'assets', 'captions');
@@ -29,7 +31,15 @@ const formatTime = (value) => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')},${String(remainder).padStart(3, '0')}`;
 };
 
-for (const { name, expectedCues } of sources) {
+const requested = new Set(process.argv.slice(2));
+const selectedSources = requested.size > 0
+  ? sources.filter(({ name }) => requested.has(name))
+  : sources;
+if (requested.size > 0 && selectedSources.length !== requested.size) {
+  throw new Error('Unknown V3 narration source requested');
+}
+
+for (const { name, expectedCues } of selectedSources) {
   const media = resolve(narrationDir, `${name}.mp3`);
   const subtitles = resolve(narrationDir, `${name}.vtt`);
   const result = spawnSync('edge-tts', [

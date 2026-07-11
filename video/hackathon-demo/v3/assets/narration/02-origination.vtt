@@ -1,27 +1,27 @@
 1
-00:00:00,050 --> 00:00:03,359
+00:00:00,050 --> 00:00:03,385
 The Seller registers a represented receivable.
 
 2
-00:00:03,359 --> 00:00:07,916
+00:00:03,385 --> 00:00:07,942
 Open RFQ stays blocked until both attestations exist.
 
 3
-00:00:07,916 --> 00:00:12,395
+00:00:07,942 --> 00:00:12,838
 Compliance and Risk then issue separate, scoped attestations.
 
 4
-00:00:12,395 --> 00:00:16,497
+00:00:12,838 --> 00:00:16,888
 Compliance records eligibility; Risk records the tier.
 
 5
-00:00:16,497 --> 00:00:20,078
+00:00:16,888 --> 00:00:20,273
 Both are now recorded, so the Seller can open RFQ.
 
 6
-00:00:20,078 --> 00:00:26,432
+00:00:20,273 --> 00:00:26,289
 The Seller derives certificates and creates one private request for each invited Funder.
 
 7
-00:00:26,432 --> 00:00:35,664
-These are real Daml contracts, with role-specific signatories and observers, while the raw debtor identity remains with the Seller.
+00:00:26,289 --> 00:00:36,757
+These are real Daml contracts with role-specific signatories and observers; during bidding, raw Debtor identity is limited to Seller and Compliance.

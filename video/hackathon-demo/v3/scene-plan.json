@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": "3.1",
   "maxDurationSeconds": 180,
   "video": {
     "width": 1440,
@@ -30,14 +30,14 @@
     },
     {
       "id": "02-origination",
-      "duration": 36.236,
+      "duration": 37.34,
       "audioDelay": 0,
       "audio": "assets/narration/02-origination.mp3",
       "captions": "assets/captions/02-origination.vtt",
       "beats": [
         {
           "image": "003-seller-register-receivable.png",
-          "duration": 3.359,
+          "duration": 3.385,
           "purpose": "Seller registers the represented Receivable"
         },
         {
@@ -52,121 +52,121 @@
         },
         {
           "image": "006-compliance-review.png",
-          "duration": 2.145,
+          "duration": 2.236,
           "purpose": "Compliance reviews its scoped disclosure"
         },
         {
           "image": "007-compliance-approved.png",
-          "duration": 2.145,
+          "duration": 2.236,
           "purpose": "Compliance records eligibility"
         },
         {
           "image": "008-risk-review.png",
-          "duration": 2.145,
+          "duration": 2.236,
           "purpose": "Risk reviews its scoped disclosure"
         },
         {
           "image": "009-risk-rated.png",
-          "duration": 2.146,
+          "duration": 2.238,
           "purpose": "Risk records the tier"
         },
         {
           "image": "010-seller-open-rfq-enabled.png",
-          "duration": 3.581,
+          "duration": 3.385,
           "purpose": "Both attestations enable Open RFQ"
         },
         {
           "image": "011-seller-rfq-opened.png",
-          "duration": 16.158,
+          "duration": 17.067,
           "purpose": "Seller derives certificates and creates private requests"
         }
       ]
     },
     {
       "id": "03-quotes",
-      "duration": 24.98,
+      "duration": 26.252,
       "audioDelay": 0,
-      "audio": "../assets/narration/03-quotes.mp3",
-      "captions": "../assets/captions/03-quotes.vtt",
+      "audio": "assets/narration/03-quotes.mp3",
+      "captions": "assets/captions/03-quotes.vtt",
       "beats": [
         {
           "image": "012-funder-a-compose-offer.png",
-          "duration": 3.6,
-          "purpose": "Funder A reviews its certified package"
+          "duration": 2.949,
+          "purpose": "Funder A reviews its private RFQ package"
         },
         {
           "image": "013-funder-a-offer-submitted.png",
-          "duration": 3.548,
+          "duration": 2.949,
           "purpose": "Funder A submits its allocation-backed quote"
         },
         {
           "image": "014-funder-b-compose-offer.png",
-          "duration": 5.67,
+          "duration": 6.354,
           "purpose": "Funder B composes different commercial terms"
         },
         {
           "image": "015-funder-b-offer-submitted.png",
-          "duration": 5.671,
-          "purpose": "Funder B submits without seeing Funder A"
+          "duration": 7.63,
+          "purpose": "Funder B submits a matching committed demo allocation"
         },
         {
           "image": "016-seller-compares-open-offers.png",
-          "duration": 6.491,
+          "duration": 6.37,
           "purpose": "Seller compares private offers before the deadline"
         }
       ]
     },
     {
       "id": "04-privacy",
-      "duration": 25.556,
+      "duration": 25.436,
       "audioDelay": 0,
       "audio": "assets/narration/04-privacy.mp3",
       "captions": "assets/captions/04-privacy.vtt",
       "beats": [
         {
           "image": "017-ledger-seller-view.png",
-          "duration": 3.333,
+          "duration": 3.346,
           "purpose": "Seller ledger entitlements"
         },
         {
           "image": "018-ledger-funder-a-view.png",
-          "duration": 1.415,
+          "duration": 1.436,
           "purpose": "Funder A ledger entitlements"
         },
         {
           "image": "019-ledger-funder-b-view.png",
-          "duration": 1.415,
+          "duration": 1.437,
           "purpose": "Funder B ledger entitlements"
         },
         {
           "image": "020-ledger-funder-c-view.png",
-          "duration": 1.415,
+          "duration": 1.437,
           "purpose": "Funder C receives no competing quotes"
         },
         {
           "image": "021-ledger-compliance-view.png",
-          "duration": 2.07,
+          "duration": 1.959,
           "purpose": "Compliance scoped contracts"
         },
         {
           "image": "022-ledger-risk-view.png",
-          "duration": 2.07,
+          "duration": 1.96,
           "purpose": "Risk scoped contracts"
         },
         {
           "image": "023-ledger-coordinator-view.png",
-          "duration": 2.878,
+          "duration": 3.333,
           "purpose": "Coordinator sees no quote contents"
         },
         {
           "image": "024-ledger-auditor-before-settlement.png",
-          "duration": 2.904,
+          "duration": 2.579,
           "purpose": "Auditor sees no pre-settlement marketplace"
         },
         {
           "image": "025-ledger-outsider-view.png",
-          "duration": 8.056,
-          "purpose": "Outsider sees nothing useful under Canton disclosure"
+          "duration": 7.949,
+          "purpose": "Outsider sees nothing under Canton disclosure"
         }
       ]
     },
@@ -201,14 +201,14 @@
     },
     {
       "id": "06-audit",
-      "duration": 21.884,
+      "duration": 20.42,
       "audioDelay": 0,
-      "audio": "../assets/narration/06-audit.mp3",
-      "captions": "../assets/captions/06-audit.vtt",
+      "audio": "assets/narration/06-audit.mp3",
+      "captions": "assets/captions/06-audit.vtt",
       "beats": [
         {
           "image": "030-auditor-scoped-evidence.png",
-          "duration": 21.884,
+          "duration": 20.42,
           "purpose": "Auditor receives only scoped settlement evidence"
         }
       ]

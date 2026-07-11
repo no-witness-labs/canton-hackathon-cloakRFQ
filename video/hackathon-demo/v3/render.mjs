@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const demoRoot = resolve(here, '..');
 const plan = JSON.parse(await readFile(resolve(here, 'scene-plan.json'), 'utf8'));
-const outputDir = resolve(demoRoot, 'work', 'v3');
+const version = String(plan.version);
+const outputDir = resolve(demoRoot, 'work', `v${version}`);
 const rawImages = resolve(here, 'raw-images');
 const { width, height, contentWidth, contentHeight, fps } = plan.video;
 
@@ -88,7 +89,7 @@ await writeFile(
   plan.scenes.map((scene) => `file '${resolve(outputDir, `${scene.id}.mp4`)}'`).join('\n') + '\n',
 );
 
-const finalPath = resolve(demoRoot, 'cloakrfq-hackathon-demo-v3.mp4');
+const finalPath = resolve(demoRoot, `cloakrfq-hackathon-demo-v${version}.mp4`);
 run('ffmpeg', [
   '-y', '-v', 'warning', '-f', 'concat', '-safe', '0', '-i', concatPath,
   '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k',
