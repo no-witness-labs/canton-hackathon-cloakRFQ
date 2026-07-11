@@ -8,8 +8,8 @@ simulated demo connector (no browser key-signing); authorization is handled
 server-side per party. Its job is to make the full MVP workflow and its
 multi-party selective-disclosure story understandable in a few minutes.
 
-The UI is built to match the design prototype `CloakRFQ.dc.html` (the visual +
-UX source of truth) and its `handoff/` spec.
+The application uses a single operational workspace so judges can switch roles
+and inspect the same live RFQ through each party's disclosure scope.
 
 ## Run it
 
@@ -41,9 +41,9 @@ it for real:
 - **Compliance** — eligibility attestations; quote prices not visible.
 - **Risk Assessor** — risk attestations only, separate scoped role.
 - **Coordinator** — workflow timeline; Private Quote contents sealed.
-- **Auditor / Regulator** — the Scoped Compliance Receipt (after settlement) +
-  the withheld-by-default list.
-- **Outsider** — opaque archived contracts; what / who / how much all sealed.
+- **Auditor** — nothing before settlement; afterward, only scoped
+  `ReceivableSaleSettlement` evidence and the withheld-by-default list.
+- **Outsider** — sees no workflow contracts because it is not a stakeholder.
 
 **Wallet connector** (top bar): connect a party wallet to act on the RFQ. The
 connected party **follows the selected role** (Seller → Northwind Components,
@@ -69,7 +69,6 @@ components/
 lib/
   store.tsx         State engine (RFQ lifecycle, per-role visibility, wallet) +
                     demo scenario values
-  types.ts          Domain model (copied from the design's handoff/types.ts)
   icons.tsx         SVG icon set
 ```
 

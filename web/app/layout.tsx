@@ -9,7 +9,7 @@ const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], 
 
 export const metadata: Metadata = {
   title: 'CloakRFQ Receipts · Private invoice-financing RFQs on Canton',
-  description: 'A private RFQ marketplace for Receivable Sales on Canton. Funders submit proof-backed Private Quotes, the Seller selects the Best Compliant Quote, settlement is demonstrated on-ledger, and Auditors receive Scoped Compliance Receipts.',
+  description: 'A private invoice-financing RFQ marketplace on Canton. Invited Funders submit funding-backed Private Quotes without seeing competitors, Sellers compare eligible offers, and Auditors receive scoped settlement evidence.',
 };
 
 export const viewport: Viewport = {

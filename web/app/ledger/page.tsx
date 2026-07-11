@@ -1,9 +1,8 @@
 'use client';
 
-// Integration proof (#21): reads the LIVE Canton ledger per party via the JSON
-// API. Switch party → see exactly the contracts Canton lets that party see
-// (Outsider sees nothing). This is the privacy enforced on-ledger, not by the UI.
-// The polished role-switcher Workspace gets wired to this next.
+// Live privacy proof: reads the Canton ledger separately for each configured
+// party. Switching party shows only contracts that party is entitled to see;
+// the Outsider sees nothing.
 
 import { useCallback, useEffect, useState } from 'react';
 import { loadConfig, getParties, listActive, seedDemo, type Contract, type Role } from '@/lib/ledger';

@@ -342,7 +342,7 @@ function WalletConnector() {
                     </button>
                   ))}
                 </div>
-                <div className="w-foot">CloakRFQ Phase 1 · Canton Devnet — non-production. No real custody or signing.</div>
+                <div className="w-foot">CloakRFQ MVP · Canton Devnet — non-production. No real custody or signing.</div>
               </>
             )}
           </div>
@@ -630,7 +630,7 @@ function SellerQuotesPanel() {
               </div>
               <div style={{ textAlign: 'right', flex: 'none' }}>
                 <div className="q-net">{usd(q.netPurchasePrice)}</div>
-                <div className="q-net-sub">demo allocation locked</div>
+                <div className="q-net-sub">demo allocation committed</div>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 13 }}>
@@ -643,7 +643,7 @@ function SellerQuotesPanel() {
           </div>
         ))}
         {state.requests.length > 0 && (
-          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>{state.requests.length} funder{state.requests.length === 1 ? '' : 's'} haven’t offered yet. Accepting an offer settles atomically: funds move to you, the invoice transfers to that Funder.</p>
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.5 }}>{state.requests.length} funder{state.requests.length === 1 ? '' : 's'} haven’t offered yet. Accepting an offer settles the demo payment and initiates the invoice transfer in one transaction; the winning Funder accepts ownership afterward.</p>
         )}
       </div>
     </section>
@@ -806,7 +806,7 @@ function FunderView() {
                 </span>
               </div>
               <p className="t-mut" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>
-                {won ? (settled!.transferAccepted ? 'You accepted the receivable ownership transfer after settlement.' : 'The seller has been paid. Accept the receivable transfer to complete your ownership step.') : lost ? 'Your mock allocation lock is released.' : 'The seller can accept & settle once the quoting window closes.'}
+                {won ? (settled!.transferAccepted ? 'You accepted the receivable ownership transfer after settlement.' : 'The seller has been paid. Accept the receivable transfer to complete your ownership step.') : lost ? 'Your unselected demo allocation remains subject to its expiry.' : 'The seller can accept & settle once the quoting window closes.'}
               </p>
               {won && !settled!.transferAccepted && (
                 <button className="btn accent block" style={{ marginTop: 12 }} onClick={() => acceptReceivableTransfer(ft)}>
@@ -1045,7 +1045,7 @@ function CoordinatorView() {
             <Icon name="lock" size={15} color="#6b7280" />
             <span className="t-ink3" style={{ fontSize: 12.5 }}>Phase 1 has <span className="t-ink2" style={{ fontWeight: 600 }}>no Coordinator party</span> on-ledger</span>
           </div>
-          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.55 }}>The origination workflow is Seller-driven end to end: the Seller registers the Receivable, gathers scoped attestations, derives the certificates, and authors one RFQRequest per Funder. A Coordinator/quote-router is introduced in a later phase. This view mirrors the on-ledger progress; it holds no privileged data.</p>
+          <p className="t-mut" style={{ fontSize: 11.5, lineHeight: 1.55 }}>The origination workflow is Seller-driven end to end: the Seller registers the Receivable, gathers scoped attestations, derives the certificates, and authors one RFQRequest per Funder. This Coordinator view is an off-ledger workflow summary; it holds no privileged contract or quote data.</p>
         </section>
         <section className="panel" style={{ padding: '16px 17px' }}>
           <div className="eyebrow" style={{ marginBottom: 11 }}>Parties in Phase 1</div>
@@ -1061,32 +1061,35 @@ function CoordinatorView() {
 /* ============================ AUDITOR ============================ */
 function AuditorView() {
   const { state } = useStore();
-  const comp = state.compliance, risk = state.risk;
-  const rows = [
-    { k: 'Receivable registered', v: state.receivable ? state.receivable.invoiceId : '—', color: state.receivable ? '#eef0f3' : '#6b7280' },
-    { k: 'Compliance attestation', v: comp ? (comp.sellerEligible && comp.rfqEligible ? 'Eligible' : 'Not eligible') : 'pending', color: comp ? '#57e3a0' : '#6b7280' },
-    { k: 'Compliance certificate', v: comp?.certified ? 'Derived' : 'pending', color: comp?.certified ? '#57e3a0' : '#6b7280' },
-    { k: 'Risk attestation', v: risk ? (TIER_LABEL[risk.riskTier] ?? risk.riskTier) : 'pending', color: risk ? '#57e3a0' : '#6b7280' },
-    { k: 'Risk certificate', v: risk?.certified ? 'Derived' : 'pending', color: risk?.certified ? '#57e3a0' : '#6b7280' },
-    { k: 'Per-Funder RFQ requests', v: String(state.requests.length), color: state.requests.length ? '#57e3a0' : '#6b7280' },
-  ];
-  const withheld = ['Raw Debtor identity', 'Full compliance disclosure', 'Raw risk records', 'Per-Funder request contents', 'Funder identities'];
+  const settlement = state.settlement;
+  const rows = settlement ? [
+    { k: 'Outcome', v: 'Receivable sale settled' },
+    { k: 'Seller', v: 'Northwind Components' },
+    { k: 'Winning Funder', v: `Funder ${settlement.funderKey} · ${FUNDER_PARTY_NAMES[settlement.funderKey] ?? '—'}` },
+    { k: 'Net Purchase Price', v: usd(settlement.netPurchasePrice) },
+    { k: 'Demo payment', v: 'CIP-56 allocation settled' },
+    { k: 'Receivable transfer', v: settlement.transferAccepted ? 'Ownership accepted' : 'Transfer initiated' },
+    { k: 'Recorded at', v: settlement.settledAt.replace('T', ' ').slice(0, 19) + ' UTC' },
+  ] : [];
+  const withheld = ['Raw Debtor identity', 'Compliance and Risk source data', 'Full RFQ request set', 'Losing Funders and quotes', 'Full quote book'];
 
   return (
     <div className="grid-auditor">
       <section className="panel">
         <div className="panel-h">
           <span style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(87,227,160,0.12)', border: '1px solid rgba(87,227,160,0.28)', display: 'grid', placeItems: 'center', color: '#57e3a0', flex: 'none' }}><Icon name="shield" size={16} /></span>
-          <h2 className="lg">Origination trail</h2><span className="spacer" /><span className="h-tag">Phase 1</span>
+          <h2 className="lg">{settlement ? 'Scoped settlement evidence' : 'No settlement evidence yet'}</h2><span className="spacer" /><span className="h-tag">Auditor view</span>
         </div>
         <div style={{ padding: '6px 18px 16px' }}>
-          {rows.map((r) => (
+          {settlement ? rows.map((r) => (
             <div key={r.k} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '11px 0', borderBottom: '1px solid var(--line3)' }}>
               <span className="t-ink3" style={{ fontSize: 12.5 }}>{r.k}</span>
-              <span className="mono" style={{ fontSize: 12.5, fontWeight: 500, textAlign: 'right', color: r.color }}>{r.v}</span>
+              <span className="mono" style={{ fontSize: 12.5, fontWeight: 500, textAlign: 'right' }}>{r.v}</span>
             </div>
-          ))}
-          <p className="t-mut" style={{ fontSize: 11, lineHeight: 1.5, marginTop: 12 }}>The scoped <span className="t-ink3">Compliance Receipt</span> — an entitled audit disclosure at RFQ finality — is a later phase. Phase 1 records only the origination trail above.</p>
+          )) : (
+            <p className="t-mut" style={{ fontSize: 12.5, lineHeight: 1.6, padding: '12px 0' }}>The Auditor is not entitled to the private origination or quote workflow. Evidence appears here only after a `ReceivableSaleSettlement` is created.</p>
+          )}
+          {settlement && <p className="t-mut" style={{ fontSize: 11, lineHeight: 1.5, marginTop: 12 }}>This view is derived from the `ReceivableSaleSettlement` contract on which the Auditor is an observer.</p>}
         </div>
       </section>
 
@@ -1096,14 +1099,14 @@ function AuditorView() {
           <span className="t-ink2" style={{ fontSize: 12.5, fontWeight: 600 }}>Withheld by default</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {withheld.map((w2) => (
-            <div key={w2} style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'var(--hatch)', border: '1px solid var(--line2)', borderRadius: 7, padding: '8px 11px' }}>
+          {withheld.map((item) => (
+            <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'var(--hatch)', border: '1px solid var(--line2)', borderRadius: 7, padding: '8px 11px' }}>
               <Icon name="lock" size={12} color="#5a6069" />
-              <span className="mono" style={{ fontSize: 11.5, color: '#7a808b' }}>{w2}</span>
+              <span className="mono" style={{ fontSize: 11.5, color: '#7a808b' }}>{item}</span>
             </div>
           ))}
         </div>
-        <p className="t-mut" style={{ fontSize: 11, marginTop: 13, lineHeight: 1.55 }}>In Phase 1 the Auditor is not yet a party on any contract — nothing is disclosed to it on-ledger.</p>
+        <p className="t-mut" style={{ fontSize: 11, marginTop: 13, lineHeight: 1.55 }}>The Auditor receives settlement evidence, not the private marketplace or its competing offers.</p>
       </section>
     </div>
   );

@@ -337,7 +337,7 @@ export const SCENARIO: Phase1Scenario = {
   debtorIdentity: { legalName: 'Meridian Retail Group', jurisdiction: 'US-NY', entityType: 'Corporation' },
   compliance: {
     transactionPurpose: 'Receivable sale RFQ for working capital',
-    disclosureRestrictions: 'Package disclosure limited to eligible funders in later phases',
+    disclosureRestrictions: 'Package disclosure limited to the invited Funder for this request',
     sellerEligible: true, rfqEligible: true,
     policyVersion: 'MVP-COMPLIANCE-v1', certificationScope: 'Phase 1 RFQ package eligibility',
   },
