@@ -1,7 +1,7 @@
-# V3 Ordered Raw Images
+# Ordered Raw Images
 
 These screenshots were captured from one fresh end-to-end workflow. They are the
-ordered visual source for V3.
+ordered visual source for the final demo.
 
 ## Usage Rule
 
@@ -38,7 +38,7 @@ ordered visual source for V3.
 | 022 | [022-ledger-risk-view.png](022-ledger-risk-view.png) | Risk ledger view | Inspect Risk Assessor entitlements | The Risk Assessor sees only its scoped risk attestation and certificate-related contracts. | The Risk Assessor retains a separate, purpose-limited risk view. |
 | 023 | [023-ledger-coordinator-view.png](023-ledger-coordinator-view.png) | Coordinator ledger view | Confirm no quote visibility | The Coordinator is not a stakeholder on Private Quotes and sees no quote contents. | The Coordinator sees no Private Quote contents. |
 | 024 | [024-ledger-auditor-before-settlement.png](024-ledger-auditor-before-settlement.png) | Auditor ledger view | Confirm pre-settlement evidence is absent | Before settlement, the Auditor has no private RFQ or Quote contracts. | Before settlement, the Auditor sees none of the private marketplace. |
-| 025 | [025-ledger-outsider-view.png](025-ledger-outsider-view.png) | Outsider ledger view | Confirm non-party privacy | A non-party sees no useful contract data. | The Outsider sees nothing useful; this is Canton disclosure, not a visual filter. |
+| 025 | [025-ledger-outsider-view.png](025-ledger-outsider-view.png) | Outsider ledger view | Confirm non-party privacy | A non-party sees no contract data. | The Outsider sees nothing; this is Canton disclosure, not a visual filter. |
 | 026 | [026-seller-settlement-enabled.png](026-seller-settlement-enabled.png) | Seller | Response deadline closes | Accept and settle is enabled only after the common response deadline. | The response window is now closed, so the Seller can accept and settle one offer. |
 | 027 | [027-seller-settlement-recorded.png](027-seller-settlement-recorded.png) | Seller | Settle the selected Quote | The Seller receives demo payment and a pending Receivable transfer is initiated atomically. | The selected Quote settles: payment reaches the Seller and a pending transfer is created. |
 | 028 | [028-winner-transfer-ready.png](028-winner-transfer-ready.png) | Winning Funder | Pending Receivable transfer is ready | The Seller is paid and the winning Funder receives the ownership-acceptance action. | The winning Funder can now accept the pending Receivable transfer. |

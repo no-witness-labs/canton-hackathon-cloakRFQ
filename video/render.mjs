@@ -4,50 +4,71 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const workdir = process.env.CLOAKRFQ_VIDEO_WORKDIR
-  ?? resolve(here, 'assets');
-const timeline = JSON.parse(await readFile(resolve(here, 'timeline.json'), 'utf8'));
-const outputDir = resolve(here, 'work', 'v' + timeline.version);
-const { width, height, contentWidth, contentHeight, fps } = timeline.video;
+const plan = JSON.parse(await readFile(resolve(here, 'scene-plan.json'), 'utf8'));
+const outputDir = resolve(here, 'work');
+const rawImages = resolve(here, 'raw-images');
+const { width, height, contentWidth, contentHeight, fps } = plan.video;
 
 await mkdir(outputDir, { recursive: true });
 
-function run(command, args, options = {}) {
-  const result = spawnSync(command, args, { stdio: 'inherit', ...options });
+function run(command, args) {
+  const result = spawnSync(command, args, { stdio: 'inherit' });
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-for (const scene of timeline.scenes) {
-  const visualDuration = scene.segments.reduce((total, segment) => total + segment.duration, 0);
-  if (Math.abs(visualDuration - scene.duration) > 0.002) {
-    throw new Error(scene.id + ': visual duration ' + visualDuration + ' does not match ' + scene.duration);
-  }
+function parseTimestamp(value) {
+  const [hours, minutes, rest] = value.split(':');
+  const [seconds, milliseconds] = rest.split(',');
+  return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds) + Number(milliseconds) / 1000;
+}
+
+function formatTimestamp(value) {
+  const milliseconds = Math.max(0, Math.round(value * 1000));
+  const hours = Math.floor(milliseconds / 3600000);
+  const minutes = Math.floor((milliseconds % 3600000) / 60000);
+  const seconds = Math.floor((milliseconds % 60000) / 1000);
+  const remainder = milliseconds % 1000;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')},${String(remainder).padStart(3, '0')}`;
+}
+
+run(process.execPath, [resolve(here, 'validate-image-plan.mjs')]);
+
+for (const scene of plan.scenes) {
   const inputs = [];
   const filters = [];
-  scene.segments.forEach((segment, index) => {
-    inputs.push('-ss', String(segment.in), '-to', String(segment.out), '-i', resolve(workdir, 'clips', segment.clip));
-    const sourceDuration = segment.out - segment.in;
-    const ratio = segment.duration / sourceDuration;
+
+  scene.beats.forEach((beat, index) => {
+    inputs.push('-loop', '1', '-framerate', String(fps), '-t', String(beat.duration), '-i', resolve(rawImages, beat.image));
     filters.push(
       `[${index}:v]fps=${fps},scale=${contentWidth}:${contentHeight}:flags=lanczos,` +
       `pad=${width}:${height}:40:0:color=0x080a0d,format=yuv420p,` +
-      `trim=duration=${sourceDuration.toFixed(3)},setpts=(PTS-STARTPTS)*${ratio.toFixed(8)}[v${index}]`,
+      `trim=duration=${beat.duration.toFixed(3)},setpts=PTS-STARTPTS[v${index}]`,
     );
   });
 
-  const audioIndex = scene.segments.length;
-  inputs.push('-i', resolve(workdir, 'narration', `${scene.id}.mp3`));
-  const concatenated = scene.segments.map((_, index) => `[v${index}]`).join('');
+  const audioIndex = scene.beats.length;
+  inputs.push('-i', resolve(here, scene.audio));
+
+  const sourceCaptions = await readFile(resolve(here, scene.captions), 'utf8');
+  const shiftedCaptions = scene.audioDelay > 0
+    ? sourceCaptions.replace(/\d\d:\d\d:\d\d,\d{3}/g, (time) => formatTimestamp(parseTimestamp(time) + scene.audioDelay))
+    : sourceCaptions;
+  const captionPath = resolve(outputDir, `${scene.id}.vtt`);
+  await writeFile(captionPath, shiftedCaptions);
+
+  const concatenated = scene.beats.map((_, index) => `[v${index}]`).join('');
   const fadeOut = scene.duration - 0.35;
+  const delayMs = Math.round(scene.audioDelay * 1000);
   filters.push(
-    `${concatenated}concat=n=${scene.segments.length}:v=1:a=0[sequence]`,
-    `[sequence]trim=duration=${scene.duration},fade=t=in:st=0:d=0.3,` +
-      `fade=t=out:st=${fadeOut}:d=0.35,subtitles=${resolve(workdir, 'captions', `${scene.id}.vtt`)}:` +
+    `${concatenated}concat=n=${scene.beats.length}:v=1:a=0[sequence]`,
+    `[sequence]trim=duration=${scene.duration},fade=t=in:st=0:d=0.25,` +
+      `fade=t=out:st=${fadeOut.toFixed(3)}:d=0.35,subtitles=${captionPath}:` +
       `force_style='FontName=DejaVu Sans,FontSize=12,PrimaryColour=&H00FFFFFF,` +
       `BackColour=&HA6080A0D,BorderStyle=3,Outline=0,Shadow=0,Alignment=2,MarginV=4'[video]`,
-    `[${audioIndex}:a]loudnorm=I=-16:TP=-1.5:LRA=11,apad=pad_dur=4,` +
-      `atrim=duration=${scene.duration},afade=t=in:st=0:d=0.15,` +
-      `afade=t=out:st=${fadeOut}:d=0.35[audio]`,
+    `[${audioIndex}:a]loudnorm=I=-16:TP=-1.5:LRA=11,adelay=${delayMs}:all=1,` +
+      `apad=pad_dur=2,atrim=duration=${scene.duration},` +
+      `afade=t=in:st=${scene.audioDelay.toFixed(3)}:d=0.15,` +
+      `afade=t=out:st=${fadeOut.toFixed(3)}:d=0.35[audio]`,
   );
 
   run('ffmpeg', [
@@ -60,19 +81,19 @@ for (const scene of timeline.scenes) {
   ]);
 }
 
-const concatFile = resolve(outputDir, 'concat.txt');
+const concatPath = resolve(outputDir, 'concat.txt');
 await writeFile(
-  concatFile,
-  timeline.scenes.map((scene) => `file '${resolve(outputDir, `${scene.id}.mp4`)}'`).join('\n') + '\n',
+  concatPath,
+  plan.scenes.map((scene) => `file '${resolve(outputDir, `${scene.id}.mp4`)}'`).join('\n') + '\n',
 );
 
-const finalPath = resolve(here, 'cloakrfq-hackathon-demo-v2.mp4');
+const finalPath = resolve(here, 'cloakrfq-hackathon-demo.mp4');
 run('ffmpeg', [
-  '-y', '-v', 'warning', '-f', 'concat', '-safe', '0', '-i', concatFile,
+  '-y', '-v', 'warning', '-f', 'concat', '-safe', '0', '-i', concatPath,
   '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k',
   '-af', 'aresample=async=1:first_pts=0',
   '-metadata', 'title=CloakRFQ Receipts - Private Invoice Financing on Canton',
-  '-metadata', 'comment=Cue-aligned hackathon demo with synthetic narration',
+  '-metadata', 'comment=Image-first hackathon demo with cue-aligned synthetic narration',
   '-movflags', '+faststart', finalPath,
 ]);
 

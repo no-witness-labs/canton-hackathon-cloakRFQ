@@ -47,10 +47,10 @@ const escapeCell = (value) => value.replaceAll('|', '\\|').replaceAll('\n', ' ')
 const rows = catalog.map((image) =>
   `| ${String(image.order).padStart(3, '0')} | [${image.file}](${image.file}) | ${escapeCell(image.role)} | ${escapeCell(image.step)} | ${escapeCell(image.description)} | ${escapeCell(image.narrationCue)} |`,
 );
-const readme = `# V3 Ordered Raw Images
+const readme = `# Ordered Raw Images
 
 These screenshots were captured from one fresh end-to-end workflow. They are the
-ordered visual source for V3.
+ordered visual source for the final demo.
 
 ## Usage Rule
 
@@ -67,4 +67,4 @@ ${rows.join('\n')}
 `;
 await writeFile(resolve(outputDir, 'README.md'), readme);
 await writeFile(resolve(here, 'image-catalog.json'), JSON.stringify(catalog, null, 2) + '\n');
-console.log(`Finalized ${catalog.length} ordered V3 images`);
+console.log(`Finalized ${catalog.length} ordered images`);

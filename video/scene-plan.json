@@ -1,5 +1,4 @@
 {
-  "version": "3.1",
   "maxDurationSeconds": 180,
   "video": {
     "width": 1440,
@@ -13,8 +12,8 @@
       "id": "01-intro",
       "duration": 22.688,
       "audioDelay": 1.5,
-      "audio": "../assets/narration/01-intro.mp3",
-      "captions": "../assets/captions/01-intro.vtt",
+      "audio": "assets/narration/01-intro.mp3",
+      "captions": "assets/captions/01-intro.vtt",
       "beats": [
         {
           "image": "001-loading.png",
@@ -174,8 +173,8 @@
       "id": "05-settlement",
       "duration": 32.828,
       "audioDelay": 0,
-      "audio": "../assets/narration/05-settlement.mp3",
-      "captions": "../assets/captions/05-settlement.vtt",
+      "audio": "assets/narration/05-settlement.mp3",
+      "captions": "assets/captions/05-settlement.vtt",
       "beats": [
         {
           "image": "026-seller-settlement-enabled.png",
@@ -217,8 +216,8 @@
       "id": "07-close",
       "duration": 13.58,
       "audioDelay": 0,
-      "audio": "../assets/narration/07-close.mp3",
-      "captions": "../assets/captions/07-close.vtt",
+      "audio": "assets/narration/07-close.mp3",
+      "captions": "assets/captions/07-close.vtt",
       "beats": [
         {
           "image": "031-closing-value-proposition.png",

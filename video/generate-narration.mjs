@@ -4,24 +4,21 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const workdir = process.env.CLOAKRFQ_VIDEO_WORKDIR
-  ?? resolve(here, 'assets');
-const names = ['01-intro', '02-origination', '03-quotes', '04-privacy', '05-settlement', '06-audit', '07-close'];
+const sources = [
+  { name: '01-intro', expectedCues: 3 },
+  { name: '02-origination', expectedCues: 7 },
+  { name: '03-quotes', expectedCues: 4 },
+  { name: '04-privacy', expectedCues: 6 },
+  { name: '05-settlement', expectedCues: 5 },
+  { name: '06-audit', expectedCues: 2 },
+  { name: '07-close', expectedCues: 1 },
+];
+const narrationDir = resolve(here, 'assets', 'narration');
+const captionDir = resolve(here, 'assets', 'captions');
 const voice = 'en-US-AndrewMultilingualNeural';
 
-await mkdir(resolve(workdir, 'narration'), { recursive: true });
-await mkdir(resolve(workdir, 'captions'), { recursive: true });
-
-for (const name of names) {
-  const result = spawnSync('edge-tts', [
-    '--voice', voice,
-    '--rate=-4%',
-    '--file', resolve(here, 'narration', `${name}.txt`),
-    '--write-media', resolve(workdir, 'narration', `${name}.mp3`),
-    '--write-subtitles', resolve(workdir, 'narration', `${name}.vtt`),
-  ], { stdio: 'inherit' });
-  if (result.status !== 0) process.exit(result.status ?? 1);
-}
+await mkdir(narrationDir, { recursive: true });
+await mkdir(captionDir, { recursive: true });
 
 const parseTime = (value) => {
   const [hours, minutes, rest] = value.split(':');
@@ -37,17 +34,38 @@ const formatTime = (value) => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')},${String(remainder).padStart(3, '0')}`;
 };
 
-for (const name of names) {
-  const source = await readFile(resolve(workdir, 'narration', `${name}.vtt`), 'utf8');
-  const entries = [...source.matchAll(/\d+\s*\n(\d\d:\d\d:\d\d,\d{3}) --> (\d\d:\d\d:\d\d,\d{3})\s*\n([^\n]+)\s*/g)];
+const requested = new Set(process.argv.slice(2));
+const selectedSources = requested.size > 0
+  ? sources.filter(({ name }) => requested.has(name))
+  : sources;
+if (requested.size > 0 && selectedSources.length !== requested.size) {
+  throw new Error('Unknown narration source requested');
+}
+
+for (const { name, expectedCues } of selectedSources) {
+  const media = resolve(narrationDir, `${name}.mp3`);
+  const subtitles = resolve(narrationDir, `${name}.vtt`);
+  const result = spawnSync('edge-tts', [
+    '--voice', voice,
+    '--rate=-4%',
+    '--file', resolve(here, 'narration', `${name}.txt`),
+    '--write-media', media,
+    '--write-subtitles', subtitles,
+  ], { stdio: 'inherit' });
+  if (result.status !== 0) process.exit(result.status ?? 1);
+
+  const raw = (await readFile(subtitles, 'utf8')).trimEnd() + '\n';
+  await writeFile(subtitles, raw);
+  const entries = [...raw.matchAll(/\d+\s*\n(\d\d:\d\d:\d\d,\d{3}) --> (\d\d:\d\d:\d\d,\d{3})\s*\n([^\n]+)\s*/g)];
+  if (entries.length !== expectedCues) {
+    throw new Error(`${name}: expected ${expectedCues} narration cues, received ${entries.length}`);
+  }
+
   const cues = [];
   for (const entry of entries) {
     const start = parseTime(entry[1]);
     const end = parseTime(entry[2]);
-    const text = entry[3]
-      .replace(/CIP fifty-six/g, 'CIP-56')
-      .replace(/Receivable Sale Settlement/g, 'ReceivableSaleSettlement');
-    const words = text.split(/\s+/);
+    const words = entry[3].split(/\s+/);
     for (let index = 0, cursor = start; index < words.length; index += 8) {
       const chunk = words.slice(index, index + 8);
       const next = Math.min(end, cursor + (end - start) * (chunk.length / words.length));
@@ -55,10 +73,11 @@ for (const name of names) {
       cursor = next;
     }
   }
-  const output = cues
+
+  const captions = cues
     .map((cue, index) => `${index + 1}\n${formatTime(cue.start)} --> ${formatTime(cue.end)}\n${cue.text}\n`)
     .join('\n');
-  await writeFile(resolve(workdir, 'captions', `${name}.vtt`), output);
+  await writeFile(resolve(captionDir, `${name}.vtt`), captions);
 }
 
-console.log(`Narration and captions generated in ${workdir}`);
+console.log(`Generated narration and captions in ${resolve(here, 'assets')}`);

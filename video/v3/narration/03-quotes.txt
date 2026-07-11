@@ -1,1 +1,0 @@
-Each Funder receives only its own RFQ package and submits its own Private Quote. A valid quote requires a committed demo allocation compatible with CIP fifty-six. That allocation must match the RFQ, Seller, amount, token administrator, and validity window. Competing Funders cannot inspect one another's requests, prices, or commercial terms.

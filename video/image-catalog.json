@@ -221,8 +221,8 @@
     "slug": "ledger-outsider-view",
     "role": "Outsider ledger view",
     "step": "Confirm non-party privacy",
-    "description": "A non-party sees no useful contract data.",
-    "narrationCue": "The Outsider sees nothing useful; this is Canton disclosure, not a visual filter."
+    "description": "A non-party sees no contract data.",
+    "narrationCue": "The Outsider sees nothing; this is Canton disclosure, not a visual filter."
   },
   {
     "order": 26,

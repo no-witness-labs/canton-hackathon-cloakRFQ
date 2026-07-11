@@ -1,23 +1,27 @@
 1
-00:00:00,050 --> 00:00:04,819
-Only after settlement does the Auditor receive scoped
+00:00:00,050 --> 00:00:03,788
+Only after settlement does the Auditor receive a
 
 2
-00:00:04,819 --> 00:00:09,587
-ReceivableSaleSettlement evidence: the outcome, parties, accepted price, demo
+00:00:03,788 --> 00:00:07,526
+scoped Receivable Sale Settlement record: the Seller, winning
 
 3
-00:00:09,587 --> 00:00:13,164
-payment status, transfer status, and time.
+00:00:07,526 --> 00:00:11,264
+Funder, accepted terms, allocation and transfer references, and
 
 4
-00:00:13,164 --> 00:00:16,787
-The Auditor does not receive the private quote
+00:00:11,264 --> 00:00:11,731
+time.
 
 5
-00:00:16,787 --> 00:00:20,409
-book, losing Funders, raw debtor identity, or attestation
+00:00:11,731 --> 00:00:15,342
+The Auditor does not receive the private quote
 
 6
-00:00:20,409 --> 00:00:21,315
+00:00:15,342 --> 00:00:18,953
+book, losing Funders, raw debtor identity, or attestation
+
+7
+00:00:18,953 --> 00:00:19,856
 source data.
