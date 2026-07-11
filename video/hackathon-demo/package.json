@@ -1,0 +1,12 @@
+{
+  "name": "cloakrfq-hackathon-video",
+  "private": true,
+  "scripts": {
+    "capture:v3": "node v3/capture-images.mjs",
+    "finalize:v3": "node v3/finalize-images.mjs",
+    "validate:v3": "node v3/validate-image-plan.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.61.1"
+  }
+}
