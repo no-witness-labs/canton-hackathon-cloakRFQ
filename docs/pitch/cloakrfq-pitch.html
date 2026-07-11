@@ -114,7 +114,7 @@
   tr.dim td { color: #7c828d; }
 
   /* ---------- quote cards (slide 5) ---------- */
-  .quotes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px; margin: auto 0; }
+  .quotes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin: auto 0; }
   .qcard {
     background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px;
     padding: 30px 28px; position: relative;
@@ -208,7 +208,7 @@
   <h1>Cloak<span class="rfq">RFQ</span> <span class="receipts">Receipts</span></h1>
   <div class="title-tag">Private invoice financing where every party sees only its slice of the deal.</div>
   <div class="title-sub">For suppliers who need cash before their invoices come due, and the factors, credit funds, and trade-finance desks that compete to provide it. <span style="color:#c9ced6">Now live on Canton DevNet: every step is a real Daml transaction.</span></div>
-  <div class="foot title-foot">Receivable Sale &nbsp;·&nbsp; Blind RFQ &nbsp;·&nbsp; CIP-56 Settlement &nbsp;·&nbsp; Scoped Compliance Receipt</div>
+  <div class="foot title-foot">Receivable Sale &nbsp;·&nbsp; Private RFQ &nbsp;·&nbsp; Funding-backed Quotes &nbsp;·&nbsp; Scoped Settlement Evidence</div>
 </section>
 
 <!-- 2 · PROBLEM -->
@@ -226,11 +226,11 @@
 <!-- 3 · IDEA -->
 <section class="slide">
   <div class="eyebrow">The Idea</div>
-  <h1>A blind RFQ, scoped per party</h1>
+  <h1>A blind-RFQ pattern, scoped per party</h1>
   <div class="rows">
-    <div class="rrow"><div class="who">SELLER</div><p>Publishes a <strong>Blind RFQ:</strong> attestations and economics, not raw debtor files.</p></div>
-    <div class="rrow"><div class="who">FUNDERS</div><p>Submit <strong>Private Quotes</strong> only the seller can read, never each other, with <strong>funds committed behind every quote</strong> (a CIP-56 allocation): no bidding what you can't pay.</p></div>
-    <div class="rrow"><div class="who">EVERYONE</div><p>Compliance, risk, coordinator and auditor each get their <strong>own scoped view</strong>.</p></div>
+    <div class="rrow"><div class="who">SELLER</div><p>Registers a represented Receivable, gathers scoped attestations, then creates <strong>one private request per invited Funder</strong>.</p></div>
+    <div class="rrow"><div class="who">FUNDERS</div><p>Submit <strong>Private Quotes</strong> only the Seller can read, backed by a <strong>committed CIP-56 demo allocation</strong> matching the quote.</p></div>
+    <div class="rrow"><div class="who">EVERYONE</div><p>Compliance, Risk, Coordinator, Auditor and Outsider each receive only their <strong>implemented disclosure scope</strong>.</p></div>
   </div>
   <div class="foot">Same RFQ, a different authorized view for every party, enforced on-ledger by <span class="g">Daml</span> contract visibility, not filtered in a UI.</div>
 </section>
@@ -243,8 +243,8 @@
     <tr><th class="h-party">Party</th><th class="h-sees">Sees</th><th class="h-with">Withheld</th></tr>
     <tr>
       <td class="party">Seller</td>
-      <td class="sees">Receivable, full Seller Quote View, selection &amp; settlement</td>
-      <td class="with">Funder balances &amp; funding sources; identities pre-settlement</td>
+      <td class="sees">Receivable, attestations, eligible Private Quotes &amp; settlement</td>
+      <td class="with">Funder balances and unrelated funding sources</td>
     </tr>
     <tr>
       <td class="party">Funder</td>
@@ -253,69 +253,62 @@
     </tr>
     <tr>
       <td class="party">Compliance</td>
-      <td class="sees">Eligibility data, its attestations, Proof-of-Funds Gate status</td>
-      <td class="with">Quote prices &amp; commercial terms; raw underwriting</td>
+      <td class="sees">Compliance disclosure and the attestation/certificate it authors</td>
+      <td class="with">Risk tier, Funder identities, requests and quotes</td>
     </tr>
     <tr>
       <td class="party">Risk Assessor</td>
-      <td class="sees">Debtor &amp; receivable risk data needed to attest</td>
-      <td class="with">Prices &amp; terms; eligibility decisions; out-of-scope identities</td>
+      <td class="sees">Receivable terms needed to assign the certified risk tier</td>
+      <td class="with">Compliance result, Funder identities, requests and quotes</td>
     </tr>
     <tr>
       <td class="party">Coordinator</td>
-      <td class="sees">Workflow status, deadlines, party routing</td>
+      <td class="sees">Off-ledger workflow summary only</td>
       <td class="with">Private Quote contents, prices &amp; terms</td>
     </tr>
     <tr>
-      <td class="party">Auditor / Regulator</td>
-      <td class="sees">Scoped Compliance Receipt: statuses, references, outcome</td>
-      <td class="with">Full RFQ, Quote Book, raw evidence, unselected funders</td>
+      <td class="party">Auditor</td>
+      <td class="sees">Nothing before settlement; afterward, scoped sale evidence</td>
+      <td class="with">Origination, RFQ requests, Quote Book, losing Funders</td>
     </tr>
     <tr class="dim">
       <td class="party" style="color:#7c828d">Outsider</td>
-      <td class="sees">Opaque archived contracts only</td>
-      <td class="with">Everything substantive: what, who, how much</td>
+      <td class="sees">Nothing</td>
+      <td class="with">Everything: not a stakeholder on any workflow contract</td>
     </tr>
   </table>
 </section>
 
-<!-- 5 · DISCLOSURE PRICED IN -->
+<!-- 5 · PRIVATE COMPETITION -->
 <section class="slide">
   <div class="eyebrow">The Original Idea</div>
-  <h1>Disclosure is part of the quote</h1>
-  <div class="lede">Four Private Quotes on a $480,000 receivable. The highest Net Purchase Price doesn't win:</div>
+  <h1>Private competition without an all-seeing operator</h1>
+  <div class="lede">Three funding-backed Private Quotes on a $480,000 Receivable. The Seller compares real commercial trade-offs:</div>
   <div class="quotes">
     <div class="qcard win">
-      <div class="best-tag">BEST COMPLIANT</div>
-      <div class="id">LC-3 · Lumen Capital</div>
-      <div class="px">$465,200</div>
-      <div class="terms">85% advance · Non-recourse</div>
-      <div class="disc">Discloses: attestations only</div>
-      <div class="verdict">Lowest headline · PoF passed</div>
+      <div class="best-tag">ELIGIBLE</div>
+      <div class="id">Funder A · Lumen</div>
+      <div class="px">$465,000</div>
+      <div class="terms">Non-recourse</div>
+      <div class="disc">Debtor notification: not required</div>
+      <div class="verdict">Committed allocation · valid quote</div>
     </div>
     <div class="qcard">
-      <div class="id">HF-9 · Harbour</div>
-      <div class="px">$466,800</div>
-      <div class="terms">88% advance · Negotiable recourse</div>
-      <div class="disc">Discloses: debtor identity</div>
-      <div class="verdict">PoF passed</div>
-    </div>
-    <div class="qcard">
-      <div class="id">VC-7 · Vanta Credit</div>
-      <div class="px">$468,000</div>
-      <div class="terms">90% advance · Recourse</div>
-      <div class="disc">Discloses: identity + payment history</div>
-      <div class="verdict">PoF passed</div>
-    </div>
-    <div class="qcard lose">
-      <div class="id">OX-2 · Onyx</div>
+      <div class="id">Funder B · Harbour</div>
       <div class="px">$470,000</div>
-      <div class="terms">92% advance · Recourse</div>
-      <div class="disc">Discloses: full file + audited accounts</div>
-      <div class="verdict">Highest headline · excluded at PoF Gate</div>
+      <div class="terms">With recourse</div>
+      <div class="disc">Debtor notification: required</div>
+      <div class="verdict">Committed allocation · valid quote</div>
+    </div>
+    <div class="qcard">
+      <div class="id">Funder C · Vanta</div>
+      <div class="px">$468,500</div>
+      <div class="terms">Non-recourse</div>
+      <div class="disc">Debtor notification: required</div>
+      <div class="verdict">Committed allocation · valid quote</div>
     </div>
   </div>
-  <div class="foot">Recourse, settlement timing, debtor notification and required disclosure are priced into every quote, so the top sticker price loses to a compliant one.</div>
+  <div class="foot">Net Purchase Price is not the only decision. Recourse, Debtor-notification requirements and quote validity shape the Seller's choice, while each Funder remains blind to competitors.</div>
 </section>
 
 <!-- 6 · PARTY INTERACTION -->
@@ -328,7 +321,7 @@
       <span class="chip"><span class="dot g"></span>Seller</span><span class="arrow-inline">→</span>
       <span class="chip"><span class="dot y"></span>Funders ×3</span>
       <ul>
-        <li class="ok">RFQ Disclosure Package, attestations only, no raw files</li>
+        <li class="ok">One certificate-backed request per invited Funder</li>
         <li class="n">Compliance + Risk attest eligibility on-ledger</li>
       </ul>
     </div>
@@ -338,7 +331,7 @@
       <span class="chip"><span class="dot y"></span>Funders</span><span class="arrow-inline">→</span>
       <span class="chip"><span class="dot g"></span>Seller only</span>
       <ul>
-        <li class="ok">Private Quote with funds committed behind it (CIP-56)</li>
+        <li class="ok">Private Quote backed by a committed CIP-56 allocation</li>
         <li class="hid">Hidden from rival Funders &amp; Coordinator</li>
       </ul>
     </div>
@@ -348,8 +341,8 @@
       <span class="chip"><span class="dot g"></span>Seller</span>
       <div style="font-family:var(--mono);font-size:15.5px;color:var(--faint);margin-top:10px">Seller Quote View</div>
       <ul>
-        <li class="ok">Picks the Best Compliant Quote</li>
-        <li class="hid">Funder identities &amp; balances withheld</li>
+        <li class="ok">Compares eligible offers after the deadline</li>
+        <li class="hid">Selection is off-ledger; competitors stay private</li>
       </ul>
     </div>
     <div class="fsep">›</div>
@@ -358,21 +351,21 @@
       <span class="chip"><span class="dot g"></span>Seller</span><span class="arrow-inline">↔</span>
       <span class="chip"><span class="dot y"></span>Winning Funder</span>
       <ul>
-        <li class="ok">Payment and Receivable change hands atomically (CIP-56)</li>
-        <li class="n">Winner identity revealed now</li>
+        <li class="ok">Demo payment settles + pending transfer is created</li>
+        <li class="n">Winning Funder accepts ownership afterward</li>
       </ul>
     </div>
     <div class="fsep">›</div>
     <div class="fcard">
       <div class="step">05 · AUDIT</div>
-      <span class="arrow-inline">→</span><span class="chip"><span class="dot o"></span>Auditor / Regulator</span>
+      <span class="arrow-inline">→</span><span class="chip"><span class="dot o"></span>Auditor</span>
       <ul>
-        <li class="ok">Scoped Compliance Receipt only</li>
+        <li class="ok">Scoped settlement evidence only</li>
         <li class="hid">No full RFQ or Quote Book</li>
       </ul>
     </div>
   </div>
-  <div class="foot">Quotes are <strong>binding</strong> within their validity window; the fallback queue is <strong>seller-controlled</strong>, ordered by selection criteria, never auto-sorted by headline price.</div>
+  <div class="foot">Quotes remain <strong>binding</strong> within their validity window. After a failed settlement, the Seller can retry or choose another still-valid Quote; no on-ledger ranking is implied.</div>
 </section>
 
 <!-- 7 · LIVE ON LEDGER -->
@@ -383,11 +376,11 @@
   <div class="live3">
     <div class="lcard">
       <div class="tag">LEDGER</div>
-      <p>The Daml model <strong>enforces the product rules</strong>: no RFQ without Compliance &amp; Risk attestations, no quote without funds committed behind it, no settlement unless payment and Receivable move together.</p>
+      <p>The Daml model <strong>enforces product rules</strong>: certificate-backed requests, deadline and quote validation, committed allocation matching, coordinated payment and transfer initiation, and rollback on failure.</p>
     </div>
     <div class="lcard">
       <div class="tag">APP</div>
-      <p>A role-switcher workspace a first-time user can drive: flip between the seven parties, an in-UI glossary explains every term, and it works on mobile. Every click is a real Daml transaction, <strong>live-backed</strong> via the JSON Ledger API.</p>
+      <p>A role-switcher workspace a first-time user can drive: flip between <strong>seven business views</strong>, use the in-UI glossary, and verify the same RFQ on mobile. Every action is live-backed through the Canton JSON Ledger API.</p>
     </div>
     <div class="lcard">
       <div class="tag">VERIFY</div>
@@ -405,17 +398,17 @@
 <!-- 8 · WHY CANTON + BOUNDARIES -->
 <section class="slide">
   <div class="eyebrow">Why Canton</div>
-  <h1>No operator sees the whole book</h1>
+  <h1>No marketplace operator needs the whole book</h1>
   <div class="why-grid">
     <ul class="why-list">
       <li>A public ledger exposes every quote; a private marketplace means trusting an <strong>operator who sees everything</strong>.</li>
       <li><strong>Canton</strong> gives each party its own ledger view, so competitors and counterparties transact with no all-seeing middleman.</li>
-      <li>Disclosure is a <strong>ledger permission</strong>, so the compliance trail is real and selective, not reconstructed by a platform.</li>
+      <li>Disclosure is a <strong>ledger authorization rule</strong>, so scoped settlement evidence is not reconstructed by an all-seeing application database.</li>
     </ul>
     <div class="demo-box">
       <div class="tag">WHAT THIS DEMO IS, AND ISN'T</div>
-      <p>Settlement pays with a non-production <strong>Demo Settlement Asset</strong> through the CIP-56 token workflow.</p>
-      <p>Proof-of-Funds is a committed <strong>CIP-56 allocation</strong>: bid-eligibility evidence, not payment finality, a funds lock, or escrow.</p>
+      <p>The demo settlement factory settles the quoted payment leg and initiates a pending Receivable transfer; the winning Funder accepts ownership afterward.</p>
+      <p>Quote funding uses a committed <strong>CIP-56-compatible demo allocation</strong>: scoped funding evidence, not production custody, bank settlement, payment finality, or escrow.</p>
       <p>No production custody, payments, or legal receivables assignment.</p>
     </div>
   </div>

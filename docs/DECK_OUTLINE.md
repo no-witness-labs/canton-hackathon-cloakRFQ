@@ -6,40 +6,38 @@ Slide-by-slide outline for the submission deck. The designed slides live in
 Chrome command in the HTML file's header comment.
 
 1. **Title**: CloakRFQ Receipts · private invoice-financing RFQs on Canton ·
-   Track 1: Private DeFi & Capital Markets. One-line: "Private invoice
-   financing where every party sees only its slice of the deal." Audience:
-   suppliers plus the factors, credit funds, and trade-finance desks that
-   compete to fund them. Now live on Canton DevNet: every step is a real
-   Daml transaction.
-2. **Problem**: to get a quote, you overshare. Sellers broadcast debtor files;
-   Funders see each other's bids; platforms in the middle see everything.
-   Receivables finance already prices on private, bilateral terms.
-3. **The idea**: Blind RFQ, scoped per party. Seller publishes attestations,
-   not raw files; Funders submit Private Quotes only the Seller can read, with
-   funds committed behind every quote (a CIP-56 allocation): no bidding what
-   you can't pay; everyone else gets a scoped view. Enforced on-ledger by
-   Daml contract visibility, not filtered in a UI.
-4. **Selective disclosure (the centerpiece)**: the who-sees-what table. Same
-   RFQ, seven parties, each sees only its slice. Outsider sees nothing.
-5. **Originality hook**: *"disclosure is part of the quote."* Best ≠ highest
-   price; recourse, settlement, notification, required disclosure are priced in;
-   the highest headline is excluded at the PoF Gate.
-6. **Party interaction**: Open → Quote (Private Quote with funds committed
-   behind it) → Select → Settle (payment and Receivable change hands
-   atomically, CIP-56) → Audit (Scoped Compliance Receipt). Binding quotes;
-   seller-controlled fallback queue.
-7. **Built & running**: live on Canton DevNet. The Daml model enforces the
-   product rules (no RFQ without attestations, no quote without committed
-   funds, no settlement unless payment and Receivable move together; Phases
-   1–3 implemented incl. rollback-based failed-settlement handling); a
-   role-switcher workspace a first-time user can drive
-   (in-UI glossary, mobile), live-backed via the JSON Ledger API; zero-setup
-   self-service per-visitor sessions; per-transaction Lighthouse explorer
-   links; 12 ADRs + per-phase design notes in the repo.
-8. **Why Canton + claim boundaries**: no operator sees the whole book;
-   disclosure is a ledger permission. Demo Settlement Asset (non-production)
-   via the CIP-56 token workflow; Proof-of-Funds = committed CIP-56 allocation
-   (bid-eligibility evidence, not payment finality, a funds lock, or escrow);
-   no production custody, payments, or legal assignment.
+   Track 1: Private DeFi & Capital Markets. Audience: suppliers and the factors,
+   credit funds, and trade-finance desks competing to buy their receivables.
+2. **Real financial problem**: obtaining competitive receivables-finance quotes
+   usually means oversharing Debtor information, commercial terms, bidder
+   identities, and the quote book with every participant or a central platform.
+3. **Product**: one represented Receivable, scoped Compliance and Risk evidence,
+   one private request per invited Funder, and funding-backed Private Quotes that
+   only the Seller can compare. This is a blind-RFQ pattern, not a cryptographic
+   blind auction.
+4. **Privacy proof**: seven business role views backed by ten technical Canton
+   parties. Each Funder sees only its own request and quote; Compliance and Risk
+   remain separate; the Coordinator has no quote contents; the Auditor sees
+   nothing before settlement; the Outsider sees nothing.
+5. **Originality**: private competition without a quote-visible marketplace
+   operator. The Seller compares eligible offers across Net Purchase Price,
+   recourse, Debtor-notification requirements, and quote validity while competing
+   Funders remain blind to one another.
+6. **Workflow and product logic**: Register → Attest → Open private requests →
+   Submit allocation-backed quotes → Compare after deadline → Settle demo payment
+   and initiate transfer → Funder accepts ownership → Auditor receives scoped
+   `ReceivableSaleSettlement` evidence. Failed settlement rolls back so the Seller
+   can retry or choose another valid quote.
+7. **Technical execution and UX**: modular Daml packages, authorization and
+   validation checks, Phase 1–3 and failure tests, Canton DevNet deployment,
+   JSON Ledger API integration, per-party ledger view, role-switcher workspace,
+   self-service sessions, transaction explorer links, glossary, responsive UI,
+   runbook, technical design, and 12 ADRs.
+8. **Why Canton and boundaries**: the product depends on selective disclosure,
+   role-based authorization, funding-backed private competition, coordinated
+   settlement, and auditability without a public quote book. CIP-56 funding and
+   settlement are non-production demo fixtures; no production custody, payment
+   finality, invoice verification, or legal assignment is claimed.
 
-Keep it judge-legible in 3 minutes; lead with the role-switcher moment.
+Keep it judge-legible in three minutes. Lead with the privacy problem and show the
+role-switcher proof early.

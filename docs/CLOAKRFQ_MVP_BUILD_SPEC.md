@@ -1,14 +1,14 @@
 # CloakRFQ Receipts — MVP Build Spec
 
-Last updated: 2026-06-20
+Last updated: 2026-07-11
 
 ## Purpose
 
-CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. The MVP demonstrates private quotes, scoped attestations, committed allocation-backed quote eligibility, Seller quote comparison, fallback, on-ledger demo settlement, and scoped compliance receipts.
+CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. The MVP demonstrates private quotes, scoped attestations, committed allocation-backed quote eligibility, Seller quote comparison, failure recovery, on-ledger demo settlement, and scoped settlement evidence.
 
 ## MVP scope
 
-Build one complete happy path and one failure/fallback branch.
+Build one complete happy path and one failed-settlement recovery path.
 
 ### Happy path
 
@@ -19,45 +19,40 @@ Build one complete happy path and one failure/fallback branch.
 5. Funders receive RFQ Disclosure Packages.
 6. Funders submit Private Quotes backed by scoped funding evidence, concretely committed CIP-56 allocation evidence in Phase 2.
 7. Seller receives Seller Quote View.
-8. Seller selects the Best Compliant Quote.
+8. Seller selects a Quote.
 9. Selected Quote enters Settlement Window.
-10. On-Ledger Demo Settlement assigns Receivable to Winning Funder and settles the committed CIP-56 token allocation to Seller.
-11. Scoped Compliance Receipt is created for Auditor/Regulator if required.
+10. On-Ledger Demo Settlement pays the Seller and initiates a pending Receivable transfer; the Winning Funder accepts ownership afterward.
+11. `ReceivableSaleSettlement` is created for the designated Auditor.
 
-### Failure/fallback branch
+### Failed-settlement recovery
 
-1. Selected Quote fails before RFQ Finality.
-2. Commitment Failure is recorded in scoped form.
-3. Seller promotes a still-valid Eligible Quote from Seller-Controlled Fallback Queue.
-4. Fallback quote attempts settlement.
-5. Scoped Compliance Receipt records fallback status without exposing full Quote Book by default.
+1. A settlement attempt fails atomically.
+2. The ledger error is surfaced to the Seller; no failure contract is created.
+3. Seller retries or chooses another still-valid Quote after reviewing the ledger error.
+4. The chosen Quote attempts settlement.
+5. A successful retry creates the same scoped `ReceivableSaleSettlement` evidence.
 
-## Suggested Daml/domain objects
+## Implemented Daml/domain objects
 
-These are implementation candidates, not final law:
+The technical-design documents and ledger source define the exact schemas:
 
-- Receivable
-- RFQRequest
-- RFQDisclosurePackage
-- ComplianceAttestation
-- RiskAttestation
-- PrivateQuote
-- FundingAllocationEvidence
-- SellerQuoteView
-- SelectedQuote
-- FallbackQueue
-- DemoSettlementAsset
-- SettlementResult
-- ScopedComplianceReceipt
+- `Receivable`
+- `ComplianceAttestation` and `ComplianceCertificate`
+- `RiskAttestation` and `RiskCertificate`
+- `RFQPackageData`
+- per-Funder `RFQRequest`
+- allocation-backed `PrivateQuote`
+- CIP-56 settlement interfaces and demo implementations
+- `ReceivableSaleSettlement`
 
 ## Party views
 
-- Seller View: create Receivable, open RFQ, review Seller Quote View, select quote, define fallback, see settlement status.
+- Seller View: create a Receivable, open the RFQ, compare Quotes, settle one, inspect errors, and retry or choose another still-valid Quote if needed.
 - Funder View: view RFQ Disclosure Package, submit Private Quote, attach/reference committed CIP-56 allocation evidence, see own quote outcome.
 - Compliance View: issue eligibility attestations.
 - Risk Assessor View: issue risk attestations.
 - Coordinator View: route workflow status and invitations; no quote contents by default.
-- Auditor/Regulator View: see Scoped Compliance Receipt only.
+- Auditor View: see scoped `ReceivableSaleSettlement` evidence only.
 
 ## MVP privacy guarantees to demonstrate
 
@@ -65,7 +60,7 @@ These are implementation candidates, not final law:
 - Coordinator does not read Private Quote contents by default.
 - Seller sees Seller Quote View and scoped allocation reference/status, not raw Funder balances, funding sources, or unrelated financial positions.
 - Funder identity is hidden by default unless required.
-- Auditor/Regulator receives Scoped Compliance Receipt, not full RFQ data.
+- The designated Auditor receives scoped `ReceivableSaleSettlement` evidence, not full RFQ data.
 - Outsiders see nothing useful.
 
 Caveat: these are application-level Canton privacy goals, not anonymity claims. Parties, their hosting participant or validator operators, and explicitly entitled signatories, observers, controllers, or actors may see the contracts or transaction views they are entitled to see.
@@ -102,5 +97,5 @@ Do not claim these unless implemented:
 - Keep CIP-56 token settlement clearly scoped to the demo environment.
 - Treat Receivable assignment as an MVP workflow state transition. Do not claim production legal assignment, perfection, enforceability against the Debtor, or jurisdiction-specific receivables-transfer compliance unless those workflows are explicitly added.
 - Treat Binding Quotes as workflow-binding for the MVP, not as externally legally enforceable commitments unless legal-enforcement workflows are explicitly added.
-- Keep Scoped Compliance Receipt as selective disclosure, not a zero-knowledge proof.
+- Keep `ReceivableSaleSettlement` record as selective disclosure, not a zero-knowledge proof.
 - Prefer minimal, demoable templates over over-generalized finance infrastructure.

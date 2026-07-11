@@ -1,10 +1,10 @@
 # CloakRFQ Receipts — Package Manifest
 
-Updated: 2026-07-07
+Updated: 2026-07-11
 
 ## Completeness status
 
-This repository now contains both the product/design documentation and the Daml ledger implementation for Phase 1, Phase 2 Private Quote intake, and the Phase 3 happy-path settlement workflow. It is no longer only a domain-discovery documentation bundle.
+This repository contains the completed hackathon MVP: product/design documentation, modular Daml packages and tests for Phases 1–3, rollback-based failed-settlement handling, and a live-backed role-scoped web application deployed on Canton DevNet.
 
 It contains:
 
@@ -17,19 +17,18 @@ It contains:
 - the MVP implementation handoff spec (`docs/CLOAKRFQ_MVP_BUILD_SPEC.md`);
 - the high-level, Phase 1, Phase 2, Phase 3, workflow diagram, and UI integration technical design notes under `docs/technical-design/`;
 - the accepted ADRs created so far (`docs/adr/0001` through `docs/adr/0012`);
-- the Phase 1, Phase 2, and Phase 3 happy-path Daml ledger packages under `ledger/`;
+- the Phase 1, Phase 2, Phase 3, and rollback-based failed-settlement Daml packages and tests under `ledger/`;
 - a README describing the repository.
 
-This repository is not complete as production implementation. The following implementation and design details are intentionally still open:
+The hackathon MVP is complete, but it is not a production finance implementation. The following remain intentionally outside scope:
 
-- hardening whether `RFQRequest` itself should become authority-signed or certificate-created rather than Seller-signatory only;
-- production-grade payment/custody integration beyond CIP-56 allocation-backed quote evidence and demo settlement;
-- fallback quote-selection and failed-settlement protocol details;
-- exact API endpoints and frontend screen layouts;
-- Debtor identity disclosure rules;
-- post-settlement Funder exit model;
-- post-MVP penalties, reputation, or Quote Bond design;
-- production payment integration, if ever added.
+- production invoice verification, underwriting, and legal assignment;
+- production payment, custody, and wallet integration beyond the CIP-56-compatible demo path;
+- public RFQ discovery and durable marketplace access policy;
+- automatic cleanup for abandoned anonymous demo sessions;
+- Debtor enforceability and production disclosure policy;
+- post-settlement secondary-market or Funder exit models;
+- penalties, reputation, Quote Bonds, and production operational controls.
 
 ## File inventory
 
@@ -62,5 +61,5 @@ This repository is not complete as production implementation. The following impl
 | `docs/adr/0008-seller-controlled-fallback-queue.md`                 | Seller-controlled fallback.                           |
 | `docs/adr/0009-binding-quotes-with-expiry.md`                       | Binding Quotes with Quote Expiry.                     |
 | `docs/adr/0010-on-ledger-demo-settlement.md`                        | On-Ledger Demo Settlement.                            |
-| `docs/adr/0011-scoped-compliance-receipts.md`                       | Scoped Compliance Receipts.                           |
+| `docs/adr/0011-scoped-compliance-receipts.md`                       | Earlier scoped-receipt design; MVP uses settlement evidence. |
 | `docs/adr/0012-cip56-committed-allocations-for-private-quotes.md`    | CIP-56 committed allocation evidence for Private Quotes. |

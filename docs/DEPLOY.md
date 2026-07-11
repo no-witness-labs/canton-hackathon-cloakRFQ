@@ -1,7 +1,7 @@
 # Deploy — public live URL
 
-The submission needs a public "Link to live product". The `web/` app is a
-Next.js app backed by the Canton JSON Ledger API through server-side routes.
+The public product is a Next.js application backed by the Canton JSON Ledger API
+through authenticated server-side routes.
 
 ## Vercel (recommended)
 
@@ -10,7 +10,7 @@ Next.js app backed by the Canton JSON Ledger API through server-side routes.
    dashboard setting, not in `vercel.json`).
 3. Framework preset auto-detects **Next.js** (see `web/vercel.json`). Build
    command `next build`, output handled by the preset.
-4. Deploy → copy the public URL into `docs/SUBMISSION.md` and the README.
+4. Deploy and copy the production URL into `docs/SUBMISSION.md`.
 
 Every push to `main` redeploys; PRs get preview URLs.
 
@@ -21,4 +21,4 @@ Every push to `main` redeploys; PRs get preview URLs.
 - DevNet mode uses server-side environment variables for the Canton JSON API and
   OIDC credentials. Keep secrets out of the browser.
 - The deploy itself (connecting Vercel, getting the URL) is a one-time dashboard
-  step — this PR provides the config + instructions; finish it to close #17.
+  deployment is live; keep the production URL in `docs/SUBMISSION.md` current after redeployments.

@@ -1,38 +1,78 @@
 # 3-Minute Video Pitch — script
 
-Timed script + on-screen actions for the demo video. Recording against the live
-deploy is the remaining step for #19.
+Timed narration and on-screen actions for recording against the live Canton
+DevNet deployment. Prepare one session with the RFQ open and three quotes before
+recording the comparison/settlement segment; edit out the demo response-window wait.
 
-## 0:00–0:25 — Hook
-> "Businesses finance their receivables — but they don't want to broadcast their
-> customers, prices, or who's bidding. CloakRFQ is a private invoice-financing
-> RFQ on Canton, where every party sees only what it's entitled to."
+## 0:00–0:20 — Real financial problem
 
-Show the overview / workspace; point at the **role switcher**.
+> "Businesses sell receivables to get cash before invoices mature. But getting
+> competitive quotes can expose the customer, commercial terms, bidder identities,
+> and the entire quote book. CloakRFQ brings that institutional workflow to Canton
+> without creating an all-seeing marketplace operator."
 
-## 0:25–1:10 — Seller selects (originality hook)
-- As **Seller**: walk the Seller Quote View — three eligible quotes with
-  economics. Note one with a *higher* price but heavier required disclosure.
-- "Best isn't just the highest price — disclosure, recourse and settlement are
-  priced in." Select the **Best Compliant Quote**.
+Show the welcome screen and the seven role views.
 
-## 1:10–1:45 — The privacy moment
-- Flip to **Funder A**: sees only its own quote; competing quotes are redaction
-  bars. Flip to **Coordinator**: workflow only, no quote contents. Flip to
-  **Outsider**: nothing.
-- "Same RFQ — enforced by Canton's party model, not hidden by the UI."
+## 0:20–0:55 — Product logic, not generic infrastructure
 
-## 1:45–2:25 — Settle + fallback
-- As Seller: **Settle** → On-Ledger Demo Settlement. (Optionally: **Simulate
-  commitment failure → promote fallback** to show recovery.)
+As **Seller**, show the represented Receivable. Briefly switch to **Compliance**
+and **Risk Assessor**, then return to Seller and open the RFQ.
 
-## 2:25–2:55 — Scoped receipt
-- Flip to **Auditor**: the Scoped Compliance Receipt — statuses, references,
-  outcome; never the full quote book.
+> "Compliance and Risk issue separate scoped attestations. The Seller derives
+> certificates and creates one private request per invited Funder. These are real
+> Daml contracts with role-specific signatories and observers."
 
-## 2:55–3:00 — Close
-> "Private deal execution, real compliance evidence, no exposed marketplace —
-> on Canton."
+## 0:55–1:25 — Funding-backed private competition
 
-**Notes:** keep under 3:00; record at 1280×800+; show real URLs/IDs once the
-ledger is wired (#21). Apply the claim-boundary list to any narration.
+Switch between **Funder A** and **Funder B**. Show that each receives only its own
+request and submits its own Private Quote with a committed CIP-56 demo allocation.
+
+> "A Funder cannot inspect competing requests or quotes, and cannot submit a valid
+> quote without committed funding evidence matching this RFQ, Seller, amount, token
+> administrator, and validity window."
+
+## 1:25–1:50 — The privacy proof
+
+Open the **Ledger** view. Compare Funder A, Funder B, Coordinator, Auditor, and
+Outsider.
+
+> "Same deal, different ledger views. Funders see only their own contracts. The
+> Coordinator sees no quote contents. The Auditor sees nothing before settlement.
+> The Outsider sees nothing. This is Canton disclosure, not a CSS filter."
+
+## 1:50–2:30 — Selection, settlement, and ownership
+
+Use the prepared post-deadline Seller view. Compare Net Purchase Price, recourse,
+Debtor-notification requirements, and expiry. Accept one quote.
+
+> "Selection is a Seller decision, but settlement rules are on-ledger. Canton
+> verifies the quote, Receivable, committed allocation, payment leg, and settlement
+> factory. The demo payment settles and the pending Receivable transfer is created
+> in one transaction."
+
+Switch to the winning **Funder** and click **Accept receivable transfer**.
+
+> "The winning Funder then accepts ownership, completing the transfer lifecycle."
+
+## 2:30–2:50 — Scoped audit evidence
+
+Switch to **Auditor**.
+
+> "Only after settlement does the Auditor receive scoped
+> ReceivableSaleSettlement evidence: outcome, parties, price, payment status,
+> transfer status, and time — not the private quote book or losing Funders."
+
+## 2:50–3:00 — Close
+
+> "CloakRFQ is a real financial workflow where privacy shapes the marketplace:
+> funding-backed private competition, coordinated settlement, and auditability on
+> Canton."
+
+## Recording notes
+
+- Keep the final cut below 3:00 and record at 1280×800 or higher.
+- Use the live production URL and show at least one real transaction/update ID.
+- Edit out the 2.5-minute demo response-window wait.
+- Keep token language explicitly non-production: no real wallet, custody, bank
+  settlement, escrow, or guaranteed payment finality.
+- Use `docs/CLAIM_BOUNDARY_REVIEW.md` for the final narration check.

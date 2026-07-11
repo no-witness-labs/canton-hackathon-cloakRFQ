@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * CloakRFQ — Workspace state engine, LIVE-backed (Phase 1 origination).
+ * CloakRFQ — Workspace state engine, live-backed end-to-end MVP.
  *
  * The role-switcher UI reads live contracts from the Canton ledger (lib/ledger.ts)
- * and issues real Daml commands for Mazen's Phase 1 workflow:
+ * and issues real Daml commands for the complete three-phase workflow:
  *
  *   1. Seller self-registers a Receivable (registrar == owner).
  *   2. Compliance issues a ComplianceAttestation (disclosure + eligibility result).
@@ -12,14 +12,14 @@
  *   4. Seller opens the RFQ: derives a ComplianceCertificate + RiskCertificate from
  *      the attestations, then creates one RFQRequest per invited Funder.
  *
- * Phase 1 ends there — quoting, selection and settlement are Phase 2/3 and are not
- * on the ledger yet. Per-party Canton enforcement (each Funder sees only its own
+ * Phase 2 adds private allocation-backed Quotes; Phase 3 settles the selected Quote,
+ * initiates the Receivable transfer, records scoped evidence, and lets the winning
+ * Funder accept ownership. Per-party Canton enforcement (each Funder sees only its own
  * RFQRequest) is demonstrated live on /ledger; here the Seller's view is the shared
  * deal state and the role switch is the lens.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { PartyRole } from './types';
 import {
   loadConfig, getParties, listActive, createAs, exerciseAs, getTxLog, type Contract,
   SCENARIO, type Phase1Scenario, type RiskTier, type QuoteTerms, type RecourseModel,
@@ -27,7 +27,7 @@ import {
   mockFundingAllocationArgs, mockSettlementFactoryArgs, isoFromNow, QUOTE_WINDOW_SECONDS,
 } from './ledger';
 
-export type Role = PartyRole;
+export type Role = 'seller' | 'funder' | 'compliance' | 'risk' | 'coordinator' | 'auditor' | 'outsider';
 export type { RiskTier };
 export type Phase = 'origination' | 'preRfq' | 'rfqOpen' | 'settled';
 
@@ -37,17 +37,17 @@ export const ROLES: { id: Role; label: string; sub: string }[] = [
   { id: 'compliance', label: 'Compliance', sub: 'eligibility' },
   { id: 'risk', label: 'Risk Assessor', sub: 'risk tier' },
   { id: 'coordinator', label: 'Coordinator', sub: 'workflow router' },
-  { id: 'auditor', label: 'Auditor / Regulator', sub: 'scoped view' },
+  { id: 'auditor', label: 'Auditor', sub: 'scoped view' },
   { id: 'outsider', label: 'Outsider', sub: 'public ledger' },
 ];
 
 export const LEGEND: Record<Role, { sees: string; hidden: string }> = {
-  seller: { sees: 'Receivable, both attestations, both certificates, every per-Funder RFQRequest it authored', hidden: 'Nothing at Phase 1 — the Seller originates the whole package' },
+  seller: { sees: 'Receivable, both attestations, both certificates, every per-Funder RFQRequest it authored', hidden: 'Raw attestation inputs outside the Seller disclosure and other parties’ unrelated ledger state' },
   funder: { sees: 'Only its own RFQRequest: certified receivable terms, risk tier, response deadline', hidden: 'Raw Debtor identity · the Receivable · attestations · certificates · other Funders’ requests' },
   compliance: { sees: 'The compliance disclosure it reviews and the ComplianceAttestation/Certificate it authors', hidden: 'Risk tier · per-Funder RFQ requests · Funder identities' },
   risk: { sees: 'The receivable terms it tiers and the RiskAttestation/Certificate it authors', hidden: 'Compliance disclosure · eligibility result · per-Funder RFQ requests · Funder identities' },
-  coordinator: { sees: 'Workflow status only (Phase 1 has no Coordinator party on-ledger)', hidden: 'Receivable · attestations · certificates · RFQ request contents' },
-  auditor: { sees: 'Nothing in Phase 1 — the scoped audit receipt is a later phase', hidden: 'Receivable · attestations · certificates · RFQ requests' },
+  coordinator: { sees: 'Workflow status only (Phase 1 has no Coordinator role on-ledger)', hidden: 'Receivable · attestations · certificates · RFQ request contents' },
+  auditor: { sees: 'Scoped ReceivableSaleSettlement evidence after settlement; nothing from the private origination or quote workflow before then', hidden: 'Raw Debtor identity · attestations · certificates · RFQ requests · losing Funders and quotes' },
   outsider: { sees: 'Nothing useful — opaque per-party contracts only', hidden: 'Receivable · attestations · certificates · RFQ requests · identities' },
 };
 
@@ -67,7 +67,7 @@ const WALLET_PARTIES: Record<string, WalletParty> = {
   compliance: { name: 'Meridian Compliance', badge: 'Compliance Party', id: 'Compliance::1220c0de4471a2f9', node: 'participant-compliance-1' },
   risk: { name: 'Sentinel Risk', badge: 'Risk Assessor', id: 'RiskAssessor::1220ra22b7f944', node: 'participant-risk-1' },
   coordinator: { name: 'RFQ Coordinator', badge: 'Coordinator', id: 'Coordinator::12204471c0017dab', node: 'participant-coord-1' },
-  auditor: { name: 'Regulator Node', badge: 'Auditor / Regulator', id: 'Auditor::1220aud17e55c3b0', node: 'participant-regulator-1' },
+  auditor: { name: 'Auditor Node', badge: 'Auditor', id: 'Auditor::1220aud17e55c3b0', node: 'participant-regulator-1' },
 };
 export const FUNDER_PARTY_NAMES: Record<string, string> = { A: 'Vanta Credit', B: 'Lumen Capital', C: 'Harbour Funding' };
 export function truncParty(id: string): string {
