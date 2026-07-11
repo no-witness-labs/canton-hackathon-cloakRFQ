@@ -62,10 +62,14 @@ await capture('welcome');
 await click(page.getByRole('button', { name: 'Got it — start the demo' }));
 await page.getByRole('button', { name: 'Register Receivable' }).waitFor();
 await capture('seller-register-receivable');
-await click(page.getByRole('button', { name: 'Register Receivable' }), 1100);
+await click(page.getByRole('button', { name: 'Register Receivable' }), 400);
+const blockedOpenRfq = page.getByRole('button', { name: /Open RFQ to 3 Funders/ });
+await blockedOpenRfq.waitFor({ timeout: 30000 });
+await page.locator('.toast').waitFor({ state: 'hidden', timeout: 10000 });
+await page.evaluate(() => window.scrollTo(0, 0));
+await sleep(300);
 await capture('seller-receivable-registered');
 
-const blockedOpenRfq = page.getByRole('button', { name: /Open RFQ to 3 Funders/ });
 const blockedOpenRfqWrap = blockedOpenRfq.locator('xpath=..');
 await blockedOpenRfqWrap.scrollIntoViewIfNeeded();
 await blockedOpenRfqWrap.focus();
