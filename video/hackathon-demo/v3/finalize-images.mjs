@@ -8,14 +8,15 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const outputDir = resolve(here, 'raw-images');
 const steps = JSON.parse(await readFile(resolve(here, 'image-steps.json'), 'utf8'));
-const appUrl = process.env.CLOAKRFQ_APP_URL ?? 'http://127.0.0.1:3000';
 const chromePath = process.env.CLOAKRFQ_CHROME
   ?? resolve(homedir(), '.cache/ms-playwright/chromium-1223/chrome-linux64/chrome');
 const exists = async (path) => access(path, constants.F_OK).then(() => true, () => false);
 
-const activityPath = resolve(outputDir, '027-activity-ledger-transactions.png');
-const closingPath = resolve(outputDir, '028-closing-value-proposition.png');
-if (!(await exists(activityPath)) || !(await exists(closingPath))) {
+const closingIndex = steps.findIndex((step) => step.slug === 'closing-value-proposition');
+if (closingIndex < 0) throw new Error('Missing closing-value-proposition metadata');
+const closingFile = `${String(closingIndex + 1).padStart(3, '0')}-closing-value-proposition.png`;
+const closingPath = resolve(outputDir, closingFile);
+if (!(await exists(closingPath))) {
   const browser = await chromium.launch({
     executablePath: chromePath,
     headless: true,
@@ -23,16 +24,7 @@ if (!(await exists(activityPath)) || !(await exists(closingPath))) {
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 810 }, colorScheme: 'dark' });
 
-  if (!(await exists(activityPath))) {
-    await page.goto(`${appUrl}/activity`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('heading', { name: 'Ledger activity' }).waitFor({ timeout: 30000 });
-    await page.getByText(/transactions · Canton JSON API/).waitFor({ timeout: 30000 });
-    await page.screenshot({ path: activityPath, animations: 'disabled' });
-    console.log('CAPTURED 027-activity-ledger-transactions.png');
-  }
-
-  if (!(await exists(closingPath))) {
-    await page.setContent(`<!doctype html><html><head><style>
+  await page.setContent(`<!doctype html><html><head><style>
       *{box-sizing:border-box}body{margin:0;background:#0b0d10;color:#eef0f3;font-family:Arial,sans-serif;height:100vh;display:grid;place-items:center}
       .frame{width:100%;height:100%;padding:76px 92px;display:flex;flex-direction:column;justify-content:space-between;background:radial-gradient(circle at 85% 15%,rgba(87,227,160,.10),transparent 32%),#0b0d10}
       .brand{font-size:24px;font-weight:700}.brand span{color:#57e3a0}.eyebrow{color:#57e3a0;text-transform:uppercase;font-size:14px;font-weight:700;letter-spacing:.12em}
@@ -40,8 +32,7 @@ if (!(await exists(activityPath)) || !(await exists(closingPath))) {
       .pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.p{border-top:2px solid #57e3a0;padding-top:16px;font-size:18px;font-weight:700}.p small{display:block;color:#858c96;font-size:14px;line-height:1.45;margin-top:7px;font-weight:400}
     </style></head><body><main class="frame"><div><div class="brand">Cloak<span>RFQ</span> Receipts</div><div class="eyebrow" style="margin-top:70px">Private invoice financing on Canton</div><h1>Privacy shapes the marketplace.</h1><p class="sub">A working Receivable Sale RFQ with private competition, coordinated settlement, and scoped audit evidence.</p></div><div class="pillars"><div class="p">Private competition<small>Funders never inspect competing Quotes.</small></div><div class="p">Funding-backed offers<small>Committed CIP-56 demo allocation evidence.</small></div><div class="p">Purpose-limited evidence<small>Auditor sees the outcome, not the marketplace.</small></div></div></main></body></html>`);
     await page.screenshot({ path: closingPath, animations: 'disabled' });
-    console.log('CAPTURED 028-closing-value-proposition.png');
-  }
+  console.log(`CAPTURED ${closingFile}`);
   await browser.close();
 }
 

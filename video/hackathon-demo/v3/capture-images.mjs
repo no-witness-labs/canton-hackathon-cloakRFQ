@@ -1,5 +1,5 @@
 import { chromium } from 'playwright-core';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +14,9 @@ const captured = [];
 let sequence = 0;
 
 await mkdir(outputDir, { recursive: true });
+for (const file of await readdir(outputDir)) {
+  if (/^\d{3}-.*\.png$/.test(file)) await unlink(resolve(outputDir, file));
+}
 
 const browser = await chromium.launch({
   executablePath: chromePath,
@@ -62,6 +65,13 @@ await capture('seller-register-receivable');
 await click(page.getByRole('button', { name: 'Register Receivable' }), 1100);
 await capture('seller-receivable-registered');
 
+const blockedOpenRfq = page.getByRole('button', { name: /Open RFQ to 3 Funders/ });
+const blockedOpenRfqWrap = blockedOpenRfq.locator('xpath=..');
+await blockedOpenRfqWrap.scrollIntoViewIfNeeded();
+await blockedOpenRfqWrap.focus();
+await page.getByRole('tooltip').waitFor();
+await capture('seller-open-rfq-blocked');
+
 await roleButton('Compliance').click();
 await page.getByRole('button', { name: 'Approve compliance' }).waitFor();
 await capture('compliance-review');
@@ -109,6 +119,12 @@ await click(roleButton('Funder A'));
 await capture('ledger-funder-a-view');
 await click(roleButton('Funder B'));
 await capture('ledger-funder-b-view');
+await click(roleButton('Funder C'));
+await capture('ledger-funder-c-view');
+await click(roleButton('Compliance'));
+await capture('ledger-compliance-view');
+await click(roleButton('Risk'));
+await capture('ledger-risk-view');
 await click(roleButton('Coordinator'));
 await capture('ledger-coordinator-view');
 await click(roleButton('Auditor'));
@@ -135,9 +151,6 @@ await capture('winner-ownership-accepted');
 await roleButton('Auditor').click();
 await page.getByRole('heading', { name: 'Scoped settlement evidence' }).waitFor();
 await capture('auditor-scoped-evidence');
-await page.getByRole('link', { name: /^Activity ·/ }).click();
-await sleep(900);
-await capture('activity-ledger-transactions');
 
 await page.setContent(`<!doctype html><html><head><style>
   *{box-sizing:border-box}body{margin:0;background:#0b0d10;color:#eef0f3;font-family:Arial,sans-serif;height:100vh;display:grid;place-items:center}
