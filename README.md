@@ -5,10 +5,10 @@ role-scoped disclosure, coordinated demo settlement, and scoped audit evidence.
 
 ## Demo video
 
-[Watch the 2:46 CloakRFQ hackathon demo](video/hackathon-demo/cloakrfq-hackathon-demo-v2.mp4).
+[Watch the 2:59 CloakRFQ hackathon demo](video/hackathon-demo/cloakrfq-hackathon-demo-v3.1.mp4).
 
-The reusable raw clips, unchanged narration, captions, picture-timing manifest,
-and renderer are in [`video/hackathon-demo/`](video/hackathon-demo/README.md).
+The ordered workflow images, narration sources, captions, scene plan, and
+renderer are in [`video/hackathon-demo/`](video/hackathon-demo/README.md).
 
 
 ## Layout
