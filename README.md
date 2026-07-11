@@ -1,22 +1,22 @@
 # CloakRFQ
 
-Privacy-preserving RFQ settlement on the Canton Network. This repository
-holds both the planning documentation and the first implementation.
+Private invoice-financing RFQs on Canton, with funding-backed confidential quotes,
+role-scoped disclosure, coordinated demo settlement, and scoped audit evidence.
 
 ## Layout
 
 ```
 docs/    Planning documentation — product brief, PRD, ADRs, technical design, roadmap.
 ledger/  Daml multi-package ledger model and script tests for the MVP workflow.
-web/     Next.js 14 (App Router + TypeScript) UI prototype of the MVP. See web/README.md.
+web/     Next.js 14 (App Router + TypeScript) live-backed MVP application. See web/README.md.
 ```
 
 ## Web app
 
-The `web/` directory is a Next.js prototype of the Receivable Sale RFQ workflow,
-built to match the design prototype `CloakRFQ.dc.html`. A single workspace
-with a **role switcher** across all seven Canton parties (Seller, Funder A/B/C,
-Compliance, Risk Assessor, Coordinator, Auditor/Regulator, Outsider) shows the
+The `web/` directory is the live-backed Receivable Sale RFQ application. A single workspace
+presents the complete workflow through role-scoped views.
+with a **role switcher** across seven business views (Seller, grouped Funder A/B/C,
+Compliance, Risk Assessor, Coordinator, Auditor/Regulator, and Outsider) shows the
 same RFQ from each party's entitled view — demonstrating selective disclosure,
 the full MVP flow, and a simulated wallet connector that acts as the party for
 the selected role. The UI is **live-backed**: each action submits a
@@ -56,10 +56,10 @@ and component-level commands.
 - `docs/adr/0005-require-funding-capacity-evidence-during-bidding.md` — require funding-capacity evidence during bidding; refined by ADR 0006.
 - `docs/adr/0006-proof-of-funds-as-bid-eligibility-evidence.md` — original Proof-of-Funds boundary, refined by ADR 0012.
 - `docs/adr/0007-controlled-funder-identity-disclosure.md` — control Funder identity disclosure timing.
-- `docs/adr/0008-seller-controlled-fallback-queue.md` — use a Seller-Controlled Fallback Queue.
+- `docs/adr/0008-seller-controlled-fallback-queue.md` — records the earlier fallback-queue decision; the MVP uses retry or another still-valid Quote without an on-ledger queue.
 - `docs/adr/0009-binding-quotes-with-expiry.md` — use Binding Quotes with Quote Expiry for the MVP.
 - `docs/adr/0010-on-ledger-demo-settlement.md` — use On-Ledger Demo Settlement for the MVP.
-- `docs/adr/0011-scoped-compliance-receipts.md` — use Scoped Compliance Receipts for audit and regulatory disclosure.
+- `docs/adr/0011-scoped-compliance-receipts.md` — records the earlier scoped-receipt design; the MVP implements scoped `ReceivableSaleSettlement` evidence.
 - `docs/adr/0012-cip56-committed-allocations-for-private-quotes.md` — use CIP-56 committed allocations for Private Quote funding evidence.
 
 ## Status
@@ -68,9 +68,9 @@ Phase 1, Phase 2, Phase 3 settlement, and rollback-based failed-settlement handl
 
 Implemented ledger scope currently covers represented Receivable registration, Compliance/Risk attestations and certificates, `RFQPackageData`, per-Funder `RFQRequest` bridge contracts, allocation-backed `PrivateQuote` submission, CIP-56 settlement factory integration, pending Receivable transfer, and `ReceivableSaleSettlement` evidence.
 
-Not complete as production implementation. Later RFQ discovery, package access policy, receipts beyond current settlement evidence, and production payment/custody integration remain open.
+The hackathon MVP is complete, but this is not a production finance system. RFQ discovery, production invoice verification, legal assignment, custody, and production payment integration remain outside scope.
 
-Settlement product decision is resolved as On-Ledger Demo Settlement. Compliance Receipt product decision is resolved as Scoped Compliance Receipt.
+The MVP uses scoped `ReceivableSaleSettlement` evidence for the Auditor/Regulator; broader compliance-receipt designs remain documented as post-MVP context.
 
 ## Agent workflow
 

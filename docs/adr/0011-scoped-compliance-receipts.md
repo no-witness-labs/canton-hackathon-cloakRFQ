@@ -4,6 +4,12 @@
 
 Accepted
 
+## Implementation Refinement (2026-07-11)
+
+The selective-disclosure principle below remains accepted, but the completed hackathon MVP does not define a separate `ScopedComplianceReceipt` template. It implements the narrower `ReceivableSaleSettlement` record instead. The designated Auditor observes that record after settlement and sees the parties to the sale, accepted price, payment and transfer references, and settlement time without seeing losing Funders, losing Quotes, raw Receivable source data, or private attestation inputs.
+
+The field list in this ADR is therefore a design direction, not the implemented MVP schema. Jurisdiction-specific receipt profiles and broader regulatory evidence remain outside the hackathon scope.
+
 ## Context
 
 CloakRFQ Receipts needs to give Auditors or Regulators enough information to verify that a Receivable Sale workflow followed the required rules. A simple approach would disclose the full RFQ workflow, including all Private Quotes, all Unselected Funders, raw Proof-of-Funds evidence, full invoice documents, full Seller or Debtor data, and all fallback details.

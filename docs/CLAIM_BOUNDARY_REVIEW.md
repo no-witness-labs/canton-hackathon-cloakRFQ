@@ -25,20 +25,22 @@ Then confirm the safe phrasings are present in the UI copy.
 
 ## Findings
 
-- **UI copy needs a Phase 2 wording refresh before final submission.** It should
-  describe committed CIP-56 allocation evidence as scoped quote funding evidence
-  for the RFQ context, without calling it escrow, custody, bank settlement,
-  production payment finality, or guaranteed settlement.
-- **No overclaim in product copy.** The flagged terms (ZK, escrow, stablecoin,
-  Canton Coin, real bank settlement, guaranteed settlement) appear **only** inside explicit
-  "do not claim / out of scope" lists in `docs/CLOAKRFQ_PRD.md`,
-  `docs/CLOAKRFQ_MVP_BUILD_SPEC.md`, the ADRs, and `HACKATHON_ALIGNMENT.md`, or in
-  negations in `web/README.md` ("not … real settlement"). None assert a capability.
-- **Wallet connector** is labelled "Canton Devnet — non-production. No real
-  custody or signing."
+- **UI wording is aligned.** Committed CIP-56 allocations are described as
+  non-production demo funding evidence; the UI does not claim bank settlement,
+  custody, escrow, or guaranteed payment finality.
+- **Settlement sequencing is explicit.** The demo payment settles and the pending
+  Receivable transfer is initiated in one Daml transaction; final ownership changes
+  when the winning Funder exercises `AcceptTransfer`.
+- **Privacy claims are scoped.** Competing Funders cannot see one another's requests
+  or quotes, the Outsider sees nothing, and the Auditor receives only
+  `ReceivableSaleSettlement` evidence. The project does not claim anonymity or a
+  cryptographic blind auction.
+- **Wallet connector is clearly simulated.** It is labelled non-production and
+  performs no browser custody or signing.
 
-## Still to check before final submit (human)
+## Final submission checks
 
-- Deck (`docs/DECK_OUTLINE.md`) and video (`docs/VIDEO_SCRIPT.md`) copy — apply
-  the same list when those assets are produced.
-- Any text added once the ledger lands (#9–#11) — settlement must stay "Demo".
+- Re-run the scan after deck and video-script edits.
+- Confirm the rendered PDF uses the same settlement and privacy boundaries.
+- Record the video against the live product and describe token funding as non-production demo funding.
+- Keep `AcceptTransfer` visible as the winning Funder's post-settlement ownership-acceptance step.

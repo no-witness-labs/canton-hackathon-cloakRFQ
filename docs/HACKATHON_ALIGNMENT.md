@@ -59,7 +59,7 @@ The project demonstrates:
 
 Canonical positioning:
 
-> **CloakRFQ Receipts is a private invoice-financing RFQ marketplace on Canton where Funders submit proof-backed Private Quotes, Sellers select the Best Compliant Quote, settlement is demonstrated on-ledger, and Auditors or Regulators receive Scoped Compliance Receipts without seeing the full marketplace.**
+> **CloakRFQ Receipts is a private invoice-financing RFQ marketplace on Canton where invited Funders submit funding-backed Private Quotes without seeing competitors, Sellers compare eligible offers, settlement is demonstrated on-ledger, and the designated Auditor receives scoped settlement evidence without seeing the full marketplace.**
 
 ## Why this is the right track
 
@@ -70,7 +70,7 @@ CloakRFQ Receipts directly answers that challenge:
 - Sellers do not expose their full receivable workflow to the public.
 - Funders do not see competing Private Quotes.
 - Coordinators do not receive quote contents by default.
-- Auditors and Regulators receive scoped compliance evidence rather than the full RFQ.
+- The designated Auditor receives scoped settlement evidence rather than the full RFQ or quote book.
 - Sensitive commercial data is replaced with attestations and purpose-limited disclosure where practical.
 
 The project is therefore not just using Canton as a generic ledger. The product logic depends on Canton-style privacy, selective disclosure, and multi-party workflow coordination.
@@ -81,18 +81,18 @@ CloakRFQ uses Canton for concrete product benefits, not generic chain branding.
 
 | Canton benefit | How CloakRFQ uses it |
 |---|---|
-| **Selective disclosure** | Sellers, Funders, Coordinators, Compliance, Risk, Auditors, and Regulators each receive only the records relevant to their role. |
+| **Selective disclosure** | Sellers, Funders, Coordinators, Compliance, Risk, and the Auditor each receive only the records relevant to their role. |
 | **Private RFQs** | Funders do not see competing Private Quotes, and Coordinators do not receive quote contents by default. |
-| **Atomic multi-party settlement** | Receivable assignment and CIP-56 token settlement can be demonstrated as one coordinated settlement outcome. |
+| **Coordinated multi-party settlement** | CIP-56 demo payment settlement and initiation of the winning Funder's Receivable transfer occur in one Daml transaction; final ownership changes when that Funder accepts the pending transfer. |
 | **Institutional decentralisation** | The workflow does not require a quote-visible marketplace operator that controls and reads the full Quote Book by default. |
-| **Workflow speed** | Quote submission, selection, settlement status, fallback, and compliance receipt generation can happen in one coordinated workflow instead of across disconnected manual processes. |
+| **Workflow speed** | Quote submission, deadline enforcement, settlement, pending Receivable transfer, acceptance, fallback, and audit evidence happen in one coordinated workflow instead of disconnected manual processes. |
 | **Efficiency** | Unrelated parties do not need to process or store the full marketplace, quote book, or compliance record. |
 | **Role-based authorization** | Daml/Canton workflow roles can encode who may create, view, approve, select, settle, or audit each record. |
-| **Auditability without full transparency** | Auditors or Regulators can receive Scoped Compliance Receipts without becoming full observers of the private RFQ. |
+| **Auditability without full transparency** | The designated Auditor receives scoped `ReceivableSaleSettlement` evidence without becoming an observer of the private quote book. |
 
 Deck wording:
 
-> **CloakRFQ uses Canton because private invoice-financing RFQs need more than tokenization. They need selective disclosure, role-based authorization, atomic settlement, and auditability without exposing the full marketplace.**
+> **CloakRFQ uses Canton because private invoice-financing RFQs need more than tokenization. They need selective disclosure, role-based authorization, funding-backed private competition, coordinated settlement, and auditability without exposing the full marketplace.**
 
 ## Relationship to other themes
 
@@ -101,7 +101,7 @@ These themes are relevant, but they should be treated as supporting context rath
 | Theme | Relationship to CloakRFQ | Submission posture |
 |---|---|---|
 | Invoice or supply-chain financing | Core use case: the MVP is based on Receivable Sales. | Mention as use case inside Track 1. |
-| B2B marketplace with blind auctions | CloakRFQ is a Blind RFQ marketplace with private quotes. | Mention as product pattern, not separate track. |
+| B2B marketplace with blind auctions | CloakRFQ uses a blind-RFQ pattern: Funders cannot inspect competing requests or quotes, while the Seller can compare eligible offers. | Mention as product pattern; do not claim a cryptographic blind auction. |
 | TradeFi, RWA & Tokenized Assets | The Receivable is represented on-ledger and can be described as a real-world financial claim. | Secondary context only. |
 | Payments and neobanking | The MVP has On-Ledger Demo Settlement, but it is not a payments product. | Do not position as this track. |
 | Agentic commerce with privacy | Not part of the MVP. | Do not add agents just to chase the theme. |
@@ -112,12 +112,12 @@ These themes are relevant, but they should be treated as supporting context rath
 
 Show a working multi-party Canton/Daml workflow:
 
-1. Seller creates a Receivable and opens a Blind RFQ.
-2. Funders receive RFQ Disclosure Packages.
-3. Funders submit Private Quotes backed by scoped funding evidence, concretely committed CIP-56 allocation evidence in Phase 2.
-4. Seller sees a Seller Quote View and selects the Best Compliant Quote.
-5. Settlement is demonstrated with a committed CIP-56 token allocation.
-6. Auditor or Regulator receives a Scoped Compliance Receipt.
+1. Seller registers a represented Receivable and opens one private RFQ request per invited Funder.
+2. Compliance and Risk parties issue scoped attestations and certificates without exposing all raw inputs to Funders.
+3. Each Funder submits a Private Quote backed by a committed CIP-56 allocation for the quoted amount.
+4. The Seller compares eligible quotes after the response deadline and chooses one off-ledger.
+5. Accepting the chosen quote settles the demo payment and initiates the Receivable transfer in one Daml transaction.
+6. The winning Funder accepts the pending transfer, while the designated Auditor receives scoped `ReceivableSaleSettlement` evidence.
 
 The demo should clearly show that different parties see different ledger views.
 
@@ -125,11 +125,11 @@ The demo should clearly show that different parties see different ledger views.
 
 The strongest original angle is:
 
-> **Disclosure is part of the quote.**
+> **Private competition without a quote-visible marketplace operator.**
 
-A Seller may prefer a quote with a slightly lower Net Purchase Price if it has faster settlement, better recourse terms, fewer required disclosures, or better privacy properties.
+A Seller compares funding-backed offers across Net Purchase Price, recourse, Debtor-notification requirements, and quote validity. Competing Funders cannot inspect one another's requests or quotes, while the Seller retains a practical comparison workflow.
 
-This makes the product more than generic invoice financing. It turns privacy and selective disclosure into commercial RFQ terms.
+This makes CloakRFQ more than generic invoice financing or ledger infrastructure: privacy changes the marketplace structure without removing the commercial decision process.
 
 ### User experience and design
 
@@ -138,12 +138,12 @@ Keep the UI simple and role-based:
 - Seller dashboard;
 - Funder dashboard;
 - Compliance / Risk dashboard;
-- Auditor / Regulator receipt view;
+- Auditor settlement-evidence view;
 - Coordinator status view.
 
 The demo story should be understandable in three minutes:
 
-> A Seller wants liquidity without exposing its full financial workflow. Funders quote privately. The Seller selects the best compliant deal. Settlement completes. The Auditor or Regulator sees only the scoped receipt.
+> A Seller wants liquidity without exposing its full financial workflow. Funders quote privately and cannot inspect competitors. The Seller compares eligible, funding-backed offers. Demo payment settles and the winning Funder receives a pending Receivable transfer. The designated Auditor sees only scoped settlement evidence.
 
 ### Real-world applicability
 
@@ -169,7 +169,7 @@ Do not claim that CloakRFQ is:
 
 The correct claim is narrower and stronger:
 
-> **CloakRFQ is a private RFQ workflow for invoice financing / Receivable Sales that demonstrates Canton-native selective disclosure, multi-party privacy, and atomic demo settlement.**
+> **CloakRFQ is a private RFQ workflow for invoice financing / Receivable Sales that demonstrates Canton-native selective disclosure, funding-backed private competition, and coordinated demo settlement.**
 
 ## Submission positioning
 
@@ -180,7 +180,7 @@ Track: Private DeFi & Capital Markets
 
 Theme: Private credit / invoice financing
 
-Product: CloakRFQ Receipts — private invoice-financing RFQs with proof-backed quotes and scoped compliance receipts on Canton.
+Product: CloakRFQ Receipts — private invoice-financing RFQs with funding-backed quotes and scoped settlement evidence on Canton.
 ```
 
 Do not present the project as spanning multiple tracks. The project can reference adjacent themes, but the submitted track should remain **Private DeFi & Capital Markets**.

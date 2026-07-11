@@ -1,6 +1,6 @@
 # CloakRFQ Receipts — Project Brief
 
-Last updated: 2026-06-20
+Last updated: 2026-07-11
 
 ## Working definition
 
@@ -8,7 +8,7 @@ Last updated: 2026-06-20
 
 Working product language:
 
-> CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. Funders submit Private Quotes backed by committed CIP-56 allocation evidence, Sellers select the Best Compliant Quote through a minimal Seller Quote View, Compliance and Risk parties provide scoped attestations, and Auditors or Regulators receive Scoped Compliance Receipts without exposing unnecessary bidders, quotes, identities, balances, or sensitive commercial data.
+> CloakRFQ Receipts is a private, functionality-preserving RFQ marketplace for Receivable Sales on Canton. Funders submit Private Quotes backed by committed CIP-56 allocation evidence, Sellers select a Quote through a minimal Seller Quote View, Compliance and Risk parties provide scoped attestations, and the designated Auditor receives scoped settlement evidence without exposing unnecessary bidders, quotes, identities, balances, or sensitive commercial data.
 
 The guiding product question is:
 
@@ -29,10 +29,10 @@ It is a private RFQ flow for selling a Receivable at a discount, with privacy an
 3. Funders submit Private Quotes.
 4. Private Quotes must pass a Proof-of-Funds Gate.
 5. Compliance and Risk parties provide scoped attestations.
-6. The Seller selects the Best Compliant Quote using a Seller Quote View.
+6. The Seller selects a Quote using a Seller Quote View.
 7. Settlement is attempted with the Selected Quote.
-8. If the Selected Quote fails before RFQ Finality, the Seller may use a Seller-Controlled Fallback Queue.
-9. A Scoped Compliance Receipt is produced for an Auditor or Regulator where required.
+8. If settlement fails, the Seller sees the ledger error and may retry or choose another still-valid Quote.
+9. The designated Auditor receives scoped `ReceivableSaleSettlement` evidence after successful settlement.
 
 ## Resolved product decisions
 
@@ -45,7 +45,7 @@ It is a private RFQ flow for selling a Receivable at a discount, with privacy an
 | Privacy posture          | Use Maximum Practical Privacy around the real RFQ.                                                                                           |
 | Coordinator              | Coordinator may route workflow state but should not read Private Quote contents by default.                                                  |
 | Quote visibility         | Funders do not see each other's Private Quotes.                                                                                              |
-| Quote selection          | Seller selects the Best Compliant Quote based on Selection Criteria.                                                                         |
+| Quote selection          | Seller selects a Quote based on Selection Criteria.                                                                         |
 | Best deal                | Best does not automatically mean highest headline price.                                                                                     |
 | Disclosure cost          | Disclosure requirements can affect quote attractiveness, but the MVP does not model a back-and-forth Funder disclosure-request workflow.     |
 | RFQ package              | Funders receive an attestation-first RFQ Disclosure Package.                                                                                 |
@@ -54,11 +54,11 @@ It is a private RFQ flow for selling a Receivable at a discount, with privacy an
 | Funding evidence         | Phase 2 requires committed CIP-56 allocation-backed quotes. This allocates funds for the RFQ context during the quote validity window, but is not escrow, custody, bank settlement, production payment finality, or a guarantee settlement will complete. |
 | Seller selection surface | Seller uses a Seller Quote View with minimum comparison fields.                                                                              |
 | Funder identity          | Hidden by default in the Seller Quote View; revealed only when needed by selection, compliance, settlement, audit, regulation, or RFQ terms. |
-| Fallback                 | Use a Seller-Controlled Fallback Queue, not automatic highest-price fallback.                                                                |
+| Failure recovery         | Surface the ledger error; the Seller may retry or choose another still-valid Quote.                                                         |
 | Quote validity           | For the MVP, Private Quotes are Binding Quotes during their Quote Validity Period and have Quote Expiry.                                     |
 | Penalties                | Monetary penalties are not in the MVP. Quote Bonds are a future option.                                                                      |
 | Settlement model         | Use On-Ledger Demo Settlement with a committed CIP-56 token allocation.                                                                                  |
-| Compliance receipt       | Use Scoped Compliance Receipts for audit and regulatory disclosure.                                                                          |
+| Settlement evidence     | The designated Auditor observes the scoped `ReceivableSaleSettlement` record.                                                               |
 
 ## Main roles
 
@@ -85,13 +85,13 @@ It is a private RFQ flow for selling a Receivable at a discount, with privacy an
 7. Bidding closes; eligible still-valid quotes become Pending Quotes.
 8. Private Quotes remain hidden from competing Funders and Coordinators by default.
 9. Seller receives a Seller Quote View for Eligible Quotes, with Funder identity hidden by default unless disclosure is required.
-10. Seller selects the Best Compliant Quote as the Selected Quote for attempted settlement.
-11. Seller may define a Seller-Controlled Fallback Queue from other still-valid Eligible Quotes.
-12. The Selected Quote enters the Settlement Window: the Selected Quote attempts to fund and settle while Pending Quotes may remain available as Fallback Quotes.
-13. If settlement succeeds, On-Ledger Demo Settlement assigns the Receivable to the Winning Funder and settles the committed CIP-56 token allocation to the Seller.
-14. If settlement fails before RFQ Finality, the Seller may promote a Fallback Quote from the Fallback Queue.
-15. After RFQ Finality, pending fallback rights end.
-16. Auditor or Regulator receives a Scoped Compliance Receipt if required.
+10. Seller selects a Quote as the Selected Quote for attempted settlement.
+11. Other still-valid Quotes remain available if a settlement attempt fails.
+12. The selected Quote attempts settlement using its committed allocation.
+13. If settlement succeeds, the CIP-56 allocation pays the Seller and a pending Receivable transfer is created; the Winning Funder accepts ownership afterward.
+14. If settlement fails, the UI shows the ledger error and the Seller may retry or choose another still-valid Quote.
+15. After successful settlement, the settled Quote cannot be reused.
+16. The designated Auditor observes the `ReceivableSaleSettlement` record after success.
 
 ## RFQ Disclosure Package
 
@@ -137,7 +137,7 @@ A Seller may prefer a slightly lower quote if it requires less sensitive disclos
 
 ## Seller Quote View
 
-The Seller Quote View is the minimum Seller-visible comparison surface needed to select the Best Compliant Quote.
+The Seller Quote View is the minimum Seller-visible comparison surface needed to select a Quote.
 
 The MVP Seller Quote View may include:
 
@@ -160,19 +160,19 @@ Phase 2 Private Quotes require committed CIP-56 allocation evidence at submissio
 
 This allocates funds for the RFQ workflow during the quote validity window. It is not escrow, custody, bank settlement, production payment finality, or a guarantee that settlement will complete. The Seller receives scoped allocation evidence, not raw Funder balances, funding sources, or unrelated financial positions.
 
-## Fallback model
+## Failed-settlement recovery
 
-Fallback only applies before RFQ Finality.
+A failed settlement transaction rolls back atomically. While another Quote remains valid, the Seller may retry or choose that Quote off-ledger.
 
 | Stage                   | Behavior                                                                                   |
 | ----------------------- | ------------------------------------------------------------------------------------------ |
 | Before Seller selection | Private Quotes may be Pending Quotes if eligible and unexpired.                            |
-| Seller selection        | Seller selects the Best Compliant Quote and may define a Seller-Controlled Fallback Queue. |
+| Seller selection        | Seller chooses a visible, still-valid Quote off-ledger.                                      |
 | Settlement Window       | The Selected Quote attempts settlement.                                                    |
-| Commitment Failure      | If the Selected Quote fails before RFQ Finality, the Seller may promote a Fallback Quote.  |
-| After RFQ Finality      | No fallback. Later Funder exit is a separate secondary transaction.                        |
+| Settlement failure      | The transaction rolls back; the UI shows the ledger error and another valid Quote remains usable. |
+| After successful settlement | The settled Quote cannot be used again; later Funder exit is a separate transaction. |
 
-Fallback ordering is Seller-controlled because the second-best quote is not necessarily the second-highest headline price.
+The ledger does not rank alternatives. After a failure, the Seller decides off-ledger whether to retry or use another still-valid Quote.
 
 ## Binding quote model
 
@@ -182,7 +182,7 @@ A Binding Quote:
 
 - has an explicit Quote Expiry;
 - remains selectable until Quote Expiry if otherwise eligible;
-- may be placed in the Seller-Controlled Fallback Queue while valid;
+- remains available for another settlement attempt while valid;
 - cannot be arbitrarily withdrawn during its Quote Validity Period unless the RFQ terms explicitly allow withdrawal;
 - does not imply escrow, custody, bank settlement, production payment finality, or guaranteed settlement completion;
 - does not imply monetary penalties in the MVP.
@@ -193,29 +193,17 @@ In the MVP, "Binding Quote" means binding under the demo workflow rules during t
 
 The MVP uses On-Ledger Demo Settlement.
 
-A tokenized or represented Receivable is assigned to the Winning Funder, and CIP-56 token allocation settles to the Seller. This demonstrates payment-versus-receivable settlement as Canton/Daml ledger state transitions.
+The CIP-56 token allocation pays the Seller while settlement initiates a pending Receivable transfer. The Winning Funder accepts ownership afterward. This demonstrates payment-versus-receivable settlement as Canton/Daml ledger state transitions.
 
 The CIP-56 token settlement path is scoped to the demo environment. The MVP must not claim bank settlement, production custody, production legal assignment, or jurisdiction-specific payment finality.
 
 The MVP also does not claim production legal assignment, perfection of ownership or security rights, enforceability against the Debtor, or jurisdiction-specific receivables-transfer compliance. The on-ledger Receivable assignment demonstrates the application workflow state transition only, unless legal documentation, Debtor notification, transfer restrictions, or jurisdiction-specific assignment workflows are explicitly added later.
 
-## Scoped Compliance Receipt
+## `ReceivableSaleSettlement` record
 
-A Scoped Compliance Receipt may include:
+The implemented `ReceivableSaleSettlement` identifies the Seller, Winning Funder, accepted price, payment and transfer references, and settlement time.
 
-- RFQ/workflow reference;
-- opaque Receivable reference;
-- Seller eligibility status;
-- Winning Funder eligibility status;
-- Risk Attestation reference if used;
-- Proof-of-Funds Gate status for the Winning Quote;
-- quote-selection statement;
-- settlement status;
-- Debtor Notification mode;
-- fallback status if fallback occurred;
-- RFQ Finality timestamp.
-
-The receipt should not disclose by default:
+The record does not disclose by default:
 
 - full RFQ workflow;
 - full Quote Book;
@@ -241,7 +229,7 @@ The MVP does not claim full anonymity, secrecy from a party's own infrastructure
 | Competing Funders cannot see each other's Private Quotes.                                             | MVP guarantee target. |
 | Coordinator cannot read Private Quote contents by default.                                            | MVP guarantee target. |
 | Outsiders see nothing useful about Receivables, RFQs, quotes, or results.                             | MVP guarantee target. |
-| Auditor or Regulator receives scoped compliance evidence, not the full workflow.                      | MVP guarantee target. |
+| The designated Auditor receives scoped settlement evidence, not the full workflow.                      | MVP guarantee target. |
 | Sensitive Attributes are not disclosed as raw data unless required.                                   | MVP guarantee target. |
 | Funders receive an attestation-first RFQ Disclosure Package.                                          | MVP guarantee target. |
 | Seller receives a minimal Seller Quote View, not raw Funder balances or funding sources.              | MVP guarantee target. |
@@ -277,7 +265,7 @@ The MVP should not become:
 
 ### 1. Quote-selection mechanism
 
-How does the Seller evaluate or receive enough information to select the Best Compliant Quote while minimizing disclosure?
+How does the Seller evaluate or receive enough information to select a Quote while minimizing disclosure?
 
 Current boundary: the Seller Quote View is the MVP selection surface, but stronger Winning-Only Disclosure remains a stretch privacy ambition.
 
@@ -291,7 +279,7 @@ Current boundary: Phase 2 uses committed CIP-56 allocation evidence for quote fu
 
 Settlement model is resolved as On-Ledger Demo Settlement with a committed CIP-56 token allocation.
 
-Compliance Receipt product shape is resolved as Scoped Compliance Receipt.
+Compliance Receipt product shape is resolved as `ReceivableSaleSettlement` record.
 
 ### 3. Winning-Only Disclosure feasibility
 
@@ -325,13 +313,13 @@ Not resolved for post-MVP.
 
 Show multiple party views:
 
-- Seller sees the Receivable, RFQ, Seller Quote View, selected quote, fallback status if applicable, and final sale state.
+- Seller sees the Receivable, RFQ, Seller Quote View, selected Quote, settlement errors, and final sale state.
 - Funder A sees only its RFQ Disclosure Package, funding evidence status, and its own Private Quote.
 - Funder B sees only its RFQ Disclosure Package, funding evidence status, and its own Private Quote.
 - Coordinator sees workflow status but not quote contents.
 - Compliance Party sees eligibility data and can produce attestations.
 - Risk Assessor sees only risk-relevant data and produces Risk Attestations.
-- Auditor or Regulator sees a Scoped Compliance Receipt, not the full RFQ.
+- The designated Auditor sees scoped `ReceivableSaleSettlement` evidence, not the full RFQ.
 - Outsider sees nothing useful.
 
 ## Current ADRs
@@ -343,7 +331,7 @@ Show multiple party views:
 - ADR 0005: Require Funding Capacity Evidence During Bidding; refined by ADR 0006.
 - ADR 0006: Require Proof of Funds as Bid Eligibility Evidence, Not a Funding Lock.
 - ADR 0007: Control Funder Identity Disclosure Timing.
-- ADR 0008: Use a Seller-Controlled Fallback Queue.
+- ADR 0008 records the earlier fallback-queue design; the MVP uses retry or another still-valid Quote without an on-ledger queue.
 - ADR 0009: Use Binding Quotes with Quote Expiry for the MVP.
 - ADR 0010: Use On-Ledger Demo Settlement for the MVP.
-- ADR 0011: Use Scoped Compliance Receipts for Audit and Regulatory Disclosure.
+- ADR 0011: preserve scoped audit disclosure; the implementation uses `ReceivableSaleSettlement` evidence.

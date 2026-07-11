@@ -1,25 +1,27 @@
 # CloakRFQ Receipts — Submission
 
 Private invoice-financing **Receivable Sale RFQ** on Canton — Track 1: Private
-DeFi & Capital Markets. Multi-party selective disclosure: different Canton
-parties see different data.
+DeFi & Capital Markets. Invited Funders compete through funding-backed Private
+Quotes while Canton restricts each party to its entitled workflow records.
 
 ## Links
 
 | | |
 | --- | --- |
 | Repository | https://github.com/no-witness-labs/canton-hackathon-cloakRFQ |
-| Live product | _TBD — see #17_ |
-| Video pitch (3 min) | _TBD — see #19; script in `docs/VIDEO_SCRIPT.md`_ |
-| Presentation deck | _TBD — see #18; outline in `docs/DECK_OUTLINE.md`_ |
+| Live product | https://canton-hackathon-cloak-6v1qrvvgn-dappwebsites-projects.vercel.app |
+| Video pitch (3 min) | _Recording pending; script in `docs/VIDEO_SCRIPT.md`_ |
+| Presentation deck | [`docs/pitch/cloakrfq-pitch.pdf`](pitch/cloakrfq-pitch.pdf) |
 
 ## What it is
 
-A Seller offers a receivable; Funders submit proof-backed **Private Quotes**;
-the Seller selects the **Best Compliant Quote** (price *and* recourse,
-settlement, debtor-notification, required-disclosure — "disclosure is part of
-the price"); settlement is demonstrated **on-ledger**; an Auditor receives a
-**Scoped Compliance Receipt** — without anyone seeing the full marketplace.
+A Seller offers a represented Receivable through one private request per invited
+Funder. Funders submit **Private Quotes** backed by committed CIP-56 demo
+allocations without seeing competitors. The Seller compares eligible offers across
+Net Purchase Price, recourse, Debtor-notification requirements, and validity,
+then demonstrates on-ledger payment settlement and Receivable transfer. An
+Auditor receives scoped `ReceivableSaleSettlement` evidence rather
+than the private RFQ or quote book.
 
 The brief and our positioning are in [`HACKATHON_ALIGNMENT.md`](HACKATHON_ALIGNMENT.md);
 the product detail in [`CLOAKRFQ_PRD.md`](CLOAKRFQ_PRD.md).
@@ -32,11 +34,7 @@ npm --prefix web install       # first run only
 # open http://localhost:3000
 ```
 
-Flip the **role switcher** across the seven Canton parties (Seller, Funder
-A/B/C, Compliance, Risk, Coordinator, Auditor, Outsider). As Seller, create the
-RFQ, review visible Private Quotes, settle, retry a failed settlement, or select
-another still-valid quote. Switch to Auditor for final settlement evidence; to
-Outsider to see that a non-party sees nothing.
+Use the **seven role views**: Seller, grouped Funder A/B/C, Compliance, Risk Assessor, Coordinator, Auditor, and Outsider. Register the Receivable, issue scoped attestations, open one private request per Funder, submit funding-backed Private Quotes, compare eligible offers after the deadline, settle, and complete the winning Funder's ownership acceptance. The Auditor receives scoped settlement evidence; the Outsider sees nothing.
 
 ## Component-level operation
 

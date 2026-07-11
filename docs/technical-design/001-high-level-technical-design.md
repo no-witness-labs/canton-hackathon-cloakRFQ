@@ -37,7 +37,7 @@ The preferred MVP mode is **rule-publisher mode**:
 - regulation-specific ledger state is not part of the current Phase 1 MVP implementation;
 - Compliance Party applies the selected policy assumptions to the Seller, RFQ, Disclosure Boundary, and package access;
 - Regulator is not automatically an active party on every RFQ;
-- Regulator usually receives a Scoped Compliance Receipt after RFQ Finality.
+- In the implemented MVP, the Auditor or Regulator observes scoped `ReceivableSaleSettlement` evidence after settlement; it is not an observer of the private origination or quote book.
 
 An optional **pre-approval mode** may add Regulator involvement before quoting or settlement only if the selected regulation requires it.
 
@@ -130,25 +130,20 @@ Starts when `SelectedQuote` enters the Settlement Window. Ends when the RFQ reac
 
 ### Actions
 
-- `SelectedQuote` enters Settlement Window.
-- Winning Funder attempts settlement.
-- On-Ledger Demo Settlement assigns the represented Receivable to the Winning Funder and transfers `DemoSettlementAsset` to the Seller.
-- On success, record `SettlementResult` and reach `RFQFinality`.
-- On failure before `RFQFinality`, record scoped `CommitmentFailure`.
-- Seller may promote a still-valid `FallbackQuote` from `SellerControlledFallbackQueue`.
-- Debtor Notification occurs only if required by quote terms, compliance, settlement, enforceability, or RFQ terms.
-- Issue `ScopedComplianceReceipt` when required.
+- The Seller chooses a visible, still-valid `PrivateQuote` off-ledger.
+- The Seller exercises `AcceptAndSettle` on that Funder-authored Quote.
+- CIP-56 demo payment settlement and pending Receivable transfer initiation occur atomically.
+- On success, create `ReceivableSaleSettlement` for the designated Auditor.
+- The Winning Funder completes ownership later through `AcceptTransfer`.
+- On failure, the transaction rolls back and the UI surfaces the ledger error; the Seller may retry or choose another still-valid Quote.
 
 Regulator receipt visibility is usually post-finality. If a selected regulation requires pre-approval, that requirement must be modeled explicitly rather than making Regulator visibility automatic for all RFQs.
 
 ### Outputs
 
-- `SettlementResult`
-- represented Receivable assignment state
-- `DemoSettlementAsset` transfer state
-- `RFQFinality`
-- fallback status, if fallback occurred
-- optional `ScopedComplianceReceipt`
+- `ReceivableSaleSettlement` scoped evidence
+- settled CIP-56 demo payment state
+- pending Receivable transfer, followed by accepted ownership state
 
 ## Cross-Cutting Rules
 
