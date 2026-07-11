@@ -3,7 +3,7 @@
 Reusable, cue-aligned editing assets for the CloakRFQ hackathon demo. The branch
 is self-contained; no machine-local media directory is required.
 
-[Watch the current V3.1 video](cloakrfq-hackathon-demo-v3.1.mp4).
+[Watch the final video](cloakrfq-hackathon-demo.mp4).
 
 ## Layout
 
@@ -14,8 +14,8 @@ is self-contained; no machine-local media directory is required.
 - `timeline.json`: source clip ranges and exact output durations for each visual beat.
 - `generate-narration.mjs`: regenerates synthetic narration and cue captions.
 - `render.mjs`: renders each cue-aligned scene and the final MP4.
-- `v3/`: ordered workflow images, narration overrides, scene plan, and V3.1 renderer.
-- `cloakrfq-hackathon-demo-v3.1.mp4`: final reviewable render.
+- `v3/`: ordered workflow images, narration overrides, scene plan, and final renderer.
+- `cloakrfq-hackathon-demo.mp4`: final reviewable render.
 
 Intermediate scene renders are written to the ignored `work/` directory.
 
@@ -24,12 +24,12 @@ Intermediate scene renders are written to the ignored `work/` directory.
 Prerequisites: `node`, `ffmpeg`, `ffprobe`, and `edge-tts`.
 
 ```bash
-npm --prefix video/hackathon-demo run narrate:v3
-npm --prefix video/hackathon-demo run validate:v3
-npm --prefix video/hackathon-demo run render:v3.1
+npm --prefix video run narrate:v3
+npm --prefix video run validate:v3
+npm --prefix video run render
 ```
 
-Edit V3.1 picture synchronization in `v3/scene-plan.json`. Each scene references
+Edit picture synchronization in `v3/scene-plan.json`. Each scene references
 one ordered workflow image and defines its output duration. The validation step
 checks that every image is used exactly once and in workflow order before the
 final render is generated.

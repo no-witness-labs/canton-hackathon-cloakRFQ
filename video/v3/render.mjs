@@ -89,7 +89,7 @@ await writeFile(
   plan.scenes.map((scene) => `file '${resolve(outputDir, `${scene.id}.mp4`)}'`).join('\n') + '\n',
 );
 
-const finalPath = resolve(demoRoot, `cloakrfq-hackathon-demo-v${version}.mp4`);
+const finalPath = resolve(demoRoot, 'cloakrfq-hackathon-demo.mp4');
 run('ffmpeg', [
   '-y', '-v', 'warning', '-f', 'concat', '-safe', '0', '-i', concatPath,
   '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k',
