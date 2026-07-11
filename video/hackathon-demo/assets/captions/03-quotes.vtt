@@ -1,0 +1,27 @@
+1
+00:00:00,050 --> 00:00:03,836
+Each Funder receives only its own certified disclosure
+
+2
+00:00:03,836 --> 00:00:07,148
+package and submits its own Private Quote.
+
+3
+00:00:07,148 --> 00:00:11,923
+A valid quote requires committed CIP-56 demo funding
+
+4
+00:00:11,923 --> 00:00:16,698
+evidence matching the RFQ, Seller, amount, token administrator,
+
+5
+00:00:16,698 --> 00:00:18,489
+and validity window.
+
+6
+00:00:18,489 --> 00:00:22,798
+Competing Funders cannot inspect one another's requests, prices,
+
+7
+00:00:22,798 --> 00:00:24,414
+or commercial terms.

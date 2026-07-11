@@ -3,12 +3,21 @@
 Private invoice-financing RFQs on Canton, with funding-backed confidential quotes,
 role-scoped disclosure, coordinated demo settlement, and scoped audit evidence.
 
+## Demo video
+
+[Watch the 2:46 CloakRFQ hackathon demo](video/hackathon-demo/cloakrfq-hackathon-demo-v2.mp4).
+
+The reusable raw clips, unchanged narration, captions, picture-timing manifest,
+and renderer are in [`video/hackathon-demo/`](video/hackathon-demo/README.md).
+
+
 ## Layout
 
 ```
 docs/    Planning documentation — product brief, PRD, ADRs, technical design, roadmap.
 ledger/  Daml multi-package ledger model and script tests for the MVP workflow.
 web/     Next.js 14 (App Router + TypeScript) live-backed MVP application. See web/README.md.
+video/   Reusable hackathon demo sources, cue-aligned editing tools, and current MP4.
 ```
 
 ## Web app

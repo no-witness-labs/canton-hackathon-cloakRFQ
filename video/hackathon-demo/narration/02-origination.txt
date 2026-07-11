@@ -1,0 +1,1 @@
+The Seller registers a represented receivable. Compliance and Risk then issue separate, scoped attestations. The Seller derives certificates and creates one private request for each invited Funder. These are real Daml contracts, with role-specific signatories and observers, while the raw debtor identity remains with the Seller.

@@ -1,0 +1,8 @@
+1
+00:00:00,050 --> 00:00:13,164
+Only after settlement does the Auditor receive scoped Receivable Sale Settlement evidence: the outcome, parties, accepted price, demo payment status, transfer status, and time.
+
+2
+00:00:13,164 --> 00:00:21,315
+The Auditor does not receive the private quote book, losing Funders, raw debtor identity, or attestation source data.
+

@@ -1,0 +1,87 @@
+{
+  "version": 2,
+  "video": {
+    "width": 1440,
+    "height": 810,
+    "contentWidth": 1360,
+    "contentHeight": 765,
+    "fps": 30
+  },
+  "scenes": [
+    {
+      "id": "01-intro",
+      "duration": 21.688,
+      "segments": [
+        { "clip": "01-intro.webm", "in": 1.5, "out": 6.0, "duration": 4.442, "purpose": "Problem introduction on welcome screen" },
+        { "clip": "01-intro.webm", "in": 6.0, "out": 12.0, "duration": 7.773, "purpose": "Sensitive marketplace context and Seller view" },
+        { "clip": "01-intro.webm", "in": 12.0, "out": 23.5, "duration": 8.346, "purpose": "Role-scoped workflow without an all-seeing operator" },
+        { "clip": "01-intro.webm", "in": 23.5, "out": 26.0, "duration": 1.127, "purpose": "Transition to Seller" }
+      ]
+    },
+    {
+      "id": "02-origination",
+      "duration": 24.496,
+      "segments": [
+        { "clip": "02-origination.webm", "in": 1.5, "out": 5.5, "duration": 3.231, "purpose": "Seller registers represented Receivable" },
+        { "clip": "02-origination.webm", "in": 11.0, "out": 14.5, "duration": 2.311, "purpose": "Compliance attestation" },
+        { "clip": "02-origination.webm", "in": 15.5, "out": 19.0, "duration": 2.311, "purpose": "Risk attestation" },
+        { "clip": "02-origination.webm", "in": 19.0, "out": 27.5, "duration": 6.38, "purpose": "Seller derives certificates and opens per-Funder requests" },
+        { "clip": "02-origination.webm", "in": 1.8, "out": 4.6, "duration": 4.0, "purpose": "Raw Debtor identity remains in Seller Receivable" },
+        { "clip": "02-origination.webm", "in": 25.5, "out": 30.5, "duration": 5.141, "purpose": "RFQ requests confirmed on-ledger" },
+        { "clip": "02-origination.webm", "in": 28.0, "out": 30.5, "duration": 1.122, "purpose": "Origination transition" }
+      ]
+    },
+    {
+      "id": "03-quotes",
+      "duration": 25.48,
+      "segments": [
+        { "clip": "03-quotes.webm", "in": 1.5, "out": 6.0, "duration": 3.549, "purpose": "Funder A receives and submits its request" },
+        { "clip": "03-quotes.webm", "in": 6.5, "out": 13.0, "duration": 3.549, "purpose": "Funder B receives and submits its request" },
+        { "clip": "03-quotes.webm", "in": 7.5, "out": 12.5, "duration": 6.0, "purpose": "Committed CIP-56 demo funding evidence" },
+        { "clip": "03-quotes.webm", "in": 17.5, "out": 22.5, "duration": 5.341, "purpose": "Seller sees funding-backed comparison rows" },
+        { "clip": "03-quotes.webm", "in": 13.0, "out": 17.5, "duration": 5.925, "purpose": "Funders inspect only their own quote status" },
+        { "clip": "03-quotes.webm", "in": 20.0, "out": 23.5, "duration": 1.116, "purpose": "Quote comparison transition" }
+      ]
+    },
+    {
+      "id": "04-privacy",
+      "duration": 22.912,
+      "segments": [
+        { "clip": "04-privacy.webm", "in": 1.2, "out": 3.5, "duration": 3.4, "purpose": "Same deal, per-party ledger" },
+        { "clip": "04-privacy.webm", "in": 3.5, "out": 9.0, "duration": 4.18, "purpose": "Funder A and Funder B visibility" },
+        { "clip": "04-privacy.webm", "in": 9.0, "out": 13.0, "duration": 3.359, "purpose": "Coordinator sees no quote contents" },
+        { "clip": "04-privacy.webm", "in": 13.0, "out": 20.0, "duration": 6.133, "purpose": "Auditor and Outsider see nothing before settlement" },
+        { "clip": "04-privacy.webm", "in": 18.0, "out": 22.5, "duration": 4.726, "purpose": "Canton disclosure proof" },
+        { "clip": "04-privacy.webm", "in": 20.0, "out": 22.5, "duration": 1.114, "purpose": "Privacy transition" }
+      ]
+    },
+    {
+      "id": "05-settlement",
+      "duration": 33.328,
+      "segments": [
+        { "clip": "05-settlement.webm", "in": 1.5, "out": 10.5, "duration": 10.249, "purpose": "Seller compares terms and selects a Quote" },
+        { "clip": "05-settlement.webm", "in": 10.0, "out": 14.5, "duration": 4.961, "purpose": "Seller triggers on-ledger settlement" },
+        { "clip": "05-settlement.webm", "in": 12.0, "out": 17.5, "duration": 7.865, "purpose": "Settlement checks and recorded outcome" },
+        { "clip": "05-settlement.webm", "in": 16.5, "out": 23.8, "duration": 6.25, "purpose": "Payment settled and pending transfer visible to winner" },
+        { "clip": "05-settlement.webm", "in": 23.5, "out": 27.5, "duration": 2.89, "purpose": "Winning Funder accepts ownership" },
+        { "clip": "05-settlement.webm", "in": 27.5, "out": 32.5, "duration": 1.113, "purpose": "Ownership accepted transition" }
+      ]
+    },
+    {
+      "id": "06-audit",
+      "duration": 24.5,
+      "segments": [
+        { "clip": "06-audit.webm", "in": 1.5, "out": 12.5, "duration": 13.114, "purpose": "Auditor receives scoped settlement fields" },
+        { "clip": "06-audit.webm", "in": 6.0, "out": 12.5, "duration": 8.151, "purpose": "Auditor withheld-data boundary" },
+        { "clip": "06-audit.webm", "in": 13.0, "out": 18.5, "duration": 3.235, "purpose": "Real ledger transaction IDs" }
+      ]
+    },
+    {
+      "id": "07-close",
+      "duration": 14.08,
+      "segments": [
+        { "clip": "07-close.webm", "in": 0.0, "out": 14.4, "duration": 14.08, "purpose": "Closing value proposition" }
+      ]
+    }
+  ]
+}

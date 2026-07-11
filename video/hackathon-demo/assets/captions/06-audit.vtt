@@ -1,0 +1,23 @@
+1
+00:00:00,050 --> 00:00:04,819
+Only after settlement does the Auditor receive scoped
+
+2
+00:00:04,819 --> 00:00:09,587
+ReceivableSaleSettlement evidence: the outcome, parties, accepted price, demo
+
+3
+00:00:09,587 --> 00:00:13,164
+payment status, transfer status, and time.
+
+4
+00:00:13,164 --> 00:00:16,787
+The Auditor does not receive the private quote
+
+5
+00:00:16,787 --> 00:00:20,409
+book, losing Funders, raw debtor identity, or attestation
+
+6
+00:00:20,409 --> 00:00:21,315
+source data.

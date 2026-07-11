@@ -1,0 +1,27 @@
+1
+00:00:00,050 --> 00:00:03,281
+The Seller registers a represented receivable.
+
+2
+00:00:03,281 --> 00:00:07,903
+Compliance and Risk then issue separate, scoped attestations.
+
+3
+00:00:07,903 --> 00:00:11,829
+The Seller derives certificates and creates one private
+
+4
+00:00:11,829 --> 00:00:14,283
+request for each invited Funder.
+
+5
+00:00:14,283 --> 00:00:18,132
+These are real Daml contracts, with role-specific signatories
+
+6
+00:00:18,132 --> 00:00:21,981
+and observers, while the raw debtor identity remains
+
+7
+00:00:21,981 --> 00:00:23,424
+with the Seller.

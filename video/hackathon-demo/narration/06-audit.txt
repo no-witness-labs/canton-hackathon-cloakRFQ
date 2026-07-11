@@ -1,0 +1,1 @@
+Only after settlement does the Auditor receive scoped Receivable Sale Settlement evidence: the outcome, parties, accepted price, demo payment status, transfer status, and time. The Auditor does not receive the private quote book, losing Funders, raw debtor identity, or attestation source data.
