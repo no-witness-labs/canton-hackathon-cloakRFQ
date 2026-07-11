@@ -1,0 +1,39 @@
+1
+00:00:00,050 --> 00:00:02,980
+This is the same deal through different ledger
+
+2
+00:00:02,980 --> 00:00:03,346
+views.
+
+3
+00:00:03,346 --> 00:00:06,794
+Each Funder sees only contracts it is entitled
+
+4
+00:00:06,794 --> 00:00:07,656
+to see.
+
+5
+00:00:07,656 --> 00:00:11,575
+Compliance and Risk retain only their scoped contracts.
+
+6
+00:00:11,575 --> 00:00:14,908
+The Coordinator sees no quote contents.
+
+7
+00:00:14,908 --> 00:00:18,659
+The Auditor sees nothing before settlement, and the
+
+8
+00:00:18,659 --> 00:00:20,065
+Outsider sees nothing.
+
+9
+00:00:20,065 --> 00:00:23,898
+This privacy comes from Canton disclosure, not a
+
+10
+00:00:23,898 --> 00:00:24,856
+visual filter.

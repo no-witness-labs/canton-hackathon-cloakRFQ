@@ -1,0 +1,20 @@
+1
+00:00:00,050 --> 00:00:10,299
+After the response deadline, the Seller compares net purchase price, recourse, debtor notification, and quote validity, then chooses one offer.
+
+2
+00:00:10,299 --> 00:00:15,260
+Selection is a Seller decision, but settlement rules are on-ledger.
+
+3
+00:00:15,260 --> 00:00:23,125
+Canton verifies the quote, receivable, committed allocation, payment leg, and settlement factory.
+
+4
+00:00:23,125 --> 00:00:29,375
+The demo payment settles and a pending receivable transfer is created in one transaction.
+
+5
+00:00:29,375 --> 00:00:32,265
+The winning Funder then accepts ownership.
+
