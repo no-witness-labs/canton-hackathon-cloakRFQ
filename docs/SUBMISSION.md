@@ -10,7 +10,7 @@ Quotes while Canton restricts each party to its entitled workflow records.
 | --- | --- |
 | Repository | https://github.com/no-witness-labs/canton-hackathon-cloakRFQ |
 | Live product | https://canton-hackathon-cloak-6v1qrvvgn-dappwebsites-projects.vercel.app |
-| Video pitch (3 min) | _Recording pending; script in `docs/VIDEO_SCRIPT.md`_ |
+| Video pitch (3 min) | [`video/cloakrfq-hackathon-demo.mp4`](../video/cloakrfq-hackathon-demo.mp4) (2:59; script in [`VIDEO_SCRIPT.md`](VIDEO_SCRIPT.md)) |
 | Presentation deck | [`docs/pitch/cloakrfq-pitch.pdf`](pitch/cloakrfq-pitch.pdf) |
 
 ## What it is
