@@ -290,6 +290,36 @@
       font-size: 17px;
     }
 
+    .definition-strip .seller-aim {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+      padding-left: 18px;
+      border-left: 1px solid var(--line-strong);
+      color: var(--text);
+      font-family: var(--headline);
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .definition-strip .goal-label {
+      color: var(--mint);
+      font-family: var(--mono);
+      font-size: 8.5px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .contract-inline {
+      color: var(--mint);
+      font-family: var(--mono);
+      font-size: 0.88em;
+      font-weight: 500;
+      letter-spacing: 0.015em;
+    }
+
     .finance-map {
       margin-top: 24px;
       padding: 24px 25px 22px;
@@ -990,6 +1020,13 @@
       text-transform: uppercase;
     }
 
+    .atomic-event .event-role.contract-event {
+      color: var(--mint);
+      font-size: 7.6px;
+      letter-spacing: 0.015em;
+      text-transform: none;
+    }
+
     .why-panel {
       padding: 23px 22px;
       background:
@@ -1167,7 +1204,7 @@
     class="slide"
     data-document-role="page"
     data-label="Finance Background — What CloakRFQ Is About"
-    data-speaker-notes="25 seconds. Define a receivable in one sentence. Contrast waiting for customer payment with the early-liquidity path where invited funders compete."
+    data-speaker-notes="25 seconds. Lead with the Seller: the work is done, payment comes later, and the business needs cash now. Define the receivable, then follow the private-RFQ path to early liquidity."
   >
     <div class="slide-canvas">
     <div class="topbar">
@@ -1184,6 +1221,7 @@
       <span class="term">Receivable</span>
       <span class="divider"></span>
       <span class="meaning">Money a customer owes after goods or services have already been delivered.</span>
+      <span class="seller-aim"><span class="goal-label">Seller goal</span>Early liquidity without broadcasting the deal</span>
     </div>
 
     <div class="finance-map">
@@ -1280,7 +1318,7 @@
     class="slide"
     data-document-role="page"
     data-label="Top 3 Problems CloakRFQ Solves"
-    data-speaker-notes="30 seconds. Move left to right: oversharing, the all-seeing intermediary, and disconnected execution. Each solution line previews the product."
+    data-speaker-notes="30 seconds. Keep the Seller as the protagonist: competitive financing normally expands disclosure. Move left to right through oversharing, the all-seeing intermediary, and disconnected execution."
   >
     <div class="slide-canvas">
     <div class="topbar">
@@ -1292,7 +1330,7 @@
 
     <div class="eyebrow">Why this needs a new workflow</div>
     <h1>Top 3 Problems CloakRFQ Solves</h1>
-    <p class="subhead">Today, privacy and competitive financing pull in opposite directions.</p>
+    <p class="subhead">Today, the Seller often trades privacy for competitive financing.</p>
 
     <div class="problem-grid">
       <article class="problem-card">
@@ -1303,7 +1341,7 @@
           <span class="problem-number">01</span>
         </div>
         <h2>Sensitive information is overshared</h2>
-        <p class="explain">Debtor data, deal terms, and funding context travel too far.</p>
+        <p class="explain">The Seller’s debtor data, deal terms, and funding context travel too far.</p>
         <div class="help-line">
           <div class="micro-label">CloakRFQ helps by</div>
           <p>Purpose-limited disclosure</p>
@@ -1352,19 +1390,19 @@
     class="slide"
     data-document-role="page"
     data-label="How CloakRFQ Works"
-    data-speaker-notes="40 seconds. Follow the five-step rail. Emphasize one private request per invited funder, seller-controlled quote choice after the deadline, and scoped auditor evidence after settlement."
+    data-speaker-notes="40 seconds. Present this as an implemented Canton workflow. Follow the five-step rail, naming RFQRequest and PrivateQuote only as credibility anchors. Emphasize Seller-controlled quote choice after the deadline."
   >
     <div class="slide-canvas">
     <div class="topbar">
       <div class="wordmark">
         <span class="cloak">Cloak</span><span class="rfq">RFQ</span><span class="receipts">Receipts</span>
       </div>
-      <div class="deck-meta">Workflow</div>
+      <div class="deck-meta">Implemented on Canton</div>
     </div>
 
-    <div class="eyebrow">Five steps · five roles</div>
+    <div class="eyebrow">Five steps · five roles · enforced on Canton</div>
     <h1>How CloakRFQ Works</h1>
-    <p class="subhead">One receivable moves through a role-scoped financing workflow.</p>
+    <p class="subhead">One receivable moves through a role-scoped Canton workflow.</p>
 
     <div class="workflow">
       <article class="workflow-card">
@@ -1407,7 +1445,7 @@
         <div class="role-group">
           <span class="role-pill mint">Funders</span>
         </div>
-        <p class="detail">Each Funder submits a funding-backed quote in its own lane.</p>
+        <p class="detail"><span class="contract-inline">RFQRequest → PrivateQuote</span><br>One funding-backed lane per Funder.</p>
       </article>
       <div class="arrow">
         <svg viewBox="0 0 28 16"><path d="M1 8h24M20 3l5 5-5 5"></path></svg>
@@ -1443,7 +1481,7 @@
     </div>
 
     <div class="actor-band">
-      <div class="micro-label">Business roles</div>
+      <div class="micro-label">Canton party views</div>
       <div class="actor">
         <svg class="icon"><use href="#icon-user"></use></svg>
         Seller
@@ -1467,7 +1505,7 @@
     </div>
 
     <div class="footer">
-      <div class="footer-note"><span class="footer-rule"></span>Private quote intake · seller choice · coordinated settlement</div>
+      <div class="footer-note"><span class="footer-rule"></span>Implemented in Daml on Canton · seller choice · coordinated settlement</div>
       <div class="footer-page">03 / 05</div>
     </div>
     </div>
@@ -1477,17 +1515,17 @@
     class="slide"
     data-document-role="page"
     data-label="Selective Disclosure — Who Sees What"
-    data-speaker-notes="40 seconds. This is the proof slide. Read the green and coral cells across the key roles. The auditor gate opens only after settlement. Clarify that this is Canton role-scoped disclosure, not anonymity or zero knowledge."
+    data-speaker-notes="40 seconds. This is the Canton proof slide. Read the green and coral cells across the key roles. RFQRequest, PrivateQuote, and ReceivableSaleSettlement are implementation anchors. Clarify that this is role-scoped disclosure, not anonymity or zero knowledge."
   >
     <div class="slide-canvas">
     <div class="topbar">
       <div class="wordmark">
         <span class="cloak">Cloak</span><span class="rfq">RFQ</span><span class="receipts">Receipts</span>
       </div>
-      <div class="deck-meta">Privacy proof</div>
+      <div class="deck-meta">Canton privacy proof</div>
     </div>
 
-    <div class="eyebrow">Different party · different authorized view</div>
+    <div class="eyebrow">Canton contract visibility · different party · different view</div>
     <h1>Selective Disclosure — Who Sees What</h1>
     <div class="legend" aria-label="Visibility legend">
       <span class="legend-item"><span class="state-dot visible"></span>Visible</span>
@@ -1510,7 +1548,7 @@
         </div>
         <div class="visibility-cell">
           <span class="state-dot visible"></span>
-          Own request + own quote
+          <span>Own <span class="contract-inline">RFQRequest</span> + <span class="contract-inline">PrivateQuote</span></span>
         </div>
         <div class="visibility-cell hidden-text">
           <span class="state-dot hidden"></span>
@@ -1574,7 +1612,7 @@
         </div>
         <div class="visibility-cell">
           <span class="state-dot conditional"></span>
-          Scoped ReceivableSaleSettlement
+          <span>Scoped <span class="contract-inline">ReceivableSaleSettlement</span></span>
         </div>
         <div class="visibility-cell hidden-text">
           <span class="state-dot hidden"></span>
@@ -1606,7 +1644,7 @@
     </div>
 
     <div class="footer">
-      <div class="footer-note"><span class="footer-rule"></span>Contract-level visibility · not a UI filter</div>
+      <div class="footer-note"><span class="footer-rule"></span>Canton contract-level visibility · not a UI filter</div>
       <div class="footer-page">04 / 05</div>
     </div>
     </div>
@@ -1616,17 +1654,17 @@
     class="slide"
     data-document-role="page"
     data-label="Settlement and Why Canton"
-    data-speaker-notes="35 seconds. The seller chooses off-ledger. The demo payment, pending transfer, and scoped evidence are created in one Daml transaction. The winning funder accepts the transfer separately. Close with the four reasons this workflow belongs on Canton."
+    data-speaker-notes="35 seconds. The Seller chooses off-ledger. Canton coordinates demo payment, pending transfer, and scoped ReceivableSaleSettlement evidence in one Daml transaction. The winning Funder accepts separately. Close: Private competition without an all-seeing intermediary—made possible by Canton."
   >
     <div class="slide-canvas">
     <div class="topbar">
       <div class="wordmark">
         <span class="cloak">Cloak</span><span class="rfq">RFQ</span><span class="receipts">Receipts</span>
       </div>
-      <div class="deck-meta">Execution + close</div>
+      <div class="deck-meta">Canton execution + close</div>
     </div>
 
-    <div class="eyebrow">From winning quote to scoped evidence</div>
+    <div class="eyebrow">Canton coordination · from winning quote to scoped evidence</div>
     <h1>Settlement and Why Canton</h1>
 
     <div class="settlement-layout">
@@ -1653,7 +1691,7 @@
           <div class="atomic-group">
             <div class="atomic-label">
               <span>02 · One Daml transaction</span>
-              <span>Atomic demo path</span>
+              <span>Canton atomic demo path</span>
             </div>
 
             <div class="atomic-event">
@@ -1677,7 +1715,7 @@
                 <svg class="icon icon-sm"><use href="#icon-audit"></use></svg>
               </div>
               <h3>Scoped evidence is created</h3>
-              <span class="event-role">Auditor</span>
+              <span class="event-role contract-event">ReceivableSaleSettlement</span>
             </div>
           </div>
 
@@ -1697,7 +1735,7 @@
 
         <div class="closing-line">
           <span class="pulse"></span>
-          Private competition. Coordinated execution. Scoped evidence.
+          Private competition without an all-seeing intermediary—made possible by Canton.
         </div>
       </div>
 
