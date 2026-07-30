@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CloakRFQ Receipts — Finalist Pitch</title>
   <!--
-    Six-slide, 2:50 finalist pitch deck.
+    Seven-slide, 2:50 finalist pitch deck.
 
     Rendered with:
       /home/aibox/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome \
@@ -222,6 +222,143 @@
 
     .footer-page {
       color: var(--muted);
+    }
+
+    /* Intro */
+    .intro-slide .slide-canvas {
+      padding: 42px 68px 34px;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(87, 227, 160, 0.09), transparent 31%),
+        radial-gradient(circle at 88% 2%, rgba(87, 227, 160, 0.07), transparent 29%),
+        radial-gradient(circle at 8% 100%, rgba(232, 193, 95, 0.05), transparent 30%),
+        var(--bg);
+    }
+
+    .intro-slide .topbar {
+      margin-bottom: 0;
+    }
+
+    .intro-stage {
+      height: 674px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .intro-wordmark {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      font-family: var(--headline);
+      letter-spacing: -0.055em;
+    }
+
+    .intro-wordmark .cloak,
+    .intro-wordmark .rfq {
+      font-size: 112px;
+      font-weight: 700;
+      line-height: 0.92;
+    }
+
+    .intro-wordmark .cloak {
+      color: var(--text);
+    }
+
+    .intro-wordmark .rfq {
+      color: var(--mint);
+    }
+
+    .intro-wordmark .receipts {
+      margin-left: 18px;
+      color: var(--muted);
+      font-size: 34px;
+      font-weight: 500;
+      letter-spacing: -0.025em;
+    }
+
+    .intro-meanings {
+      width: 100%;
+      max-width: 980px;
+      margin-top: 58px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border-top: 1px solid var(--line-strong);
+      border-bottom: 1px solid var(--line-strong);
+    }
+
+    .intro-meaning {
+      min-height: 112px;
+      padding: 24px 28px 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 9px;
+    }
+
+    .intro-meaning + .intro-meaning {
+      border-left: 1px solid var(--line);
+    }
+
+    .intro-meaning span {
+      color: var(--mint);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .intro-meaning strong {
+      color: var(--text-secondary);
+      font-family: var(--headline);
+      font-size: 21px;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    .intro-thesis {
+      margin-top: 34px;
+      color: var(--text-secondary);
+      font-family: var(--headline);
+      font-size: 27px;
+      font-weight: 500;
+      letter-spacing: -0.025em;
+    }
+
+    .intro-thesis span {
+      color: var(--text);
+    }
+
+    .intro-canton {
+      margin-top: 24px;
+      padding: 10px 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      border: 1px solid rgba(87, 227, 160, 0.22);
+      border-radius: 999px;
+      background: var(--mint-soft);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .intro-canton .pulse {
+      width: 7px;
+      height: 7px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 16px rgba(87, 227, 160, 0.56);
+    }
+
+    .intro-canton strong {
+      color: var(--mint);
+      font-weight: 600;
     }
 
     .icon {
@@ -1395,10 +1532,57 @@
   </svg>
 
   <section
+    class="slide intro-slide"
+    data-document-role="page"
+    data-label="CloakRFQ Receipts"
+    data-speaker-notes="10 seconds. CloakRFQ is a private receivable-sale RFQ where each participant sees only its authorized slice of the deal—enforced by Canton."
+  >
+    <div class="slide-canvas">
+      <div class="topbar">
+        <div class="deck-meta">Finalist pitch</div>
+        <div class="deck-meta">02:50 · Canton</div>
+      </div>
+
+      <div class="intro-stage">
+        <div class="intro-wordmark" aria-label="CloakRFQ Receipts">
+          <span class="cloak">Cloak</span><span class="rfq">RFQ</span><span class="receipts">Receipts</span>
+        </div>
+
+        <div class="intro-meanings" aria-label="What the name means">
+          <div class="intro-meaning">
+            <span>Cloak</span>
+            <strong>Selective disclosure</strong>
+          </div>
+          <div class="intro-meaning">
+            <span>RFQ</span>
+            <strong>Request for Quote</strong>
+          </div>
+          <div class="intro-meaning">
+            <span>Receipts</span>
+            <strong>Scoped settlement evidence</strong>
+          </div>
+        </div>
+
+        <p class="intro-thesis">Each participant sees only its <span>authorized slice</span> of the deal.</p>
+
+        <div class="intro-canton">
+          <span class="pulse"></span>
+          Role-scoped disclosure, enforced by <strong>Canton</strong>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="footer-note"><span class="footer-rule"></span>Private receivable-sale RFQ</div>
+        <div class="footer-page">01 / 07</div>
+      </div>
+    </div>
+  </section>
+
+  <section
     class="slide"
     data-document-role="page"
     data-label="Finance Background — What CloakRFQ Is About"
-    data-speaker-notes="20 seconds. A receivable is money owed on an unpaid invoice. Payment may be Net 30–90; instead of waiting, the Seller sells at a discount for liquidity now. Then point to private Funder competition."
+    data-speaker-notes="18 seconds. A receivable is money owed on an unpaid invoice. Payment may be Net 30–90; instead of waiting, the Seller sells at a discount for liquidity now. Then point to private Funder competition."
   >
     <div class="slide-canvas">
     <div class="topbar">
@@ -1503,7 +1687,7 @@
 
     <div class="footer">
       <div class="footer-note"><span class="footer-rule"></span>Receivable sale · not a loan · private competition</div>
-      <div class="footer-page">01 / 06</div>
+      <div class="footer-page">02 / 07</div>
     </div>
     </div>
   </section>
@@ -1512,7 +1696,7 @@
     class="slide"
     data-document-role="page"
     data-label="Top 3 Problems CloakRFQ Solves"
-    data-speaker-notes="25 seconds. Keep the Seller as the protagonist: competitive financing normally expands disclosure. Move left to right through oversharing, the all-seeing intermediary, and disconnected execution."
+    data-speaker-notes="22 seconds. Keep the Seller as the protagonist: competitive financing normally expands disclosure. Move left to right through oversharing, the all-seeing intermediary, and disconnected execution."
   >
     <div class="slide-canvas">
     <div class="topbar">
@@ -1575,7 +1759,7 @@
 
     <div class="footer">
       <div class="footer-note"><span class="footer-rule"></span>Three broken trust boundaries · one institutional workflow</div>
-      <div class="footer-page">02 / 06</div>
+      <div class="footer-page">03 / 07</div>
     </div>
     </div>
   </section>
@@ -1584,7 +1768,7 @@
     class="slide"
     data-document-role="page"
     data-label="How CloakRFQ Works"
-    data-speaker-notes="35 seconds. Present this as an implemented Canton workflow. Private Quotes differ by net purchase price, recourse, Debtor notification, and expiry, with committed funding allocation evidence. A Seller may prefer a lower-priced non-recourse, no-notification quote over the highest price. Emphasize Seller-controlled quote choice after the deadline."
+    data-speaker-notes="32 seconds. Present this as an implemented Canton workflow. Private Quotes differ by net purchase price, recourse, Debtor notification, and expiry, with committed funding allocation evidence. A Seller may prefer a lower-priced non-recourse, no-notification quote over the highest price. Emphasize Seller-controlled quote choice after the deadline."
   >
     <div class="slide-canvas">
     <div class="topbar">
@@ -1694,7 +1878,7 @@
 
     <div class="footer">
       <div class="footer-note"><span class="footer-rule"></span>Implemented in Daml on Canton · seller choice · coordinated settlement</div>
-      <div class="footer-page">03 / 06</div>
+      <div class="footer-page">04 / 07</div>
     </div>
     </div>
   </section>
@@ -1833,7 +2017,7 @@
 
     <div class="footer">
       <div class="footer-note"><span class="footer-rule"></span>Canton contract-level visibility · not a UI filter</div>
-      <div class="footer-page">04 / 06</div>
+      <div class="footer-page">05 / 07</div>
     </div>
     </div>
   </section>
@@ -1930,7 +2114,7 @@
 
     <div class="footer">
       <div class="footer-note"><span class="footer-rule"></span>Demo settlement · pending transfer · separate Funder acceptance</div>
-      <div class="footer-page">05 / 06</div>
+      <div class="footer-page">06 / 07</div>
     </div>
     </div>
   </section>
@@ -1939,7 +2123,7 @@
     class="slide"
     data-document-role="page"
     data-label="Why Canton"
-    data-speaker-notes="20 seconds. Land the four Canton capabilities, then close on the thesis: private competition without an all-seeing intermediary, made possible by Canton."
+    data-speaker-notes="18 seconds. Land the four Canton capabilities, then close on the thesis: private competition without an all-seeing intermediary, made possible by Canton."
   >
     <div class="slide-canvas">
     <div class="topbar">
@@ -1986,7 +2170,7 @@
 
     <div class="footer">
       <div class="footer-note"><span class="footer-rule"></span>Selective disclosure · authorization · coordination · auditability</div>
-      <div class="footer-page">06 / 06</div>
+      <div class="footer-page">07 / 07</div>
     </div>
     </div>
   </section>
