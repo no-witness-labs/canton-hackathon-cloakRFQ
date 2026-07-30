@@ -576,7 +576,7 @@
 
     .workflow-card {
       min-width: 0;
-      height: 306px;
+      height: 320px;
       padding: 20px 18px;
       border: 1px solid var(--line);
       border-radius: 15px;
@@ -1398,7 +1398,7 @@
     class="slide"
     data-document-role="page"
     data-label="Finance Background — What CloakRFQ Is About"
-    data-speaker-notes="20 seconds. Lead with the Seller: the work is done, payment comes later, and the business needs cash now. Define the receivable, then follow the private-RFQ path to early liquidity."
+    data-speaker-notes="20 seconds. A receivable is money owed on an unpaid invoice. Payment may be Net 30–90; instead of waiting, the Seller sells at a discount for liquidity now. Then point to private Funder competition."
   >
     <div class="slide-canvas">
     <div class="topbar">
@@ -1414,7 +1414,7 @@
     <div class="definition-strip">
       <span class="term">Receivable</span>
       <span class="divider"></span>
-      <span class="meaning">Money a customer owes after goods or services have already been delivered.</span>
+      <span class="meaning">Money owed on an unpaid invoice after goods or services are delivered.</span>
       <span class="seller-aim"><span class="goal-label">Seller goal</span>Early liquidity without broadcasting the deal</span>
     </div>
 
@@ -1449,7 +1449,7 @@
             <svg class="icon"><use href="#icon-clock"></use></svg>
           </div>
           <div>
-            <div class="micro-label">Paid later</div>
+            <div class="micro-label">Often 30–90 days</div>
             <h2>Customer pays on due date</h2>
           </div>
         </div>
@@ -1478,7 +1478,7 @@
           </div>
           <div>
             <div class="micro-label">Private RFQ</div>
-            <h2>Funders compete to buy it</h2>
+            <h2>Funders bid at a discount</h2>
             <div class="funder-marks" aria-label="Three funders">
               <span class="funder-mark">A</span>
               <span class="funder-mark">B</span>
@@ -1584,7 +1584,7 @@
     class="slide"
     data-document-role="page"
     data-label="How CloakRFQ Works"
-    data-speaker-notes="35 seconds. Present this as an implemented Canton workflow. Follow the five-step rail, naming RFQRequest and PrivateQuote only as credibility anchors. Emphasize Seller-controlled quote choice after the deadline."
+    data-speaker-notes="35 seconds. Present this as an implemented Canton workflow. Private Quotes differ by net purchase price, recourse, Debtor notification, and expiry, with committed funding allocation evidence. Emphasize Seller-controlled quote choice after the deadline."
   >
     <div class="slide-canvas">
     <div class="topbar">
@@ -1635,11 +1635,12 @@
         <div class="workflow-icon">
           <svg class="icon"><use href="#icon-quote"></use></svg>
         </div>
-        <h2>Private requests → Private Quotes</h2>
+        <h2>Funders submit Private Quotes</h2>
         <div class="role-group">
-          <span class="role-pill mint">Funders</span>
+          <span class="role-pill mint">RFQRequest</span>
+          <span class="role-pill mint">Funding-backed</span>
         </div>
-        <p class="detail"><span class="contract-inline">RFQRequest → PrivateQuote</span><br>Private lane per Funder.</p>
+        <p class="detail">Price · recourse<br>notification · expiry</p>
       </article>
       <div class="arrow">
         <svg viewBox="0 0 28 16"><path d="M1 8h24M20 3l5 5-5 5"></path></svg>
