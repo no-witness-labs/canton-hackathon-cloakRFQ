@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloakRFQ Finalist Pitch</title>
+<!--
+  Source for cloakrfq-finalist-pitch.pdf.
+  Print with a Chromium-compatible browser using:
+    --headless=new --disable-gpu --no-pdf-header-footer
+    --run-all-compositor-stages-before-draw --virtual-time-budget=10000
+    --print-to-pdf=docs/pitch/finalist/cloakrfq-finalist-pitch.pdf
+    file://$PWD/docs/pitch/finalist/cloakrfq-finalist-pitch.html
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Public+Sans:wght@400;500;600;700&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #15171c;
+    --bg-deep: #0a0c10;
+    --panel: #1b1e24;
+    --panel-deep: #101318;
+    --text: #eef0f3;
+    --secondary: #cdd2db;
+    --muted: #9aa1ad;
+    --faint: #6b7280;
+    --mint: #57e3a0;
+    --amber: #e8c15f;
+    --coral: #f0795f;
+    --line: rgba(255, 255, 255, 0.09);
+    --line-soft: rgba(255, 255, 255, 0.055);
+    --display: "Space Grotesk", "Arial", sans-serif;
+    --body: "Public Sans", "Arial", sans-serif;
+    --mono: "IBM Plex Mono", "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  @page { size: 13.333333in 7.5in; margin: 0; }
+  html, body { background: var(--bg-deep); }
+  body {
+    color: var(--text);
+    font-family: var(--body);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .slide {
+    width: 13.333333in;
+    height: 7.5in;
+    padding: 0.58in 0.68in 0.55in;
+    position: relative;
+    overflow: hidden;
+    break-after: page;
+    page-break-after: always;
+    background:
+      radial-gradient(850px 520px at 100% -12%, rgba(87, 227, 160, 0.085), transparent 62%),
+      var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .slide:last-of-type {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 0.48in;
+  }
+
+  .wordmark {
+    font-family: var(--display);
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+
+  .wordmark .rfq { color: var(--mint); }
+  .wordmark .receipts { color: var(--muted); font-weight: 500; }
+
+  .run-label,
+  .eyebrow,
+  .section-id,
+  .micro {
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  .run-label {
+    color: var(--muted);
+    font-size: 10.5px;
+  }
+
+  .eyebrow {
+    color: var(--mint);
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    max-width: 10.8in;
+    font-family: var(--display);
+    font-size: 49px;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1.06;
+  }
+
+  .lede {
+    max-width: 10.6in;
+    color: var(--secondary);
+    font-size: 19px;
+    line-height: 1.48;
+    margin-top: 16px;
+  }
+
+  .slide-foot {
+    position: absolute;
+    left: 0.68in;
+    right: 0.68in;
+    bottom: 0.28in;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 11px;
+    color: var(--faint);
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Finance background */
+  .finance-flow {
+    display: grid;
+    grid-template-columns: 1fr 46px 1fr 46px 1.08fr;
+    align-items: stretch;
+    margin-top: 0.44in;
+  }
+
+  .finance-card {
+    min-height: 2.02in;
+    padding: 23px 24px;
+    background: var(--panel-deep);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .finance-card.amber {
+    border-color: rgba(232, 193, 95, 0.28);
+    background: linear-gradient(155deg, rgba(232, 193, 95, 0.055), transparent 58%), var(--panel-deep);
+  }
+
+  .finance-card.mint {
+    border-color: rgba(87, 227, 160, 0.34);
+    background: linear-gradient(155deg, rgba(87, 227, 160, 0.075), transparent 58%), var(--panel-deep);
+  }
+
+  .finance-card .section-id {
+    color: var(--muted);
+    font-size: 10px;
+    margin-bottom: 20px;
+  }
+
+  .finance-card.amber .section-id { color: var(--amber); }
+  .finance-card.mint .section-id { color: var(--mint); }
+
+  .finance-card h2 {
+    font-family: var(--display);
+    font-size: 25px;
+    font-weight: 600;
+    line-height: 1.12;
+  }
+
+  .finance-card p {
+    color: var(--muted);
+    font-size: 14.5px;
+    line-height: 1.42;
+    margin-top: auto;
+    padding-top: 16px;
+  }
+
+  .flow-arrow {
+    display: grid;
+    place-items: center;
+    color: var(--faint);
+    font-family: var(--mono);
+    font-size: 23px;
+  }
+
+  /* Problems */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+    margin-top: 0.5in;
+  }
+
+  .problem {
+    min-height: 2.52in;
+    padding: 25px 25px 23px;
+    background: var(--panel-deep);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .problem .num {
+    width: 35px;
+    height: 35px;
+    border: 1px solid rgba(240, 121, 95, 0.36);
+    border-radius: 9px;
+    background: rgba(240, 121, 95, 0.08);
+    color: var(--coral);
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .problem h2 {
+    font-family: var(--display);
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.22;
+    margin-top: 22px;
+  }
+
+  .problem p {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.45;
+    margin-top: auto;
+    padding-top: 18px;
+  }
+
+  .problem p span + span::before {
+    content: " · ";
+    color: var(--faint);
+  }
+
+  /* Close */
+  .close-slide {
+    justify-content: center;
+    background:
+      radial-gradient(950px 610px at 86% 0%, rgba(87, 227, 160, 0.12), transparent 62%),
+      var(--bg-deep);
+  }
+
+  .close-slide .topline {
+    position: absolute;
+    top: 0.58in;
+    left: 0.68in;
+    right: 0.68in;
+  }
+
+  .close-slide h1 {
+    max-width: 10.4in;
+    font-size: 58px;
+  }
+
+  .close-slide .lede {
+    max-width: 10.4in;
+    font-size: 21px;
+    line-height: 1.5;
+  }
+
+  .capability-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 0.44in;
+    max-width: 11.3in;
+  }
+
+  .capability {
+    padding: 14px 16px;
+    border-top: 2px solid var(--mint);
+    background: rgba(255, 255, 255, 0.025);
+    color: var(--secondary);
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.4;
+    letter-spacing: 0.04em;
+  }
+
+  .capability:nth-child(3) { border-top-color: var(--amber); }
+
+  @media screen {
+    body { width: 13.333333in; margin: 0 auto; }
+    .slide { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04); }
+  }
+</style>
+</head>
+<body>
+
+<section class="slide" id="finance-background">
+  <div class="topline">
+    <div class="wordmark">Cloak<span class="rfq">RFQ</span> <span class="receipts">Receipts</span></div>
+    <div class="run-label">Finalist pitch · 02:50 target</div>
+  </div>
+  <div class="eyebrow">01 · Finance Background</div>
+  <h1>An unpaid invoice can become liquidity today.</h1>
+  <p class="lede">A business can sell a Receivable at a discount. CloakRFQ lets invited Funders compete privately to purchase it on Canton.</p>
+
+  <div class="finance-flow">
+    <article class="finance-card">
+      <div class="section-id">Receivable</div>
+      <h2>Unpaid invoice</h2>
+      <p>$480,000 face value<br>Cash is due later</p>
+    </article>
+    <div class="flow-arrow">→</div>
+    <article class="finance-card amber">
+      <div class="section-id">Sell early</div>
+      <h2>Discounted purchase</h2>
+      <p>The Seller trades some value<br>for liquidity now</p>
+    </article>
+    <div class="flow-arrow">→</div>
+    <article class="finance-card mint">
+      <div class="section-id">CloakRFQ on Canton</div>
+      <h2>Private competition</h2>
+      <p>One role-scoped view per party<br>No public quote book</p>
+    </article>
+  </div>
+
+  <div class="slide-foot">
+    <span>Receivable sale · not a loan</span>
+    <span>0:00–0:20</span>
+  </div>
+</section>
+
+<section class="slide" id="top-three-problems">
+  <div class="topline">
+    <div class="wordmark">Cloak<span class="rfq">RFQ</span> <span class="receipts">Receipts</span></div>
+    <div class="run-label">Problem → Product proof</div>
+  </div>
+  <div class="eyebrow">02 · The Problem</div>
+  <h1>Top 3 Problems CloakRFQ Solves</h1>
+
+  <div class="problem-grid">
+    <article class="problem">
+      <div class="num">01</div>
+      <h2>Sensitive financial information is overshared.</h2>
+      <p><span>Customer identity</span><span>Invoice terms</span><span>Bids</span></p>
+    </article>
+    <article class="problem">
+      <div class="num">02</div>
+      <h2>Private competition usually requires an operator who sees every quote.</h2>
+      <p><span>Every quote</span><span>Every bidder</span><span>One privileged book</span></p>
+    </article>
+    <article class="problem">
+      <div class="num">03</div>
+      <h2>Compliance, funding, settlement, and audit are fragmented.</h2>
+      <p><span>Compliance</span><span>Funding</span><span>Settlement</span><span>Audit</span></p>
+    </article>
+  </div>
+
+  <div class="slide-foot">
+    <span>Next · Live product proof</span>
+    <span>0:20–0:40</span>
+  </div>
+</section>
+
+<section class="slide close-slide" id="why-canton">
+  <div class="topline">
+    <div class="wordmark">Cloak<span class="rfq">RFQ</span> <span class="receipts">Receipts</span></div>
+    <div class="run-label">Why Canton</div>
+  </div>
+  <div class="eyebrow">03 · Why Canton</div>
+  <h1>Shared outcome.<br>No full marketplace view.</h1>
+  <p class="lede">Private Receivable-financing RFQs require selective disclosure, role-based authorization, coordinated settlement, and auditability without exposing the full marketplace.</p>
+
+  <div class="capability-row">
+    <div class="capability">SELECTIVE<br>DISCLOSURE</div>
+    <div class="capability">ROLE-BASED<br>AUTHORIZATION</div>
+    <div class="capability">COORDINATED<br>SETTLEMENT</div>
+    <div class="capability">SCOPED<br>AUDITABILITY</div>
+  </div>
+
+  <div class="slide-foot">
+    <span>Canton is essential to the product</span>
+    <span>2:30–2:50</span>
+  </div>
+</section>
+
+</body>
+</html>
